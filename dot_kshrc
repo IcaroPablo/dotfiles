@@ -1,0 +1,50 @@
+. /etc/ksh.kshrc
+
+# Setings
+
+set -o vi
+set -o vi-tabcomplete
+ulimit -c 0
+
+# Variables
+
+export EDITOR='nvim'
+export ENABLE_WASM=true
+export FCEDIT='nvim'
+export HISTFILE=$HOME/.sh_history
+export LC_ALL=pt_PT.UTF-8
+export MANPAGER="nvim +Man!"
+export PAGER='bat'
+export PATH=$HOME/.local/bin:$PATH
+export PATH=$HOME/.local/lib/python3.10/site-packages:$PATH
+export PATH=$HOME/.local/scripts/:$PATH
+export PS1="[$(whoami)@$(hostname -s)] [\$PWD] $ "
+export SKORN_EDITOR='nvim +"set ft=sh"'
+# export AUDIODEVICE='snd@192.168.1.23/0'
+
+. $HOME/.config/korn/zlua.ksh
+. $HOME/.config/korn/lf.ksh
+
+# Functions
+
+simplegrep() {
+    grep -nR "$1" ./*
+}
+
+# Aliases
+
+alias "a"="create"
+alias "add"="doas pkg_add -Dsnap"
+alias "f"="findfile"
+alias "g"="simplegrep"
+alias "htop"="TERM=xterm-256color && htop"
+alias "img"="nsxiv --thumbnail"
+alias "la"="ls -a"
+alias "ls"="eza -lh --group-directories-first"
+alias "o"="open"
+alias "play"="mpv --shuffle ."
+alias "rm"="rm -i"
+alias "rr"="commandsearch"
+
+# dvtm
+# skorn
