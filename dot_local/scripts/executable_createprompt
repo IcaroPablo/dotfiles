@@ -1,0 +1,5 @@
+#!/bin/ksh
+
+# file="$(echo -e | fzf --prompt="Enter file name (directories end with an '/'): " --print-query)"
+file="$(fzfsimpleprompt "Enter file name (directories end with an '/'): ")"
+create "$file"

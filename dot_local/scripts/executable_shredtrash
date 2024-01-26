@@ -1,0 +1,41 @@
+#!/bin/ksh
+
+set -f
+
+clear
+
+printf "\n\ndelete .trash content ?[y/N]"
+
+read -r ans
+
+# todo: prompt "message" && command
+
+if [ $ans = "y" ] ; then
+    rm -rf -- $HOME/.trash/
+fi
+
+# cmd shred ${{
+# 	# TODO:
+# 	# handle multiple files with shred or rshred
+# 	# for files or directories respectively (with array/positional parameters)
+# 	# Al parecer hay algunos bugs luego del primer despedazo no se puede despedazar más? revisar luego
+# 	clear; tput cup $(($(tput lines)/3)); tput bold
+# 	set -f
+# 	printf -- "%s\n" $fx | sed 's|'"$HOME"'||'
+# 	# Mejorar el prompteo, que sea más cuidadoso
+# 	printf "\t\033[1;34m¿Despedazar? \033[37m[\033[32ms\033[37m/\033[31mN\033[37m]\033[m "
+# 	read -r REPLY
+# 	case "$REPLY" in
+# 		[yYsS])
+# 			for f in $fx; do
+# 				if [ -f "$f" ]; then
+# 					shred -u -n 3 "$f" >/dev/null 2>&1 &
+# 					# TODO: Poner un máximo número de trabajos
+# 				elif [ -d "$f" ]; then
+# 					rshred -fdu "$f"
+# 				fi
+# 			done
+# 		;;
+# 	esac
+# }}
+
