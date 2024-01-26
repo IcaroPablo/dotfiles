@@ -1,0 +1,3 @@
+#!/bin/ksh
+
+doas find ./* -iname "*$1*" | less
