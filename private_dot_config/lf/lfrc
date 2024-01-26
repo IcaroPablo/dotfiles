@@ -1,14 +1,14 @@
 # OPTIONS
 
-set autoquit on
+set autoquit true
 # set cleaner '~/.config/lf/cleaner'
-set drawbox on
+set drawbox true
 set errorfmt "\033[1m%s\033[0m"
-set icons on
+set icons true
 set ifs "\n"
 set incfilter
-set incsearch on
-set number on
+set incsearch true
+set number true
 set previewer "~/.config/lf/preview"
 # set promptfmt "
 # \033[48;2;35;38;39;38;2;28;220;156m  
@@ -19,7 +19,7 @@ set previewer "~/.config/lf/preview"
 # \033[38;2;255;255;255m %f 
 # \033[;38;2;58;67;89;49m\033[m"
 set ratios '1:2'
-set relativenumber on
+set relativenumber true
 set scrolloff 10
 set shell sh
 set shellopts '-eu'
@@ -66,7 +66,7 @@ map v :toggle; down
 map V :invert
 map w
 map X !$f # execute current file (must be executable)
-map Y $printf "%s" "$fx" | xclip -selection clipboard # Copy selected file names
+map Y $printf "%s" "$fx" | xclip -selection clipboard # Copy selected file names -- to do: usar xsel em vez de xclip
 
 map <esc> :clear; unselect
 map <space>
