@@ -1,9 +1,9 @@
-. /etc/ksh.kshrc
+#. /etc/ksh.kshrc
 
 # Setings
 
 set -o vi
-set -o vi-tabcomplete
+#set -o vi-tabcomplete
 ulimit -c 0
 
 # Variables
