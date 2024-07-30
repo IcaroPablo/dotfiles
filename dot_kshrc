@@ -8,27 +8,15 @@ ulimit -c 0
 
 # Variables
 
-export EDITOR='nvim'
-export ENABLE_WASM=true
-export FCEDIT='nvim'
-export HISTFILE=$HOME/.sh_history
-export LC_ALL=pt_PT.UTF-8
-export MANPAGER="nvim +Man!"
-export PAGER='bat'
-export PATH=$HOME/.local/bin:$PATH
-export PATH=$HOME/.local/lib/python3.10/site-packages:$PATH
-export PATH=$HOME/.local/scripts/:$PATH
-export PS1="[$(whoami)@$(hostname -s)] [\$PWD] $ "
-export SKORN_EDITOR='nvim +"set ft=sh"'
-# export AUDIODEVICE='snd@192.168.1.23/0'
-
+. $HOME/.profile
 . $HOME/.config/korn/zlua.ksh
 . $HOME/.config/korn/lf.ksh
 
 # Functions
 
 simplegrep() {
-    grep -nR "$1" ./*
+    # rg -n --hidden "$1" ./* || grep -nRI "$1" ./*
+    grep -nRI "$1" ./*
 }
 
 # Aliases
@@ -41,10 +29,16 @@ alias "htop"="TERM=xterm-256color && htop"
 alias "img"="nsxiv --thumbnail"
 alias "la"="ls -a"
 alias "ls"="eza -lh --group-directories-first"
-alias "o"="open"
+alias "nvim"="launch_nvim"
+alias "o"="openfile"
 alias "play"="mpv --shuffle ."
 alias "rm"="rm -i"
 alias "rr"="commandsearch"
+alias "x"="ssh -YC4 icaro@192.168.1.23 'x2x -east -to :0'"
 
 # dvtm
-# skorn
+# . $HOME/.local/scripts/skorn
+
+#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
+# export SDKMAN_DIR="$HOME/.sdkman"
+# [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
