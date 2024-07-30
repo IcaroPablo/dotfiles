@@ -1,13 +1,12 @@
 #!/bin/ksh
 
-SOURCE="$(mktemp)"
 COMMAND="$(mktemp)"
 COMMAND_EDIT="$(mktemp)"
 # ERRORFILE="$(mktemp)"
 QUERY_EDITOR=${EDITOR:-SKORN_EDITOR}
 
-cat $HOME/.kshrc | sed '/skorn/d' > "$SOURCE" #deveria ser uma variável de ambiente
-. $SOURCE
+# cat $HOME/.kshrc | sed '/skorn/d' > "$SOURCE" #deveria ser uma variável de ambiente
+# . $SOURCE
 
 fzf_exit_status=0
 defaultquery=""
@@ -98,6 +97,6 @@ done
 rm -rf "$COMMAND"
 rm -rf "$COMMAND_EDIT"
 # rm -rf "$ERRORFILE"
-rm -rf "$SOURCE"
+# rm -rf "$SOURCE"
 
-echo "skorn: exit"
+exit

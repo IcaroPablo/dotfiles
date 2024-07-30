@@ -29,7 +29,9 @@ set truncatechar "…"
 
 # COMMANDS
 
-cmd open $open $fx
+${{ echo $id > /tmp/lf_server_id }}
+
+cmd open $openfile $fx
 
 cmd zlua ${{
     # . $HOME/.kshrc
@@ -59,6 +61,7 @@ map E $extract $fx
 # map G busca textual com grep/ripgrep
 map i
 # map l $open $fx # open script does not open directories
+map p :paste; clear
 map R $bulkrename $fx # todo: apenas os selecionados
 map S $shredtrash
 map T $trash $fx
