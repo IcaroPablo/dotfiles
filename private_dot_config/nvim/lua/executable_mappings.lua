@@ -72,8 +72,8 @@ function mappings.setup_basic_mappings()
 
     -- integrated terminal window
     -- TODO: abrir terminal na pasta atual
-    vim.keymap.set("n", "tt", ":call OpenTerminal()<CR>", { noremap = true, silent = true })
-    vim.keymap.set("n", "TT", require('utils').open_terminal_in_current_folder, { noremap = true, silent = true })
+    -- vim.keymap.set("n", "tt", require('utils'), { noremap = true, silent = true })
+    vim.keymap.set("n", "tt", require('utils').open_terminal_in_current_folder, { noremap = true, silent = true })
     vim.keymap.set("t", "<Esc><Esc>", "<C-\\><C-n>", { noremap = true, silent = true })
 
     -- center search results

@@ -1,7 +1,10 @@
 local lf_integration = {}
 
+local utils = require('utils')
+
 function lf_integration.open_new_lf()
-    os.execute("export NVIM_SOCKET=" .. vim.g.current_port .. " ; " .. os.getenv('NVIM_TERMINAL') .. ' -e lf &')
+    -- os.execute("export NVIM_SOCKET=" .. vim.g.current_port .. " ; " .. os.getenv('NVIM_TERMINAL') .. ' -e lf &')
+    utils.run('lf')
     os.execute('sleep 0.10')
 
     local handle = io.popen('cat /tmp/lf_server_id')

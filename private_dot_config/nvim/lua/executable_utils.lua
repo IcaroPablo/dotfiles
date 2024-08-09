@@ -1,17 +1,34 @@
 local utils = {}
 
-function utils.open_terminal_in_current_folder()
-    local cwd = vim.loop.cwd()
-    local home = os.getenv('HOME')
-    local split_script = home .. '/Workspace/shell-script-collection/split_script.sh'
-    local fifo_file = home .. '/Workspace/shell-script-collection/dvtm_fifo.file'
+function utils.run(command)
+    local nvim_socket = "export NVIM_SOCKET=" .. vim.g.current_port
+    local terminal_command = nvim_socket  .. " ; " .. os.getenv('NVIM_TERMINAL') .. ' -e '
+    local full_command = terminal_command .. command .. ' 2>/dev/null 1>/dev/null &'
 
-    -- local lel = 'echo create ' .. split_script.. ' ' .. cwd .. ' > ' .. fifo_file .. ' &'
-    -- print(lel)
-    os.execute('echo ' .. cwd .. ' > ~/cwd.txt')
-    -- os.execute('echo create ' .. split_script.. ' ' .. cwd .. ' > ' .. fifo_file .. ' &')
-    os.execute('echo create ' .. split_script .. ' > ' .. fifo_file .. ' &')
-    -- os.execute('echo create ~/pou.sh ' .. cwd .. ' > ~/fifo.file &')
+    os.execute(full_command)
+    -- os.execute("export NVIM_SOCKET=" .. vim.g.current_port .. " ; " .. os.getenv('NVIM_TERMINAL') .. ' -e lf &')
+end
+
+function utils.open_terminal_in_current_folder()
+    -- local cwd = vim.loop.cwd()
+    -- local home = os.getenv('HOME')
+    -- local split_script = home .. '/Workspace/shell-script-collection/split_script.sh'
+    -- local fifo_file = home .. '/Workspace/shell-script-collection/dvtm_fifo.file'
+
+    -- -- local lel = 'echo create ' .. split_script.. ' ' .. cwd .. ' > ' .. fifo_file .. ' &'
+    -- -- print(lel)
+    -- os.execute('echo ' .. cwd .. ' > ~/cwd.txt')
+    -- -- os.execute('echo create ' .. split_script.. ' ' .. cwd .. ' > ' .. fifo_file .. ' &')
+    -- os.execute('echo create ' .. split_script .. ' > ' .. fifo_file .. ' &')
+    -- -- os.execute('echo create ~/pou.sh ' .. cwd .. ' > ~/fifo.file &')
+
+    local nvim_socket = "export NVIM_SOCKET=" .. vim.g.current_port
+    local terminal_command = nvim_socket  .. " ; " .. os.getenv('NVIM_TERMINAL') .. ' -e '
+    -- todo vim.fn.getcwd não traz a pasta onde o arquivo tá aberto
+    local full_command = 'cd ' .. vim.fn.getcwd() .. ' ; ' .. nvim_socket .. terminal_command .. 'ksh &'
+
+    os.execute(full_command)
+    -- os.execute("export NVIM_SOCKET=" .. vim.g.current_port .. " ; " .. os.getenv('NVIM_TERMINAL') .. ' -e lf &')
 end
 
 return utils

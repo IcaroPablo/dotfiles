@@ -34,5 +34,3 @@ export PATH=$HOME/.local/scripts/:$PATH
 export PATH=$JAVA_HOME/bin:$PATH
 export PS1="[$(whoami)@$(hostname -s)] [\$PWD] $ "
 export SKORN_EDITOR='nvim +"set ft=sh"'
-
-alias luamake="/home/treebeard/lua-language-server/3rd/luamake/luamake"

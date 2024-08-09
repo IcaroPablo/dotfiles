@@ -357,14 +357,6 @@ vim.g.mapleader = ' '
 -- " }}}
 -- lua require'utils.settings'
 
--- Integrated terminal
-vim.cmd [[
-    au BufEnter * if &buftype == 'terminal' | :startinsert | endif
-    function! OpenTerminal()
-        split term://zsh
-    endfunction
-]]
-
 -- This allows you to undo changes to a file even after saving it.
 vim.cmd([[
     if version >= 703

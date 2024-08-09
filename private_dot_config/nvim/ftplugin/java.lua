@@ -7,6 +7,7 @@ local on_attach = function(client, bufnr)
     -- require('jdtls').setup_dap({ hotcodereplace = 'auto' })
     require('mappings').setup_nvim_lsp()
     require('mappings').setup_nvim_lsp_on_attach(bufnr)
+    require('mappings').setup_nvim_dap(bufnr)
     require('mappings').setup_jdtls(bufnr)
 
 -----------------------------------------------------------------------------------------------------------------------
@@ -118,7 +119,7 @@ end
 -----------------------------------------------------------------------------------------------------------------------
 
 local home = os.getenv('HOME')
-local jdtls_folder = home .. '/.local/share/nvim/mason/packages/jdtls/'
+local jdtls_folder = home .. '/.local/share/nvim/mason/packages/jdtls/' -- sensible (mason default)
 local config_folder = jdtls_folder .. 'config_linux/'
 -- local workspace_folder = lspconfig.util.root_pattern(".git", "pom.xml"),
 -- local workspace_folder = require('jdtls.setup').find_root({'.gradlew', 'pom.xml', '.git', 'mvnw'})
@@ -127,10 +128,10 @@ local config_folder = jdtls_folder .. 'config_linux/'
 local project_folder = vim.fs.root(0, {".git", "mvnw", "gradlew", "pom.xml"})
 
 local bundles = {
-    vim.fn.glob(home .. '/java-debug/com.microsoft.java.debug.plugin/target/com.microsoft.java.debug.plugin-*.jar')
+    vim.fn.glob(home .. '/.local/share/nvim/java-debug/com.microsoft.java.debug.plugin/target/com.microsoft.java.debug.plugin-*.jar') --sensible
 };
 
-vim.list_extend(bundles, vim.split(vim.fn.glob(home .. "/vscode-java-test/server/*.jar", 1), "\n"))
+vim.list_extend(bundles, vim.split(vim.fn.glob(home .. "/.local/share/nvim/vscode-java-test/server/*.jar", 1), "\n")) -- sensible
 
 -- local caps = vim.lsp.protocol.make_client_capabilities()
 local capabilities = require('cmp_nvim_lsp').default_capabilities(vim.lsp.protocol.make_client_capabilities())
@@ -184,7 +185,7 @@ local jdtls_config = {
                 settings = {
                     -- Use Google Java style guidelines for formatting
                     -- To use, make sure to download the file from https://github.com/google/styleguide/blob/gh-pages/eclipse-java-google-style.xml
-                    url = "/.local/share/eclipse/eclipse-java-google-style.xml",
+                    url = "/.local/share/eclipse/eclipse-java-google-style.xml", --sensible
                     profile = "GoogleStyle",
                 },
             },
@@ -218,7 +219,7 @@ local jdtls_config = {
                     -- },
                     {
                         name = 'JavaSE-17',
-                        path = '/usr/local/jdk-17/'
+                        path = '/usr/local/jdk-17/' -- sensible
                     }
                 }
             },
