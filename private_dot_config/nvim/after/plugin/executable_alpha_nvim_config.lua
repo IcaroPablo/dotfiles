@@ -30,14 +30,14 @@ local header = {
 local buttons = {
     type = "group",
     val = {
-        dashboard.button("n", "  New file", ":ene <Bar> startinsert<CR>"),
-        dashboard.button("f", "  File search", ":lua require('telescope.builtin').find_files({hidden = true})<CR>"),
+        dashboard.button("n", "  New file", ":ene <Bar> startinsert<CR>"),
+        dashboard.button("f", "⌕  File search", ":lua require('telescope.builtin').find_files({hidden = true})<CR>"),
         -- dashboard.button("p", "  Find project", ":Telescope projects <CR>"),
         dashboard.button("r", "  Recently used files", ":Telescope oldfiles<CR>"),
         dashboard.button("t", "  Text search", ":Telescope live_grep<CR>"),
-        dashboard.button("c", "  Configs", ":e .config/nvim/init.lua<CR>"),
-        dashboard.button("l", "  Load session", ":SessionManager load_session<CR>"),
-        dashboard.button("d", "  Delete session", ":SessionManager delete_session<CR>"),
+        dashboard.button("c", "  Configs", ":e $HOME/.config/nvim/init.lua<CR>"),
+        dashboard.button("l", "󰁯  Load session", ":SessionManager load_session<CR>"),
+        dashboard.button("d", "  Delete session", ":SessionManager delete_session<CR>"),
         dashboard.button("q", "  Quit", ":qa <CR>")
     },
     opts = {

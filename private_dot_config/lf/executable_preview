@@ -4,7 +4,7 @@ batorcat() {
 	file="$1"
 	shift
 	if command -v bat > /dev/null 2>&1; then
-		bat --decorations=always --color=always --theme=gruvbox-dark --style=numbers --line-range=:100 "$file" "$@"
+		bat --decorations=always --color=always --theme=base16 --style=numbers --line-range=:100 "$file" "$@"
 	else
 		cat "$file"
 	fi
