@@ -19,6 +19,14 @@ simplegrep() {
     grep -nRI "$1" ./*
 }
 
+deps() {
+    pkg_info -f "$1" | grep '^@depend' | cut -f 3 -d :
+}
+
+del() {
+    doas pkg_delete "$1" && pkg_delete -a
+}
+
 # Aliases
 
 alias "a"="create"
