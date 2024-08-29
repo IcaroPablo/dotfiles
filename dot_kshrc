@@ -31,6 +31,7 @@ del() {
 
 alias "a"="create"
 alias "add"="doas pkg_add -Dsnap"
+alias "chkclock"="ntpctl -s all"
 alias "f"="findfile"
 alias "g"="simplegrep"
 # alias "htop"="TERM=xterm-256color && htop"
