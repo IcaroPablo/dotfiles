@@ -33,14 +33,14 @@ ${{ echo $id > /tmp/lf_server_id }}
 
 cmd open $openfile $fx
 
-cmd zlua ${{
+cmd zlua %{{
     # . $HOME/.kshrc
     eval "$(lua54 $HOME/.local/bin/z.lua --init posix legacy)"
     dir="$(_zlua -l $1 | sed -E 's/^[.0-9@[:space:]]+//' | fzf --tac)"
 	lf -remote "send ${id} cd \"$dir\""
 }}
 
-cmd on-cd ${{
+cmd on-cd %{{
     # $HOME/.kshrc &&
     eval "$(lua54 $HOME/.local/bin/z.lua --init posix legacy)"
     _zlua --add $PWD # workaround for registering lf directories to z.lua
