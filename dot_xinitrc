@@ -27,13 +27,11 @@ id3=$HOME/.ssh/id_rsa
 id4=$HOME/.ssh/id_ecdsa
 id5=$HOME/.ssh/id_ed25519
 
-if [ -z "$SSH_AGENT_PID" ];
-then
-	if [ -x /usr/bin/ssh-agent ] && [ -f $id1 -o -f $id2 -o -f $id3 -o -f $id4 -o -f $id5 ];
-	then
-		eval `ssh-agent -s`
-		ssh-add < /dev/null
-	fi
+if [ -z "$SSH_AGENT_PID" ]; then
+	if [ -x /usr/bin/ssh-agent ] && [ -f $id1 -o -f $id2 -o -f $id3 -o -f $id4 -o -f $id5]; then
+        eval `ssh-agent -s`
+        ssh-add < /dev/null
+    fi
 fi
 
 # start some nice programs
@@ -42,8 +40,8 @@ fi
 # xterm -geometry 80x24 &
 # fvwm || xterm
 if [ "$SSH_AGENT_PID" ]; then
-	ssh-add -D < /dev/null
-	eval `ssh-agent -s -k`
+    ssh-add -D < /dev/null
+    eval `ssh-agent -s -k`
 fi
 
 xset r rate 300 100
@@ -57,6 +55,5 @@ xset 0 0 0
 $HOME/.fehbg &
 setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.\+=\([0-9]\+\).\+/\1/'` br &
 bar &
-# $HOME/Workspace/shell-script-collection/bar.sh &
 #exec dwm
 exec startdwm
