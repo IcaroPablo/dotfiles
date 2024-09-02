@@ -1,3 +1,14 @@
 [user]
-	name = icaro
-	email = ic4ro.p4blo@gmail.com
+    name = Ícaro Andrade
+    email = ic4ro.p4blo@gmail.com
+
+[push]
+    default = current
+
+[alias]
+    aa = add .
+    ai = add --interactive
+    c = commit
+    cm = commit -m
+    st = status -sb
+    us = restore --staged .
