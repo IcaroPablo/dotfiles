@@ -1,0 +1,17 @@
+base-devel
+libX11-devel
+libXft-devel
+libXinerama-devel
+pkgbuild
+make
+fzf
+the_silver_searcher
+nvim
+abduco
+xsetroot
+playerctl
+scrot
+feh
+wmctrl
+xbindkeys
+snownews
