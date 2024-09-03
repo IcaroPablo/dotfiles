@@ -1,0 +1,39 @@
+#!/bin/sh
+
+# Function to check if a port is available
+is_port_available() {
+    local port="$1"
+    # Attempt to connect to the port using `nc`
+    # -w1 sets a 1-second timeout for the connection attempt
+    if nc -z -w1 localhost "$port" >/dev/null 2>&1; then
+        # Port is in use
+        return 1
+    else
+        # Port is available
+        return 0
+    fi
+}
+
+# Function to find an available port
+local starting_port="$1"
+local max_tries="${2:-100}"  # Default to 100 tries if not specified
+
+for port in $(seq "$starting_port" "$((starting_port + max_tries - 1))"); do
+    if is_port_available "$port"; then
+        echo "$port"
+        return 0
+    fi
+done
+
+echo "No available ports found" >&2
+return 1
+
+# Example usage
+# starting_port=22
+# available_port=$(find_available_port "$starting_port")
+
+# if [ $? -eq 0 ]; then
+#     echo "Found available port: $available_port"
+# else
+#     echo "Error: No available port found" >&2
+# fi
