@@ -1,4 +1,6 @@
-#. /etc/ksh.kshrc
+if [ -f "/etc/ksh.kshrc" ]; then
+    . /etc/ksh.kshrc
+fi
 
 # Setings
 
@@ -10,7 +12,7 @@ ulimit -c 0
 
 . $HOME/.profile
 . $HOME/.config/korn/zlua.sh
-. $HOME/.config/korn/lf.ksh
+. $HOME/.config/korn/lf.sh
 
 # Functions
 
