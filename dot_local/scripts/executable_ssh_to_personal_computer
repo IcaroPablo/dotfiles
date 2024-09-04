@@ -1,0 +1,4 @@
+#!/bin/sh
+
+pc_ip="$(sudo nmap -F 192.168.1.1-30 | grep -B 5 Giga-byte | sed 1q | awk '{print $5}')"
+ssh -YC4c aes128-cbc "treebeard@$pc_ip"

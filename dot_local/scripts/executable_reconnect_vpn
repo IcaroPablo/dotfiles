@@ -1,0 +1,6 @@
+#!/bin/sh
+
+username="icaro.andrade"
+password="#MUROdemacarra12"
+
+/opt/cisco/anyconnect/bin/vpn disconnect && printf "$username\\n$password\\ny" | /opt/cisco/anyconnect/bin/vpn -s connect 'VPN CA'
