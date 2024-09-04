@@ -1,0 +1,4 @@
+#!/bin/sh
+
+reconnect_vpn
+sudo systemctl start cron.service

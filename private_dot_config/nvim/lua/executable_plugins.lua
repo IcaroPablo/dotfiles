@@ -211,6 +211,7 @@ return require('packer').startup(function(use)
             --require("guess-indent").setup()
         --end,
     --})
+    use 'vinnymeller/swagger-preview.nvim'
     use 'wbthomason/packer.nvim'
     use 'l3mon4d3/luasnip'
     use 'saadparwaiz1/cmp_luasnip'

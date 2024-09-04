@@ -15,8 +15,8 @@ is_port_available() {
 }
 
 # Function to find an available port
-local starting_port="$1"
-local max_tries="${2:-100}"  # Default to 100 tries if not specified
+starting_port="$1"
+max_tries="${2:-100}"  # Default to 100 tries if not specified
 
 for port in $(seq "$starting_port" "$((starting_port + max_tries - 1))"); do
     if is_port_available "$port"; then
