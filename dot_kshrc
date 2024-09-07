@@ -1,5 +1,10 @@
 if [ -f "/etc/ksh.kshrc" ]; then
     . /etc/ksh.kshrc
+    echo ooooooodawda
+fi
+
+if [ -n "$INITIAL_FOLDER" ]; then
+    cd "$INITIAL_FOLDER"
 fi
 
 # Setings
