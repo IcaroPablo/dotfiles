@@ -125,13 +125,13 @@ local config_folder = jdtls_folder .. 'config_linux/'
 -- local workspace_folder = require('jdtls.setup').find_root({'.gradlew', 'pom.xml', '.git', 'mvnw'})
 -- local workspace_folder = home .. "/Workspace/" .. vim.fn.fnamemodify(root_dir, ":p:h:t")
 -- local workspace_folder = vim.fs.dirname(vim.fs.find({'.gradlew', 'pom.xml', '.git', 'mvnw'}, { upward = true })[1])
-local project_folder = vim.fs.root(0, {".git", "mvnw", "gradlew", "pom.xml"})
+local project_folder = vim.fs.root(0, {".git", "mvnw", "gradlew", "pom.xml"}) or ''
 
 local bundles = {
     vim.fn.glob(home .. '/.local/share/nvim/java-debug/com.microsoft.java.debug.plugin/target/com.microsoft.java.debug.plugin-*.jar') --sensible
 };
 
-vim.list_extend(bundles, vim.split(vim.fn.glob(home .. "/.local/share/nvim/vscode-java-test/server/*.jar", 1), "\n")) -- sensible
+vim.list_extend(bundles, vim.split(vim.fn.glob(home .. "/.local/share/nvim/vscode-java-test/server/*.jar", true), "\n")) -- sensible
 
 -- local caps = vim.lsp.protocol.make_client_capabilities()
 local capabilities = require('cmp_nvim_lsp').default_capabilities(vim.lsp.protocol.make_client_capabilities())
@@ -161,7 +161,7 @@ local jdtls_config = {
         '--add-modules=ALL-SYSTEM',
         '--add-opens', 'java.base/java.util=ALL-UNNAMED',
         '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
-        '-jar', vim.fn.glob(jdtls_folder .. 'plugins/org.eclipse.equinox.launcher_*.jar'), 
+        '-jar', vim.fn.glob(jdtls_folder .. 'plugins/org.eclipse.equinox.launcher_*.jar'),
         '-configuration', config_folder,
         -- If you started neovim within `~/dev/xy/project-1` this would resolve to `project-1`
         -- local project_name = vim.fn.fnamemodify(vim.fn.getcwd(), ':p:h:t')

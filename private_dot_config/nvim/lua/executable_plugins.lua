@@ -51,14 +51,14 @@ return require('packer').startup(function(use)
     -- tabnine
         -- https://github.com/tzachar/cmp-tabnine
         -- https://www.tabnine.com/install/neovim
-    --use({
-        --"lewis6991/gitsigns.nvim",
-        --event = "BufRead",
-        --requires = { "nvim-lua/plenary.nvim" },
-        --config = function()
-            --require("configs.gitsigns")
-        --end,
-    --})
+    use({
+        "lewis6991/gitsigns.nvim",
+        event = "BufRead",
+        requires = { "nvim-lua/plenary.nvim" },
+        config = function()
+            require('gitsigns').setup()
+        end,
+    })
     --use({
         --"sindrets/diffview.nvim",
         --cmd = {
@@ -123,16 +123,25 @@ return require('packer').startup(function(use)
             --require("twilight").setup()
         --end,
     --})
-    --use({ -- INDENT-BLANKLINE: display indent lines (even on blank lines)
-        --"lukas-reineke/indent-blankline.nvim",
-        --cmd = {
-            --"IndentBlanklineEnable",
-            --"IndentBlanklineToggle",
-        --},
-        --config = function()
-            --require("configs.indent")
-        --end,
-    --})
+    -- use({
+    --     'nvimdev/indentmini.nvim',
+    --     config = function()
+    --         require("indentmini").setup() -- use default config
+    --     end
+    -- })
+    use({ -- INDENT-BLANKLINE: display indent lines (even on blank lines)
+        "lukas-reineke/indent-blankline.nvim",
+        -- cmd = {
+        --     "IndentBlanklineEnable",
+        --     "IndentBlanklineToggle",
+        -- },
+    })
+    use({
+        'oysandvik94/curl.nvim',
+        requires = {
+            'mfussenegger/nvim-dap'
+        }
+    })
     --use({ -- NEOSCROLL: smooth scrolling
         --"karb94/neoscroll.nvim",
         --event = "WinScrolled",
@@ -211,12 +220,13 @@ return require('packer').startup(function(use)
             --require("guess-indent").setup()
         --end,
     --})
+    use 'shortcuts/no-neck-pain.nvim'
     use 'vinnymeller/swagger-preview.nvim'
     use 'wbthomason/packer.nvim'
     use 'l3mon4d3/luasnip'
     use 'saadparwaiz1/cmp_luasnip'
     use 'tpope/vim-commentary'
-    use 'yggdroot/indentline'
+    -- use 'yggdroot/indentline'
     use 'nvim-treesitter/nvim-treesitter'
     ---- TS-RAINBOW: treesitter rainbow parentheses
     --use({
@@ -412,10 +422,44 @@ return require('packer').startup(function(use)
         end
     }
     use {
-        'itchyny/lightline.vim',
-        config = function ()
-            vim.g.lightline = {colorscheme = 'apprentice'} -- seoul256, jellybeans, darcula, deus, apprentice
+        'nvim-lualine/lualine.nvim',
+        requires = { 'nvim-tree/nvim-web-devicons', opt = true },
+        config = function()
+            local custom_gruvbox = require('lualine.themes.gruvbox')
+
+            -- custom_gruvbox.normal.c.bg = '#112233'
+
+            require('lualine').setup({
+                -- options = { theme  = custom_gruvbox },
+                -- options = { theme  = 'gruvbox-dark' },
+                options = { theme  = 'base16' },
+            })
         end
+        -- 'itchyny/lightline.vim',
+        -- config = function ()
+        --     -- vim.cmd [[
+        --     --     let g:lightline = {
+        --     --         \ 'colorscheme': 'apprentice',
+        --     --         \ 'component_function': {
+        --     --         \   'filename': 'LightlineFilename',
+        --     --         \ },
+        --     --         \ }
+
+        --     --     function! LightlineFilename()
+        --     --       return &filetype ==# 'vimfiler' ? vimfiler#get_status_string() :
+        --     --             \ &filetype ==# 'unite' ? unite#get_status_string() :
+        --     --             \ &filetype ==# 'vimshell' ? vimshell#get_status_string() :
+        --     --             \ expand('%:t') !=# '' ? expand('%:t') : '[No Name]'
+        --     --     endfunction
+        --     -- ]]
+
+        --     vim.g.lightline = {
+        --         colorscheme = 'apprentice', -- seoul256, jellybeans, darcula, deus, apprentice
+        --         component_function = {
+        --             filename = vim.fn.expand('%:t') == '' and '[No Name]' or vim.fn.expand('%:t')
+        --         }
+        --     }
+        -- end
     }
     use { -- improves telescope's performance
         'nvim-telescope/telescope-fzf-native.nvim',
