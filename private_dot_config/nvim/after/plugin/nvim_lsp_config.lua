@@ -18,7 +18,7 @@ lspconfig.pyright.setup({
 })
 
 -- JavaScript/Typescript
-lspconfig.tsserver.setup({
+lspconfig.ts_ls.setup({
     capabilities = caps,
     on_attach = on_attach_config
 })

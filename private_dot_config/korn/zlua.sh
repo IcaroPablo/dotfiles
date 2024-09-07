@@ -7,13 +7,13 @@ eval "$(lua54 $HOME/.local/bin/z.lua --init posix legacy)"
 
 cdz() {
     if [ "$1" = "" ]; then
-        command cd
-        # builtin cd
+        # command cd
+        builtin cd
     fi
 
     # ultima alternativa não funciona
-    command cd "$1" 2> /dev/null || z -I "$1" || (echo "cd: File or Directory not found: $1" >&2 && exit 1)
-    # builtin cd "$1" 2> /dev/null || z -I "$1" || (echo "cd: File or Directory not found: $1" >&2 && exit 1)
+    # command cd "$1" 2> /dev/null || z -I "$1" || (echo "cd: File or Directory not found: $1" >&2 && exit 1)
+    builtin cd "$1" 2> /dev/null || z -I "$1" || (echo "cd: File or Directory not found: $1" >&2 && exit 1)
 }
 
 cdzprompt() {
