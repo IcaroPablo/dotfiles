@@ -28,7 +28,7 @@ function lf_integration.open_new_lf()
 end
 
 function lf_integration.reveal(server_id)
-    local current_dir = vim.fn.getcwd()
+    local current_dir = vim.fn.expand('%:h')
     local current_file = vim.fn.expand("%")
 
     -- local cd_command = "lf -remote \"send " .. vim.g.lf_server .. "cd \"" .. current_dir .. "\"\" 2>&1 | grep -q . && exit 0 || exit 1"
