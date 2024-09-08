@@ -1,3 +1,0 @@
-#!/bin/sh
-
-command lf "$@" && echo '' > "/tmp/lf_server_id"

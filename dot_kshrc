@@ -1,16 +1,11 @@
-if [ -f "/etc/ksh.kshrc" ]; then
-    . /etc/ksh.kshrc
-    echo ooooooodawda
-fi
+[ -f "/etc/ksh.kshrc" ] && . /etc/ksh.kshrc
 
-if [ -n "$INITIAL_FOLDER" ]; then
-    cd "$INITIAL_FOLDER"
-fi
+[ -n "$INITIAL_FOLDER" ] && cd "$INITIAL_FOLDER"
 
 # Setings
 
 set -o vi
-#set -o vi-tabcomplete
+set -o vi-tabcomplete
 ulimit -c 0
 
 # Variables

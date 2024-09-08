@@ -2,6 +2,7 @@
 
 # Change this depending on your battery in /sys/class/power_supply/
 battery="BAT0";
+update_network_info=true
 
 get_uptime(){
 	echo -e "uptime: $(uptime --pretty | sed -e 's/up //g' -e 's/ days/d/g' -e 's/ day/d/g' -e 's/ hours/h/g' -e 's/ hour/h/g' -e 's/ minutes/m/g' -e 's/, / /g') |"
@@ -16,7 +17,7 @@ get_wifi_connection() {
 }
 
 get_screen_brightness() {
-	echo "screen: $(xbacklight -get | sed 's/\..*$//')% |"
+    echo "screen: $(xbacklight -get | sed 's/\..*$//')% |"
 }
 
 get_sound_volume () {
@@ -43,7 +44,7 @@ get_battery_status() {
 }
 
 get_datetime() {
-	date +"%a %d %b %Y | %I:%M %p (%Z GMT)"
+    date +"%a %d %b %Y | %I:%M %p (%Z GMT)"
 }
 
 get_status() {
@@ -51,7 +52,7 @@ get_status() {
 }
 
 set_status_to_bar() {
-	xsetroot -name "$(get_status)"
+    xsetroot -name "$(get_status)"
 }
 
 echo "pid of this process is $$"
