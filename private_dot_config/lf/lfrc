@@ -29,7 +29,7 @@ set truncatechar "…"
 
 # COMMANDS
 
-${{ echo $id > /tmp/lf_server_id }}
+${{ lf_goto_start_selection $id }}
 
 cmd open $openfile $fx
 
