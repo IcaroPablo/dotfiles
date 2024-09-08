@@ -1,9 +1,0 @@
-#!/bin/sh
-
-#rm ~/.local/
-doas rm ~/.local/share/vim
-doas rm ~/.viminfo
-doas rm ~/.local/share/nvim/shada/*
-doas rm ~/.local/state/nvim/shada/*
-doas rm -rf ~/.local/share/nvim/shada
-doas rm -rf /root/.local/state/nvim/shada
