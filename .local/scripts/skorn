@@ -1,0 +1,102 @@
+#!/bin/ksh
+
+COMMAND="$(mktemp)"
+COMMAND_EDIT="$(mktemp)"
+# ERRORFILE="$(mktemp)"
+QUERY_EDITOR=${EDITOR:-SKORN_EDITOR}
+
+# cat $HOME/.kshrc | sed '/skorn/d' > "$SOURCE" #deveria ser uma variável de ambiente
+# . $SOURCE
+
+fzf_exit_status=0
+defaultquery=""
+
+complete() {
+    # separar o bloco de texto com o path (se é que ele existe) (posteriormente no meio da linha)
+    # mv path/to/dir/file path/to/dir2 -> prefix = mv path/to/dir/file & query = path/to/dir2
+    full_path_to_query="$(echo "$1" | awk '{print $NF}')"
+    query="$(echo "$full_path_to_query" | sed 's/.*\///' | sed 's/.*[[:space:]]//')"
+    prefix_path="$(echo "$full_path_to_query" | sed "s/$query//")" # para ser usado no find
+    prefix="$(echo "$1" | sed "s-$full_path_to_query--")"
+
+    if [ "$prefix_path" = "" ]; then
+        prefix_path="$(pwd)"
+    fi
+
+    # todo: lidar com mais de um resultado na busca
+    # result="$(find . -maxdepth 1 \( -type f -o -type d \) -name "$query*" | sed 's/\.\///' | sed 's/ /\\ /g')"
+    # complete no prompt -> find, ag, fzf
+    result="$(find "$prefix_path" -maxdepth 1 \( -type f -o -type d \) -name "$query*" | sed 's/\.\///' | sed 's/ /\\ /g')"
+    cwd="$(pwd)"
+    result="$(echo "$result" | sed "s-^$cwd/--")"
+
+    if [ "$result" != "" ]; then
+        echo "$prefix" | sed "s-\$-$result-"
+    else
+        echo "$1"
+    fi
+}
+
+while [ "$fzf_exit_status" = 0 ]; do
+    prompt="[$(whoami)@$(hostname -s)] [$(pwd)] $" # deveria ser o prompt do sistema
+
+    cat $HISTFILE | sort -u | sed '/^[[:space:]]*$/d' | awk '{$1=$1};1' | fzf \
+        --prompt="$prompt " \
+        --query="$defaultquery" \
+        --info=right \
+        --bind 'enter:print-query' \
+        --bind 'alt-l:replace-query' \
+        --bind 'alt-j:down' \
+        --bind 'alt-k:up' \
+        --bind 'alt-e:transform-query(echo {q} | sed "s/$/ toedit/")+print-query' \
+        --bind 'alt-r:transform-query(echo {q} | sed "s/$/ torun/")+print-query' \
+        --bind 'tab:transform-query(echo {q} | sed "s/$/ tocomplete/")+print-query' \
+        --no-scrollbar \
+        --min-height=5 \
+        --height 5% \
+        --reverse 1> "$COMMAND"
+
+    fzf_exit_status="$(echo $?)"
+
+    com="$(cat "$COMMAND")"
+
+    if [[ "$com" == @(*toedit) ]] ; then
+        com="$(echo "$com" | sed -E 's/ toedit//')"
+        echo "$com" > "$COMMAND_EDIT"
+        eval "$SKORN_EDITOR" "$COMMAND_EDIT"
+        com="$(cat "$COMMAND_EDIT")"
+        defaultquery="$com"
+        continue
+    fi
+
+    if [[ "$com" == @(*torun) ]] ; then
+        com="$(echo "$com" | sed -E 's/ torun//')"
+        echo "$com" > "$COMMAND_EDIT"
+        eval "$SKORN_EDITOR" "$COMMAND_EDIT"
+        com="$(cat "$COMMAND_EDIT")"
+    fi
+
+    # todo complete no meio da linha
+    if [[ "$com" == @(*tocomplete) ]] ; then
+        com="$(echo "$com" | sed -E 's/ tocomplete//')"
+        defaultquery="$(complete "$com")"
+        continue
+    fi
+
+    defaultquery=""
+
+    echo "$prompt $com"
+    eval "$com" #2> "$errorfile" # 2>&1
+    
+    # if [[ -s "$ERRORFILE" ]]; then
+    #     cat "$ERRORFILE" | sed 's/.*\/\///'
+    #     echo "" > "$ERRORFILE"
+    # fi
+done
+
+rm -rf "$COMMAND"
+rm -rf "$COMMAND_EDIT"
+# rm -rf "$ERRORFILE"
+# rm -rf "$SOURCE"
+
+exit

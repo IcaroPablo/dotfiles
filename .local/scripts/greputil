@@ -1,0 +1,26 @@
+#!/bin/ksh
+
+# cmd gsh %{{
+# 	lf -remote "send ${id} cd \"$(g.sh -x $*)\""
+# }}
+
+# cmd gsh_fuzzy %{{
+# 	lf -remote "send ${id} cd \"$(_GS_GREP='fzf -f' g.sh -l $* | awk 'NR==1{print $2}')\""
+# }}
+
+# cmd gsh_i ${{
+# 	selected=$(g.sh -l "$@" \
+# 		| fzf --nth 2.. --tac +s -e \
+# 		--header "Directorios marcados" --header-first \
+# 		--preview "lsd --color always --icon always --tree --depth 2 --group-dirs first {+2} 2>/dev/null" \
+# 		| awk '{print substr($0, index($0,$2))}'
+# 	)
+# 	if [ -d "$selected" ]; then
+# 		lf -remote "send ${id} cd \"${selected}\""
+# 	elif [ -e "$selected" ]; then
+# 		lf -remote "send ${id} select \"${selected}\""
+# 	else
+# 		>&2 printf "Could not select %s\n" "${selected}"
+# 	fi
+# }}
+

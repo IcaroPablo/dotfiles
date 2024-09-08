@@ -1,0 +1,18 @@
+#!/bin/ksh
+
+# just a reminder to explore broot, seems useful
+
+# cmd broot ${{
+# 	# You need to manually close broot printing the
+# 	# selected path with :print-path or :pp. You may
+# 	# want to configure broot keybindings
+# 	selected="$(broot)"
+# 	if [ -d "$selected" ]; then
+# 		lf -remote "send ${id} cd \"${selected}\""
+# 	elif [ -e "$selected" ]; then
+# 		lf -remote "send ${id} select \"${selected}\""
+# 	else
+# 		>&2 printf "Could not select %s\n" "${selected}"
+# 	fi
+# }}
+
