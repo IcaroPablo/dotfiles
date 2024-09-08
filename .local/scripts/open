@@ -1,0 +1,61 @@
+#!/bin/ksh
+
+# define a custom 'open' command
+# This command is called when current file is not a directory. You may want to
+# use either file extensions and/or mime types here. Below uses an editor for
+# text files and a file opener for the rest.
+
+# lf specific
+# check if there are selected files
+# if [ -z "$fs" ]; then
+
+# if [ $# -lt 1 ]; then
+#     echo "Usage: $0 <file_path>"
+#     exit 1
+# fi
+
+# # Get the file path from the first command-line argument
+# file_path="$1"
+# 
+# # Check if the file exists
+# if [ ! -e "$file_path" ]; then
+#     echo "File does not exist: $file_path"
+#     exit 1
+# fi
+# 
+# # Check if the file is a symbolic link and resolve it
+# if [ -L "$file_path" ]; then
+#     file_path=$(readlink -f "$file_path")
+# fi
+
+#open() {
+#    test -L $f && f=$(readlink -f $f)
+#    case $(file --mime-type $f -b) in
+#        #text/*) $EDITOR $fx;;
+#        text/*) nvim $fx;;
+#        *pdf) zathura $fx;;
+#        *) for f in $fx; do setsid $OPENER $f > /dev/null 2> /dev/null & done;;
+#    esac
+#}}
+
+# todo criar função de wrapping para não exibir erros na tela
+# image/vnd.djvu|application/pdf|application/octet-stream|application/postscript) setsid -f zathura $fx >/dev/null 2>&1 ;;
+# setsid não funciona
+
+first="$1"
+
+echo "$first"
+
+test -L "$first" && first="$(readlink -f "$first")"
+case "$(file --mime-type "$first" -b)" in
+    text/*|application/json|*shellscript|application/x-empty) nvim "$@" ;;
+    application/pdf|application/vnd.djvu|application/epub*) zathura "$@" ;;
+    # application/pdf|application/vnd.djvu|application/epub*) setsid -f zathura $fx >/dev/null 2>&1 ;;
+    audio/*|video/x-ms-asf) mpv --shuffle --no-audio-display "$@" ;;
+    # video/*) setsid -f mpv "$@" -quiet >/dev/null 2>&1 ;;
+    video/*) mpv "$@" >/dev/null 2>&1 ;;
+    # image/*) setsid -f nsxiv -aio "$@" 2>/dev/null ;;
+    image/*) nsxiv -a --thumbnail "$@" ;;
+    *) for f in $@ ; do setsid xdg-open "$f" > /dev/null 2> /dev/null & done ;;
+    # *) for f in $fx; do setsid -f $OPENER $f >/dev/null 2>&1; done;;
+esac
