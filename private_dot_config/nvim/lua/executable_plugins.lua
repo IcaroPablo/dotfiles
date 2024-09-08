@@ -424,17 +424,6 @@ return require('packer').startup(function(use)
     use {
         'nvim-lualine/lualine.nvim',
         requires = { 'nvim-tree/nvim-web-devicons', opt = true },
-        config = function()
-            local custom_gruvbox = require('lualine.themes.gruvbox')
-
-            -- custom_gruvbox.normal.c.bg = '#112233'
-
-            require('lualine').setup({
-                -- options = { theme  = custom_gruvbox },
-                -- options = { theme  = 'gruvbox-dark' },
-                options = { theme  = 'base16' },
-            })
-        end
         -- 'itchyny/lightline.vim',
         -- config = function ()
         --     -- vim.cmd [[
