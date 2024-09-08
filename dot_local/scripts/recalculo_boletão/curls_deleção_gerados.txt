@@ -1,8 +1,0 @@
-curl -o /dev/null -s -w "%{http_code}
-" --location --request DELETE 'http://finance-pro.prod.contaazul.local/v1/acquittances/149f11c2-c473-11ee-a26e-4b3fa851ca03' --header 'X-TenantId: 2184180' --header 'X-UserId: -1'
-curl -o /dev/null -s -w "%{http_code}
-" --location --request DELETE 'http://finance-pro.prod.contaazul.local/v1/acquittances/20830752-c471-11ee-a66d-73c942d61bb6' --header 'X-TenantId: 1399421' --header 'X-UserId: -1'
-curl -o /dev/null -s -w "%{http_code}
-" --location --request DELETE 'http://finance-pro.prod.contaazul.local/v1/acquittances/3d8d1468-c472-11ee-a0e5-97e7cfebefed' --header 'X-TenantId: 2258048' --header 'X-UserId: -1'
-curl -o /dev/null -s -w "%{http_code}
-" --location --request DELETE 'http://finance-pro.prod.contaazul.local/v1/acquittances/79bd89c4-c470-11ee-a743-cf8b4f6bc690' --header 'X-TenantId: 2118433' --header 'X-UserId: -1'

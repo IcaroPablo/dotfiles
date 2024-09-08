@@ -73,7 +73,7 @@ function mappings.setup_basic_mappings()
     -- integrated terminal window
     -- TODO: abrir terminal na pasta atual
     -- vim.keymap.set("n", "tt", require('utils'), { noremap = true, silent = true })
-    vim.keymap.set("n", "TT", require('utils').open_terminal_in_current_folder, { noremap = true, silent = true })
+    vim.keymap.set("n", "TT", function() require('utils').open_terminal_in(nil) end, { noremap = true, silent = true })
     vim.keymap.set("n", "tt", require('utils').open_terminal_in_project_root, { noremap = true, silent = true })
     -- vim.keymap.set("t", "<Esc><Esc>", "<C-\\><C-n>", { noremap = true, silent = true })
 
@@ -239,7 +239,7 @@ end
 function mappings.setup_neotree()
     vim.keymap.set("n", "<leader>t", ":Neotree toggle<CR>", { noremap = true, silent = true })
     -- vim.keymap.set("n", "<C-f>", ":Neotree reveal<CR>", {noremap = true, silent = true})
-    vim.keymap.set("n", "<C-f>", require('lf_integration').reveal_in_lf, {noremap = true, silent = true})
+    vim.keymap.set("n", "<C-f>", function() require('utils').run('lf') end, {noremap = true, silent = true})
 end
 
 function mappings.setup_telescope()
