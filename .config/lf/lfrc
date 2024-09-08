@@ -1,0 +1,79 @@
+# OPTIONS
+
+set autoquit true
+# set cleaner '~/.config/lf/cleaner'
+set drawbox true
+set errorfmt "\033[1m%s\033[0m"
+set icons true
+set ifs "\n"
+set incfilter
+set incsearch true
+set number true
+set previewer "~/.config/lf/preview"
+# set promptfmt "
+# \033[48;2;35;38;39;38;2;28;220;156m  
+# \033[38;2;35;38;39;48;2;202;31;31m
+# \033[38;2;202;31;31;48;2;40;47;62m
+# \033[38;2;255;255;255m %w 
+# \033[38;2;40;47;62;48;2;58;67;89m
+# \033[38;2;255;255;255m %f 
+# \033[;38;2;58;67;89;49m\033[m"
+set ratios '1:2'
+set relativenumber true
+set scrolloff 10
+set shell sh
+set shellopts '-eu'
+set smartdia
+set tabstop 4
+set truncatechar "…"
+
+# COMMANDS
+
+${{ lf_goto_start_selection $id }}
+
+cmd open $openfile $fx
+
+cmd zlua %{{
+    # . $HOME/.kshrc
+    eval "$(lua54 $HOME/.local/bin/z.lua --init posix legacy)"
+    dir="$(_zlua -l $1 | sed -E 's/^[.0-9@[:space:]]+//' | fzf --tac)"
+	lf -remote "send ${id} cd \"$dir\""
+}}
+
+cmd on-cd %{{
+    # $HOME/.kshrc &&
+    eval "$(lua54 $HOME/.local/bin/z.lua --init posix legacy)"
+    _zlua --add $PWD # workaround for registering lf directories to z.lua
+}}
+
+# MAPPINGS
+
+map a $createprompt
+# map b $setbg
+map c
+map cd push :zlua
+# map cd push :zlua<space>
+map D $delete $fx
+map e
+map E $extract $fx
+# map f busca por arquivos e abrir com o $open
+# map F busca por diretórios $lf -remote "send $id select \"$(fzf)\""
+# map G busca textual com grep/ripgrep
+map i
+# map l $open $fx # open script does not open directories
+map p :paste; clear
+map R $bulkrename $fx # todo: apenas os selecionados
+map S $shredtrash
+map T $trash $fx
+map v :toggle; down
+map V :invert
+map w
+map X !$f # execute current file (must be executable)
+map Y $printf "%s" "$fx" | xclip -selection clipboard # Copy selected file names -- to do: usar xsel em vez de xclip
+
+map <esc> :clear; unselect
+map <space>
+# map <c-r> reload
+
+cmap <tab> cmd-menu-complete
+cmap <backtab> cmd-menu-complete-back
