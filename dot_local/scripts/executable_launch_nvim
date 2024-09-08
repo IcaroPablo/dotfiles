@@ -1,5 +1,0 @@
-#!/bin/sh
-
-available_port=$(get_available_port "6660")
-
-nvim --listen 127.0.0.1:$available_port --cmd "let g:current_port='$available_port'" "$@"
