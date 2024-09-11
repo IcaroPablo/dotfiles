@@ -8,28 +8,25 @@ usage() {
     printf "Dot is a script for managing dotfiles\n\nUsage:\n\n    dot [start <git repo> | <git command>]\n\n"
 }
 
-initial_setup() {
-    git_cmd init --bare "$DOTFILES_BARE_REPO"
-    git_cmd branch -m main
-    git_cmd config --local status.showUntrackedFiles no
-
-    if [ ! -f "$HOME/.gitignore" ] || [ ! $(grep -q "$DOTFILES_BARE_REPO" "$HOME/.gitignore") ]; then
-        dotfiles_repo="$(perl -le 'use File::Spec; print File::Spec->abs2rel(@ARGV)' $DOTFILES_BARE_REPO $HOME)"
-        echo "$dotfiles_repo" >> "$HOME/.gitignore"
-    fi
-}
-
 start() {
+    dotfiles_repo="$(perl -le 'use File::Spec; print File::Spec->abs2rel(@ARGV)' $DOTFILES_BARE_REPO $HOME)"
+
     if [ -n "$1" ]; then
-        dotfiles_repo="$(perl -le 'use File::Spec; print File::Spec->abs2rel(@ARGV)' $DOTFILES_BARE_REPO $HOME)"
         echo "make sure your git repo ignores $dotfiles_repo (Abort/ok)"
         read -r answer
         [[ "$answer" == [aA] ]] || [[ -z "$answer" ]] && echo "aborting" && exit 1
         git clone --bare "$1" "$DOTFILES_BARE_REPO"
     else
-        git_cmd rev-parse --is-bare-repository 1>/dev/null \
-            && echo "already set up in $DOTFILES_BARE_REPO" \
-            || initial_setup
+        if [ "$(git_cmd rev-parse --is-bare-repository)" == "true" ]; then
+            echo "already set up in $DOTFILES_BARE_REPO"
+        else
+            git_cmd init --bare "$DOTFILES_BARE_REPO"
+            git_cmd branch -m main
+            git_cmd config --local status.showUntrackedFiles no
+
+            [ "$(grep -q "$dotfiles_repo" "$HOME/.gitignore" 2>/dev/null ; echo "$?")" != "0" ]\
+                && echo "$dotfiles_repo" >> "$HOME/.gitignore"
+        fi
     fi
 }
 

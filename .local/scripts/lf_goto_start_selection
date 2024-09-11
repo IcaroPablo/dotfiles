@@ -1,9 +1,0 @@
-#!/bin/sh
-
-lf_server_id="$1"
-
-if [ -n "$LF_START_DIR" ]; then
-    sleep 0.2 # sleep just to make sure the server is properly started before start sending commands
-    lf -remote "send ${lf_server_id} cd \"$LF_START_DIR\""
-    [ -n "$LF_START_SELECT" ] && lf -remote "send ${lf_server_id} select \"$LF_START_SELECT\""
-fi
