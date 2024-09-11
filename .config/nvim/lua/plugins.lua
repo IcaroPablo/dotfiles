@@ -410,45 +410,65 @@ return require('packer').startup(function(use)
             "nvim-lua/plenary.nvim"
         }
     }
+    -- use {
+    --     'gruvbox-community/gruvbox',
+    --     config = function ()
+    --         vim.g.gruvbox_bold = '0'
+    --         -- vim.g.gruvbox_italic = false
+    --         -- vim.g.gruvbox_italicize_comments = '0'
+    --         -- vim.g.gruvbox_italicize_strings = '0'
+    --         vim.g.gruvbox_contrast_dark = 'hard'
+    --         vim.cmd([[ colorscheme gruvbox ]])
+    --     end
+    -- }
     use {
-        'gruvbox-community/gruvbox',
-        config = function ()
-            vim.g.gruvbox_bold = '0'
-            -- vim.g.gruvbox_italic = false
-            -- vim.g.gruvbox_italicize_comments = '0'
-            -- vim.g.gruvbox_italicize_strings = '0'
-            vim.g.gruvbox_contrast_dark = 'hard'
-            vim.cmd([[ colorscheme gruvbox ]])
+        "ellisonleao/gruvbox.nvim",
+        config = function()
+            require("gruvbox").setup({
+                terminal_colors = true, -- add neovim terminal colors
+                undercurl = true,
+                underline = false,
+                bold = false,
+                italic = {
+                    strings = false,
+                    emphasis = false,
+                    comments = false,
+                    operators = false,
+                    folds = false,
+                },
+                strikethrough = true,
+                invert_selection = true,
+                invert_signs = false,
+                invert_tabline = false,
+                invert_intend_guides = false,
+                inverse = true, -- invert background for search, diffs, statuslines and errors
+                contrast = "hard", -- can be "hard", "soft" or empty string
+                -- palette_overrides = {},
+                -- overrides = {},
+                dim_inactive = false,
+                transparent_mode = false,
+            })
+
+            vim.cmd("colorscheme gruvbox")
         end
     }
     use {
         'nvim-lualine/lualine.nvim',
         requires = { 'nvim-tree/nvim-web-devicons', opt = true },
-        -- 'itchyny/lightline.vim',
-        -- config = function ()
-        --     -- vim.cmd [[
-        --     --     let g:lightline = {
-        --     --         \ 'colorscheme': 'apprentice',
-        --     --         \ 'component_function': {
-        --     --         \   'filename': 'LightlineFilename',
-        --     --         \ },
-        --     --         \ }
+        config = function ()
+            local custom_gruvbox = require('lualine.themes.gruvbox_dark')
 
-        --     --     function! LightlineFilename()
-        --     --       return &filetype ==# 'vimfiler' ? vimfiler#get_status_string() :
-        --     --             \ &filetype ==# 'unite' ? unite#get_status_string() :
-        --     --             \ &filetype ==# 'vimshell' ? vimshell#get_status_string() :
-        --     --             \ expand('%:t') !=# '' ? expand('%:t') : '[No Name]'
-        --     --     endfunction
-        --     -- ]]
+            custom_gruvbox.normal.a.gui = ''
+            custom_gruvbox.insert.a.gui = ''
+            custom_gruvbox.visual.a.gui = ''
+            custom_gruvbox.replace.a.gui = ''
+            custom_gruvbox.command.a.gui = ''
+            custom_gruvbox.inactive.a.gui = ''
 
-        --     vim.g.lightline = {
-        --         colorscheme = 'apprentice', -- seoul256, jellybeans, darcula, deus, apprentice
-        --         component_function = {
-        --             filename = vim.fn.expand('%:t') == '' and '[No Name]' or vim.fn.expand('%:t')
-        --         }
-        --     }
-        -- end
+            require('lualine').setup({
+                options = { theme  = custom_gruvbox }
+            })
+        end
     }
     use { -- improves telescope's performance
         'nvim-telescope/telescope-fzf-native.nvim',
