@@ -409,5 +409,11 @@ if not status_ok then
 -- else 
 --     require('impatient')
 end
+
+vim.api.nvim_create_user_command('SetDotfilesGitVars', function()
+    vim.env.GIT_WORK_TREE = vim.fn.expand("~")
+    vim.env.GIT_DIR = vim.fn.expand("~/.config/dotfiles")
+end, {})
+
 require('plugins')
 require('mappings').setup_basic_mappings()
