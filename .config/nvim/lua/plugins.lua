@@ -129,6 +129,12 @@ return require('packer').startup(function(use)
     --         require("indentmini").setup() -- use default config
     --     end
     -- })
+    use {
+        'sindrets/diffview.nvim',
+        requires = {
+            "kyazdani42/nvim-web-devicons",
+        }
+    }
     use({ -- INDENT-BLANKLINE: display indent lines (even on blank lines)
         "lukas-reineke/indent-blankline.nvim",
         -- cmd = {
