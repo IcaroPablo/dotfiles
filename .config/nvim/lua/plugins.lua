@@ -416,48 +416,48 @@ return require('packer').startup(function(use)
             "nvim-lua/plenary.nvim"
         }
     }
-    -- use {
-    --     'gruvbox-community/gruvbox',
-    --     config = function ()
-    --         vim.g.gruvbox_bold = '0'
-    --         -- vim.g.gruvbox_italic = false
-    --         -- vim.g.gruvbox_italicize_comments = '0'
-    --         -- vim.g.gruvbox_italicize_strings = '0'
-    --         vim.g.gruvbox_contrast_dark = 'hard'
-    --         vim.cmd([[ colorscheme gruvbox ]])
-    --     end
-    -- }
     use {
-        "ellisonleao/gruvbox.nvim",
-        config = function()
-            require("gruvbox").setup({
-                terminal_colors = true, -- add neovim terminal colors
-                undercurl = true,
-                underline = false,
-                bold = false,
-                italic = {
-                    strings = false,
-                    emphasis = false,
-                    comments = false,
-                    operators = false,
-                    folds = false,
-                },
-                strikethrough = true,
-                invert_selection = true,
-                invert_signs = false,
-                invert_tabline = false,
-                invert_intend_guides = false,
-                inverse = true, -- invert background for search, diffs, statuslines and errors
-                contrast = "hard", -- can be "hard", "soft" or empty string
-                -- palette_overrides = {},
-                -- overrides = {},
-                dim_inactive = false,
-                transparent_mode = false,
-            })
-
-            vim.cmd("colorscheme gruvbox")
+        'gruvbox-community/gruvbox',
+        config = function ()
+            vim.g.gruvbox_bold = '0'
+            -- vim.g.gruvbox_italic = false
+            -- vim.g.gruvbox_italicize_comments = '0'
+            -- vim.g.gruvbox_italicize_strings = '0'
+            vim.g.gruvbox_contrast_dark = 'hard'
+            vim.cmd([[ colorscheme gruvbox ]])
         end
     }
+    -- use {
+    --     "ellisonleao/gruvbox.nvim",
+    --     config = function()
+    --         require("gruvbox").setup({
+    --             terminal_colors = true, -- add neovim terminal colors
+    --             undercurl = false,
+    --             underline = false,
+    --             bold = false,
+    --             italic = {
+    --                 strings = false,
+    --                 emphasis = false,
+    --                 comments = false,
+    --                 operators = false,
+    --                 folds = false,
+    --             },
+    --             strikethrough = true,
+    --             invert_selection = true,
+    --             invert_signs = true,
+    --             invert_tabline = false,
+    --             invert_intend_guides = false,
+    --             inverse = false, -- invert background for search, diffs, statuslines and errors
+    --             contrast = "hard", -- can be "hard", "soft" or empty string
+    --             -- palette_overrides = {},
+    --             -- overrides = {},
+    --             dim_inactive = false,
+    --             transparent_mode = false,
+    --         })
+
+    --         vim.cmd("colorscheme gruvbox")
+    --     end
+    -- }
     use {
         'nvim-lualine/lualine.nvim',
         requires = { 'nvim-tree/nvim-web-devicons', opt = true },
