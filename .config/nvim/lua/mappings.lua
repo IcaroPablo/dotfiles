@@ -239,7 +239,7 @@ end
 function mappings.setup_neotree()
     vim.keymap.set("n", "<leader>t", ":Neotree toggle<CR>", { noremap = true, silent = true })
     -- vim.keymap.set("n", "<C-f>", ":Neotree reveal<CR>", {noremap = true, silent = true})
-    vim.keymap.set("n", "<C-f>", function() require('lf_integration').reveal() end, {noremap = true, silent = true})
+    vim.keymap.set("n", "<C-f>", require('lf_integration').reveal, {noremap = true, silent = true})
 end
 
 function mappings.setup_telescope()

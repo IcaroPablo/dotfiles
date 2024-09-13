@@ -1,7 +1,7 @@
 local M = {}
 
 function M.reveal()
-    local current_dir = vim.fn.expand('%:p:h')
+    -- local current_dir = vim.fn.expand('%:p:h')
     local current_file = vim.fn.expand("%:t")
 
     local nvim_socket = "export NVIM_SOCKET=" .. vim.g.current_port .. " && "
@@ -10,6 +10,6 @@ function M.reveal()
     local full_command = terminal_command .. ' ' .. command .. ' 2>/dev/null 1>/dev/null &'
 
     os.execute(full_command)
-end 
+end
 
 return M

@@ -21,6 +21,9 @@
     default = current
 #    gpgSign = if-asked
 
+[core]
+    pager = bat
+
 [pull]
     rebase = true
 
@@ -136,6 +139,9 @@
 
     ## status (st*)
     st = status -sb
+    sp = --paginate status
+    us = restore --staged .
+    rp = restore -p
 
     ## misc
 
