@@ -460,21 +460,7 @@ return require('packer').startup(function(use)
     -- }
     use {
         'nvim-lualine/lualine.nvim',
-        requires = { 'nvim-tree/nvim-web-devicons', opt = true },
-        config = function ()
-            local custom_gruvbox = require('lualine.themes.gruvbox_dark')
-
-            custom_gruvbox.normal.a.gui = ''
-            custom_gruvbox.insert.a.gui = ''
-            custom_gruvbox.visual.a.gui = ''
-            custom_gruvbox.replace.a.gui = ''
-            custom_gruvbox.command.a.gui = ''
-            custom_gruvbox.inactive.a.gui = ''
-
-            require('lualine').setup({
-                options = { theme  = custom_gruvbox }
-            })
-        end
+        requires = { 'nvim-tree/nvim-web-devicons', opt = true }
     }
     use { -- improves telescope's performance
         'nvim-telescope/telescope-fzf-native.nvim',
