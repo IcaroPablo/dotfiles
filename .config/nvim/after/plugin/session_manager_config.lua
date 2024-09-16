@@ -1,12 +1,12 @@
 local Path = require('plenary.path')
 
-local path_replacer = '__'
-local colon_replacer = '++'
-
 local config = require('session_manager.config').defaults
 
 --- Replaces separators and colons into special symbols to transform session directory into a filename.
 config.dir_to_session_filename = function()
+    local path_replacer = '__'
+    local colon_replacer = '++'
+
     local dir = vim.fs.root(0, {".git", ".gitignore", "mvnw", "gradlew", "pom.xml"}) or vim.uv.cwd()
     local filename = dir:gsub(':', colon_replacer)
 
@@ -14,7 +14,6 @@ config.dir_to_session_filename = function()
 
     return Path:new(config.sessions_dir):joinpath(filename)
 end
-
 
 config.autoload_mode = require('session_manager.config').AutoloadMode.Disabled
 
