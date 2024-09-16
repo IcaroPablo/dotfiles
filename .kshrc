@@ -5,7 +5,7 @@
 # Setings
 
 set -o vi
-set -o vi-tabcomplete
+# set -o vi-tabcomplete
 ulimit -c 0
 
 # Variables
