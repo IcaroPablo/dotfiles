@@ -81,6 +81,7 @@
 
     ## add (a+)
     ap = add -p
+    au = add -u
     ai = add --interactive
 
     ## branch (bl*)
