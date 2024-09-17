@@ -1,4 +1,4 @@
 --decorations=always
 --color=always
---theme=gruvbox-dark
+--theme=base16
 --style=numbers
