@@ -105,6 +105,7 @@ function mappings.setup_basic_mappings()
     vim.keymap.set("n", "<C-s>", "\"1yiwciw<C-r>0<ESC>/<C-r>1<CR>", {silent = true})
     vim.keymap.set("n", "<Leader>jq", ":%!jq '.'<CR>", {silent = true})
 
+    vim.keymap.set("n", "<c-[>", "<esc>:nohlsearch<CR>", {silent = true})
     -- TODO: fazer autocommand para verificar bindings
 
 end
