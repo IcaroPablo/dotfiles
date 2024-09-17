@@ -6,9 +6,9 @@ local config = require('session_manager.config').defaults
 config.dir_to_session_filename = function()
     local path_replacer = '__'
     local colon_replacer = '++'
+    local root_folder = require('utils').get_root() or vim.uv.cwd()
 
-    local dir = vim.fs.root(0, {".git", ".gitignore", "mvnw", "gradlew", "pom.xml"}) or vim.uv.cwd()
-    local filename = dir:gsub(':', colon_replacer)
+    local filename = root_folder:gsub(':', colon_replacer)
 
     filename = filename:gsub(Path.path.sep, path_replacer)
 
@@ -32,3 +32,14 @@ require('session_manager').setup(config)
   -- autosave_only_in_session = false, -- Always autosaves session. If true, only autosaves after a session is active.
   -- max_path_length = 80,  -- Shorten the display path if length exceeds this threshold. Use 0 if don't want to shorten the path at all.
 -- })
+
+local config_group = vim.api.nvim_create_augroup('MyConfigGroup', {}) -- A global group for all your config autocommands
+
+-- move to root folder after loading a session
+vim.api.nvim_create_autocmd({ 'User' }, {
+    pattern = "SessionLoadPost",
+    group = config_group,
+    callback = function()
+        vim.cmd('cd ' .. require('utils').get_root() or vim.uv.cwd())
+    end
+})
