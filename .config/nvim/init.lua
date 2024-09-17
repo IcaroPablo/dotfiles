@@ -21,7 +21,7 @@ vim.opt.wrap = true                 -- prevent lines from wrapping
 vim.opt.smartcase = true            -- searches are case sensitive only if uppercase is used
 vim.opt.ignorecase = true           -- has to be set for smartcase to work properly
 
-vim.opt.hlsearch = false            -- remove highlights from search
+-- vim.opt.hlsearch = false            -- remove highlights from search
 vim.opt.incsearch = true            -- search results are showed in real time
 
 vim.opt.number = true               -- numbered lines
