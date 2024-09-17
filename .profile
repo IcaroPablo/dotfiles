@@ -28,6 +28,7 @@ export LC_TIME="pt_PT.UTF-8"
 export MANPAGER="nvim +Man!"
 export NVIM_TERM_CMD="st -e"
 export PAGER='bat'
+export PATH=$HOME/.cargo/bin:$PATH
 export PATH=$HOME/.local/bin:$PATH
 export PATH=$HOME/.local/lib/python3.10/site-packages:$PATH
 export PATH=$HOME/.local/scripts/:$PATH
