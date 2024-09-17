@@ -26,7 +26,7 @@ deps() {
 }
 
 del() {
-    doas pkg_delete "$1" && pkg_delete -a
+    doas pkg_delete "$1" && doas pkg_delete -a
 }
 
 # Aliases

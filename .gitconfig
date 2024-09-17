@@ -68,12 +68,6 @@
 [mergetool]
     prompt = false
 
-# [filter "lfs"]
-# 	clean = git-lfs clean -- %f
-# 	smudge = git-lfs smudge -- %f
-# 	process = git-lfs filter-process
-# 	required = true   us = restore --staged .
-
 [alias]
     ## am (a+)
     # aa = add .
@@ -250,3 +244,9 @@
                 echo \"updated\"; \
             }; \
         };f"
+
+# [filter "lfs"]
+# 	clean = git-lfs clean -- %f
+# 	smudge = git-lfs smudge -- %f
+# 	process = git-lfs filter-process
+# 	required = true   us = restore --staged .
