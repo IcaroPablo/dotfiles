@@ -436,6 +436,10 @@ return require('packer').startup(function(use)
         'nvim-lualine/lualine.nvim',
         requires = { 'nvim-tree/nvim-web-devicons', opt = true }
     }
+    -- use {
+    --     "nvim-telescope/telescope-frecency.nvim",
+    --     requires = { 'nvim-tree/nvim-web-devicons', opt = true }
+    -- }
     use {
         'nvim-telescope/telescope-fzf-native.nvim',
         -- run = 'cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build'
