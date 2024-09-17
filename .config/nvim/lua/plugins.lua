@@ -46,8 +46,6 @@ require('packer').init({
 })
 
 return require('packer').startup(function(use)
-    -- https://github.com/sindrets/diffview.nvim
-    -- magit
     -- tabnine
         -- https://github.com/tzachar/cmp-tabnine
         -- https://www.tabnine.com/install/neovim
@@ -59,31 +57,10 @@ return require('packer').startup(function(use)
             require('gitsigns').setup()
         end,
     })
-    --use({
-        --"sindrets/diffview.nvim",
-        --cmd = {
-            --"DiffviewOpen",
-            --"DiffviewFileHistory",
-        --},
-        --config = function()
-            --require("configs.diffview")
-        --end,
-    --})
     -- use 'nvim-telescope/telescope-file-browser.nvim' -- file browser for telescope
     -- use 'jose-elias-alvarez/null-ls.nvim'
     -- use 'windwp/nvim-autopairs'
     -- use 'norcalli/nvim-colorizer.lua'
-    -- use 'lewis6991/gitsigns.nvim'
-    -- use 'muniftanjim/nui.nvim'
-    --use({
-        --"NTBBloodbath/galaxyline.nvim",
-        --event = "VimEnter",
-        --branch = "main",
-        --wants = "nvim-web-devicons",
-        --config = function()
-            --require("configs.statusline")
-        --end,
-    --})
     ---- COLORIZER: add a colored background for color codes
     --use({
         --"norcalli/nvim-colorizer.lua",
@@ -123,17 +100,18 @@ return require('packer').startup(function(use)
             --require("twilight").setup()
         --end,
     --})
-    -- use({
-    --     'nvimdev/indentmini.nvim',
-    --     config = function()
-    --         require("indentmini").setup() -- use default config
-    --     end
-    -- })
     use {
         'sindrets/diffview.nvim',
         requires = {
             "kyazdani42/nvim-web-devicons",
         }
+        --cmd = {
+            --"DiffviewOpen",
+            --"DiffviewFileHistory",
+        --},
+        --config = function()
+            --require("configs.diffview")
+        --end,
     }
     use({ -- INDENT-BLANKLINE: display indent lines (even on blank lines)
         "lukas-reineke/indent-blankline.nvim",
@@ -232,7 +210,6 @@ return require('packer').startup(function(use)
     use 'l3mon4d3/luasnip'
     use 'saadparwaiz1/cmp_luasnip'
     use 'tpope/vim-commentary'
-    -- use 'yggdroot/indentline'
     use 'nvim-treesitter/nvim-treesitter'
     ---- TS-RAINBOW: treesitter rainbow parentheses
     --use({
@@ -386,9 +363,6 @@ return require('packer').startup(function(use)
             --require("cleanfold").setup()
         --end,
     --}) ]]
-    -- require('lualine').setup {
-    --   options = { theme = 'onedark' },
-    -- }
     use {
         'mfussenegger/nvim-jdtls',
         requires = {
@@ -462,13 +436,16 @@ return require('packer').startup(function(use)
         'nvim-lualine/lualine.nvim',
         requires = { 'nvim-tree/nvim-web-devicons', opt = true }
     }
-    use { -- improves telescope's performance
+    use {
         'nvim-telescope/telescope-fzf-native.nvim',
-        run = 'cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build'
+        -- run = 'cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build'
+        -- run = 'cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release'
+        run = "gmake",
     }
     use {
         'nvim-telescope/telescope.nvim',
-        tag = '0.1.x',
+        -- tag = '0.1.8',
+        branch = '0.1.x',
         requires = {
             -- consider installing ripgrep
             -- consider installing sharkdp/fd
