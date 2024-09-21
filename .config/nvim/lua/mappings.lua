@@ -73,17 +73,18 @@ function mappings.setup_basic_mappings()
     -- integrated terminal window
     -- TODO: abrir terminal na pasta atual
     -- vim.keymap.set("n", "tt", require('utils'), { noremap = true, silent = true })
-    vim.keymap.set("n", "TT", function() require('utils').open_terminal_in(nil) end, { noremap = true, silent = true })
+    vim.keymap.set("n", "TT", function() require('utils').open_terminal_in(vim.fn.expand('%:p:h')) end, { noremap = true, silent = true })
     vim.keymap.set("n", "tt", require('utils').open_terminal_in_project_root, { noremap = true, silent = true })
     -- vim.keymap.set("t", "<Esc><Esc>", "<C-\\><C-n>", { noremap = true, silent = true })
 
     -- center search results
-    vim.keymap.set("n", "n", "nzz", {noremap = true, silent = true})
-    vim.keymap.set("n", "N", "Nzz", {noremap = true, silent = true})
-    vim.keymap.set("n", "*", "*zz", { silent = true, noremap = true })
-    vim.keymap.set("n", "#", "#zz", { silent = true, noremap = true })
+    -- vim.keymap.set("n", "n", "nzz", {noremap = true, silent = true})
+    -- vim.keymap.set("n", "N", "Nzz", {noremap = true, silent = true})
+    -- vim.keymap.set("n", "*", "*zz", { silent = true, noremap = true })
+    -- vim.keymap.set("n", "#", "#zz", { silent = true, noremap = true })
     vim.keymap.set("n", "g*", "g*zz", { silent = true, noremap = true })
     vim.keymap.set("n", "g#", "g#zz", { silent = true, noremap = true })
+    vim.keymap.set("n", "<leader>w", "*N", { silent = true, noremap = true })
 
     -- quick and simple write
     vim.keymap.set("n", "<Leader><Leader>", ":write<CR>", {noremap = true, silent = true})
@@ -140,8 +141,8 @@ end
 function mappings.setup_nvim_lsp()
     -- Diagnostics
     vim.keymap.set("n", "<Leader>e", vim.diagnostic.open_float, {noremap = true, silent = true})
-    vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, {noremap = true, silent = true})
-    vim.keymap.set("n", "]d", vim.diagnostic.goto_next, {noremap = true, silent = true})
+    vim.keymap.set("n", "[d", function() vim.diagnostic.jump({count = -1}) end, {noremap = true, silent = true})
+    vim.keymap.set("n", "]d", function() vim.diagnostic.jump({count = 1}) end, {noremap = true, silent = true})
     -- vim.keymap.set("n", "<space>q", vim.diagnostic.setloclist, {noremap = true, silent = true})
     -- buf_set_keymap('n', '<leader>q', '<cmd>lua vim.lsp.diagnostic.set_loclist()<CR>', opts)
 end
@@ -196,13 +197,13 @@ function mappings.setup_nvim_dap(bufnr)
     -- vim.keymap.set("n", '<Leader>br', "<cmd>lua require'dap'.clear_breakpoints()<cr>", "Clear breakpoints")
     -- vim.keymap.set("n", '<Leader>ba', '<cmd>Telescope dap list_breakpoints<cr>', "List breakpoints")
 
-    -- vim.keymap.set("n", "<Leader>dc", "<cmd>lua require'dap'.continue()<cr>", "Continue")
+    vim.keymap.set("n", "<Leader>dc", "<cmd>lua require'dap'.continue()<cr>", bufopts)
     -- vim.keymap.set("n", "<Leader>dj", "<cmd>lua require'dap'.step_over()<cr>", "Step over")
     -- vim.keymap.set("n", "<Leader>dk", "<cmd>lua require'dap'.step_into()<cr>", "Step into")
     -- vim.keymap.set("n", "<Leader>do", "<cmd>lua require'dap'.step_out()<cr>", "Step out")
     -- vim.keymap.set("n", '<Leader>dd', "<cmd>lua require'dap'.disconnect()<cr>", "Disconnect")
-    -- vim.keymap.set("n", '<Leader>dt', "<cmd>lua require'dap'.terminate()<cr>", "Terminate")
-    -- vim.keymap.set("n", "<Leader>dr", "<cmd>lua require'dap'.repl.toggle()<cr>", "Open REPL")
+    vim.keymap.set("n", '<Leader>dt', "<cmd>lua require'dap'.terminate()<cr>", bufopts)
+    vim.keymap.set("n", "<Leader>dr", "<cmd>lua require'dap'.repl.toggle()<cr>", bufopts)
     -- vim.keymap.set("n", "<Leader>dl", "<cmd>lua require'dap'.run_last()<cr>", "Run last")
     -- vim.keymap.set("n", '<Leader>di', function() require"dap.ui.widgets".hover() end, "Variables")
     -- vim.keymap.set("n", '<Leader>d?', function() local widgets=require"dap.ui.widgets";widgets.centered_float(widgets.scopes) end, "Scopes")
