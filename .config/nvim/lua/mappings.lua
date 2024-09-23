@@ -70,6 +70,10 @@ function mappings.setup_basic_mappings()
     vim.keymap.set("n", "TT", function() require('utils').open_terminal_in(vim.fn.expand('%:p:h')) end, { noremap = true, silent = true })
     vim.keymap.set("n", "tt", require('utils').open_terminal_in_project_root, { noremap = true, silent = true })
 
+    -- navigate quickfixes
+    vim.keymap.set("n", "[q", ":cprev<CR>", { noremap = true, silent = true })
+    vim.keymap.set("n", "]q", ":cnext<CR>", { noremap = true, silent = true })
+
     -- center search results
     -- vim.keymap.set("n", "n", "nzz", {noremap = true, silent = true})
     -- vim.keymap.set("n", "N", "Nzz", {noremap = true, silent = true})
