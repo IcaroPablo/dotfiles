@@ -8,25 +8,21 @@
 
 local mappings = {}
 
+local nore_silent = { noremap = true, silent = true };
+
 ----------------------
 -- GENERAL MAPPINGS --
 ----------------------
 
 function mappings.setup_basic_mappings()
 
-    -- map("n", "[<space>", ":<c-u>put! =repeat(nr2char(10), v:count1)<CR>'[", { silent = true, noremap = true })
-    -- map("n", "]<space>", ":<c-u>put =repeat(nr2char(10), v:count1)<CR>", { silent = true, noremap = true })
-    -- map("n", "<leader>r", "<cmd>Registers<CR>", { silent = true, noremap = true })
-    -- map("n", "<C-P>", ":nohlsearch<CR>:diffupdate<CR>:syntax sync fromstart<CR><c-l>", { silent = true, noremap = true })
-    -- map("n", "<leader>w", ":call TrimWhiteSpace()<CR>", { silent = true, noremap = true })
-
     -- easily manage tabs
-    vim.keymap.set("n", "<leader>n", ":tabnew<CR>", { noremap = true, silent = true })
-    vim.keymap.set("n", "<Right>", ":tabnext<CR>", { noremap = true, silent = true })
-    vim.keymap.set("n", "<Left>", ":tabprev<CR>", { noremap = true, silent = true })
-    vim.keymap.set("n", "<leader>bt", ":tab sball<CR>", { noremap = true, silent = true })
-    vim.keymap.set("n", "<leader>c", ":tabclose<CR>", { noremap = true, silent = true })
-    vim.keymap.set("n", "<leader>C", ":tabonly<CR>", { noremap = true, silent = true })
+    vim.keymap.set("n", "<leader>n", ":tabnew<CR>", nore_silent)
+    vim.keymap.set("n", "<Right>", ":tabnext<CR>", nore_silent)
+    vim.keymap.set("n", "<Left>", ":tabprev<CR>", nore_silent)
+    vim.keymap.set("n", "<leader>bt", ":tab sball<CR>", nore_silent)
+    vim.keymap.set("n", "<leader>c", ":tabclose<CR>", nore_silent)
+    vim.keymap.set("n", "<leader>C", ":tabonly<CR>", nore_silent)
 
     -- easily manage buffers
     vim.keymap.set("n", "<Tab>", ":bnext<CR>:redraw<CR>", { noremap = true, silent = true })
@@ -70,44 +66,32 @@ function mappings.setup_basic_mappings()
     vim.keymap.set("v", "<A-j>", ":m '>+1<CR>gv=gv", { noremap = true, silent = true })
     vim.keymap.set("v", "<A-k>", ":m '<-2<CR>gv=gv", { noremap = true, silent = true })
 
-    -- integrated terminal window
-    -- TODO: abrir terminal na pasta atual
-    -- vim.keymap.set("n", "tt", require('utils'), { noremap = true, silent = true })
+    -- terminal window
     vim.keymap.set("n", "TT", function() require('utils').open_terminal_in(vim.fn.expand('%:p:h')) end, { noremap = true, silent = true })
     vim.keymap.set("n", "tt", require('utils').open_terminal_in_project_root, { noremap = true, silent = true })
-    -- vim.keymap.set("t", "<Esc><Esc>", "<C-\\><C-n>", { noremap = true, silent = true })
 
     -- center search results
     -- vim.keymap.set("n", "n", "nzz", {noremap = true, silent = true})
     -- vim.keymap.set("n", "N", "Nzz", {noremap = true, silent = true})
     -- vim.keymap.set("n", "*", "*zz", { silent = true, noremap = true })
     -- vim.keymap.set("n", "#", "#zz", { silent = true, noremap = true })
-    vim.keymap.set("n", "g*", "g*zz", { silent = true, noremap = true })
-    vim.keymap.set("n", "g#", "g#zz", { silent = true, noremap = true })
+    -- vim.keymap.set("n", "g*", "g*zz", { silent = true, noremap = true })
+    -- vim.keymap.set("n", "g#", "g#zz", { silent = true, noremap = true })
     vim.keymap.set("n", "<leader>w", "*N", { silent = true, noremap = true })
-
-    -- quick and simple write
-    vim.keymap.set("n", "<Leader><Leader>", ":write<CR>", {noremap = true, silent = true})
-
-    -- insert empty lines
-    vim.keymap.set("n", "<Leader>o", "o<Esc>k", {noremap = true, silent = true})
-    vim.keymap.set("n", "<Leader>O", "O<Esc>j", {noremap = true, silent = true})
 
     -- deactivate space because of annoying behaviour since its my leader key :)
     vim.keymap.set("n", "<Space>", "<Nop>", { noremap = true, silent = true})
-    -- map("n", "Q", "", { silent = true, noremap = true })
-    -- map("n", "gQ", "", { silent = true, noremap = true })
-
-    vim.keymap.set("v", "<", "<gv", { silent = true, noremap = true })
-    vim.keymap.set("v", ">", ">gv", { silent = true, noremap = true })
 
     -- word substitution
     -- vim.keymap.set("n", "<C-j>", "ciw<C-r>0<ESC>", {silent = true})
     vim.keymap.set("n", "<C-s>", "\"1yiwciw<C-r>0<ESC>/<C-r>1<CR>", {silent = true})
     vim.keymap.set("n", "<Leader>jq", ":%!jq '.'<CR>", {silent = true})
 
+    -- other niceties
+    vim.keymap.set("v", "<", "<gv", { silent = true, noremap = true })
+    vim.keymap.set("v", ">", ">gv", { silent = true, noremap = true })
+    vim.keymap.set("n", "<Leader><Leader>", ":write<CR>", {noremap = true, silent = true})
     vim.keymap.set("n", "<c-[>", "<esc>:nohlsearch<CR>", {silent = true})
-    -- TODO: fazer autocommand para verificar bindings
 
 end
 
@@ -117,9 +101,6 @@ end
 
 -- map("n", "<leader>gl", "<cmd>Gitsigns toggle_signs<CR>", { silent = true, noremap = true })
 -- map("n", "<leader>gh", "<cmd>Gitsigns preview_hunk<CR>", { silent = true, noremap = true })
--- map("n", "]p", "<cmd>Gitsigns next_hunk<CR>", { silent = true, noremap = true })
--- map("n", "[p", "<cmd>Gitsigns prev_hunk<CR>", { silent = true, noremap = true })
-
 -- map("n", "<leader>o", "<cmd>SymbolsOutline<CR>", { silent = true, noremap = true })
 
 -- map("n", "<leader>z", "<cmd>ZenMode<CR>", { silent = true, noremap = true })
@@ -138,18 +119,14 @@ end
 -- map("n", "<leader>dc", "<cmd>DiffviewClose<CR>", { silent = true, noremap = true })
 -- map("n", "<leader>df", "<cmd>DiffviewFileHistory<CR>", { silent = true, noremap = true })
 
-function mappings.setup_nvim_lsp()
-    -- Diagnostics
-    vim.keymap.set("n", "<Leader>e", vim.diagnostic.open_float, {noremap = true, silent = true})
-    vim.keymap.set("n", "[d", function() vim.diagnostic.jump({count = -1}) end, {noremap = true, silent = true})
-    vim.keymap.set("n", "]d", function() vim.diagnostic.jump({count = 1}) end, {noremap = true, silent = true})
-    -- vim.keymap.set("n", "<space>q", vim.diagnostic.setloclist, {noremap = true, silent = true})
-    -- buf_set_keymap('n', '<leader>q', '<cmd>lua vim.lsp.diagnostic.set_loclist()<CR>', opts)
-end
-
 function mappings.setup_nvim_lsp_on_attach(bufnr)
     -- Enable completion triggered by <c-x><c-o>
     -- vim.api.nvim_buf_set_option(bufnr, "omnifunc", "v:lua.vim.lsp.omnifunc")
+
+    -- diagnostics
+    vim.keymap.set("n", "<Leader>e", vim.diagnostic.open_float, nore_silent)
+    vim.keymap.set("n", "[d", function() vim.diagnostic.jump({count = -1}) end, nore_silent)
+    vim.keymap.set("n", "]d", function() vim.diagnostic.jump({count = 1}) end, nore_silent)
 
     local bufopts = { noremap = true, silent = true, buffer = bufnr }
 
@@ -161,12 +138,10 @@ function mappings.setup_nvim_lsp_on_attach(bufnr)
     vim.keymap.set("n", "<Leader>wa", vim.lsp.buf.add_workspace_folder, bufopts)
     vim.keymap.set("n", "<Leader>wr", vim.lsp.buf.remove_workspace_folder, bufopts)
     vim.keymap.set("n", "<Leader>wl", function() print(vim.inspect(vim.lsp.buf.list_workspace_folders())) end, bufopts)
-    vim.keymap.set("n", "<Leader>D", vim.lsp.buf.type_definition, bufopts)
     vim.keymap.set("n", "<Leader>rn", vim.lsp.buf.rename, bufopts)
     vim.keymap.set({"n", 'v'}, "<Leader>ca", vim.lsp.buf.code_action, bufopts)
     vim.keymap.set("n", "gr", vim.lsp.buf.references, bufopts)
     vim.keymap.set('n', 'gt', vim.lsp.buf.type_definition, bufopts)
-    -- vim.keymap.set("n", "<Leader>cf", vim.lsp.buf.format, bufopts)
     vim.keymap.set("n", "<Leader>cf", function() vim.lsp.buf.format({async = true}) end, bufopts)
 end
 
@@ -180,17 +155,18 @@ function mappings.setup_jdtls(bufnr)
     vim.keymap.set('v', '<Leader>jec', function() require('jdtls').extract_constant({true, 'constant'}) end, bufopts)
     vim.keymap.set("v", "<leader>jem", function() require('jdtls').extract_method({true, function() return 'extracted' end}) end, bufopts)
 
+    -- for tests (ver quais outras funções estão disponíveis também)
+    vim.keymap.set("n", "<leader>jtc", require('jdtls').test_class, bufopts)
+    vim.keymap.set("n", "<leader>jtm", require('jdtls').test_nearest_method, bufopts)
+    -- require("jdtls.tests").generate()
+    -- require("jdtls.tests").goto_subjects()
+
 end
 
 function mappings.setup_nvim_dap(bufnr)
 
     local bufopts = { noremap = true, silent = true, buffer = bufnr }
 
-    -- for tests (ver quais outras funções estão disponíveis também)
-    -- require("jdtls.tests").generate()
-    -- require("jdtls.tests").goto_subjects()
-    vim.keymap.set("n", "<leader>jtc", require('jdtls').test_class, bufopts)
-    vim.keymap.set("n", "<leader>jtm", require('jdtls').test_nearest_method, bufopts)
     vim.keymap.set("n", "<Leader>jtb", "<cmd>lua require'dap'.toggle_breakpoint()<cr>", bufopts)
     vim.keymap.set("n", "<Leader>jsb", "<cmd>lua require'dap'.set_breakpoint(vim.fn.input('Breakpoint condition: '))<cr>", bufopts)
     -- vim.keymap.set("n", "<Leader>bl", "<cmd>lua require'dap'.set_breakpoint(nil, nil, vim.fn.input('Log point message: '))<cr>", "Set log point")
@@ -232,15 +208,8 @@ function mappings.setup_nvim_dap(bufnr)
 
 end
 
-function mappings.setup_vim_commentary()
-    vim.keymap.set("n", "<Leader>p", "gcc", { noremap = true, silent = true })
-    vim.keymap.set("v", "<Leader>p", "gc", { noremap = true, silent = true })
-end
-
-
 function mappings.setup_neotree()
-    vim.keymap.set("n", "<leader>t", ":Neotree toggle<CR>", { noremap = true, silent = true })
-    -- vim.keymap.set("n", "<C-f>", ":Neotree reveal<CR>", {noremap = true, silent = true})
+    vim.keymap.set("n", "<leader>t", ":Neotree reveal<CR>", { noremap = true, silent = true })
     vim.keymap.set("n", "<C-f>", require('lf_integration').reveal, {noremap = true, silent = true})
 end
 
@@ -250,12 +219,11 @@ function mappings.setup_telescope()
     -- map("n", "<leader>gb", "<cmd>Telescope git_bcommits<CR>", { silent = true, noremap = true })
     -- map("n", "<leader>gc", "<cmd>Telescope git_commits<CR>", { silent = true, noremap = true })
     vim.keymap.set("n", "<leader><Tab>", require('telescope.builtin').buffers, { noremap = true, silent = true })
-    vim.keymap.set('n', '<leader>f', function() require('telescope.builtin').find_files({hidden = true, cwd = vim.fs.root(0, {".git", "mvnw", "gradlew", "pom.xml"})}) end, { noremap = true, silent = true })
-    vim.keymap.set('n', '<leader>g', function() require('telescope.builtin').live_grep({hidden = true, cwd = vim.fs.root(0, {".git", "mvnw", "gradlew", "pom.xml"})}) end, { noremap = true, silent = true })
+    vim.keymap.set('n', '<leader>ff', function() require('telescope.builtin').find_files({hidden = true, cwd = vim.fs.root(0, {".git", "mvnw", "gradlew", "pom.xml"})}) end, { noremap = true, silent = true })
+    vim.keymap.set('n', '<leader>gf', function() require('telescope.builtin').git_files({hidden = true, cwd = vim.fs.root(0, {".git", "mvnw", "gradlew", "pom.xml"})}) end, { noremap = true, silent = true })
+    vim.keymap.set('n', '<leader>lg', function() require('telescope.builtin').live_grep({hidden = true, cwd = vim.fs.root(0, {".git", "mvnw", "gradlew", "pom.xml"})}) end, { noremap = true, silent = true })
     vim.keymap.set('n', '<leader>d', function() require('telescope.builtin').diagnostics({ severity_bound = 0 }) end, { noremap = true, silent = true })
-    -- nnoremap("<leader>ff", "<cmd>Telescope find_files<cr>", "Find file")
-    -- nnoremap("<leader>fg", "<cmd>Telescope live_grep<cr>", "Grep")
-    -- nnoremap("<leader>fb", "<cmd>Telescope buffers<cr>", "Find buffer")
+    vim.keymap.set("n", "<leader>gs", function() require('telescope.builtin').grep_string({ search = vim.fn.input('Grep For > ')}) end, {noremap = true, silent = true})
     -- nnoremap("<leader>fm", "<cmd>Telescope marks<cr>", "Find mark")
     -- nnoremap("<leader>fr", "<cmd>Telescope lsp_references<cr>", "Find references (LSP)")
     -- nnoremap("<leader>fs", "<cmd>Telescope lsp_document_symbols<cr>", "Find symbols (LSP)")
@@ -263,7 +231,6 @@ function mappings.setup_telescope()
     -- nnoremap("<leader>fo", "<cmd>Telescope lsp_outgoing_calls<cr>", "Find outgoing calls (LSP)")
     -- nnoremap("<leader>fi", "<cmd>Telescope lsp_implementations<cr>", "Find implementations (LSP)")
     -- nnoremap("<leader>fx", "<cmd>Telescope diagnostics bufnr=0<cr>", "Find errors (LSP)")
-    -- vim.keymap.set("n", "<leader>s", require('telescope.builtin').grep_string({ search = vim.fn.input('Grep For > ')}), {noremap = true, silent = true})
     -- map("n", "<leader>h", "<cmd>Telescope oldfiles<CR>", { silent = true, noremap = true })
     -- map("n", "<leader>j", "<cmd>Telescope resume<CR>", { silent = true, noremap = true })
     -- map("n", "<leader>k", "<cmd>Telescope zoxide list<CR>", { silent = true, noremap = true })
@@ -272,8 +239,6 @@ function mappings.setup_telescope()
     -- map("n", "<leader>qc", "<cmd>Telescope lsp_code_actions<CR>", { silent = true, noremap = true })
     -- map("n", "<leader>sf", "<cmd>Telescope spell_suggests<CR>", { silent = true, noremap = true })
     -- map("n", "<leader>t", ":lua require('telescope').extensions.dict.synonyms()<CR>", { silent = true, noremap = true })
-    -- map("n", "<leader>y", "<cmd>Telescope file_browser<CR>", { silent = true, noremap = true })
-    -- map("n", "<leader>/", "<cmd>Telescope live_grep<CR>", { silent = true, noremap = true })
     -- map("n", "<leader>;", "<cmd>Telescope keymaps<CR>", { silent = true, noremap = true })
 end
 
