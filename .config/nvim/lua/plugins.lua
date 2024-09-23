@@ -41,7 +41,7 @@ require('packer').init({
         compact = true,                             -- if true, fold updates results by default
         open_fn  = require('packer.util').float,    -- an optional function to open a window for packer's display
         show_all_info = true,                       -- should packer show all update details automatically?
-        prompt_border = 'double'                    -- border style of prompt popups.
+        -- prompt_border = 'double'                    -- border style of prompt popups.
     }
 })
 
@@ -51,11 +51,9 @@ return require('packer').startup(function(use)
         -- https://www.tabnine.com/install/neovim
     use({
         "lewis6991/gitsigns.nvim",
-        event = "BufRead",
+        -- event = "BufRead",
         requires = { "nvim-lua/plenary.nvim" },
-        config = function()
-            require('gitsigns').setup()
-        end,
+        -- config = require('gitsigns').setup
     })
     -- use 'nvim-telescope/telescope-file-browser.nvim' -- file browser for telescope
     -- use 'jose-elias-alvarez/null-ls.nvim'
@@ -374,13 +372,6 @@ return require('packer').startup(function(use)
         requires = {
             'nvim-telescope/telescope-ui-select.nvim',
             'nvim-lua/plenary.nvim'
-        }
-    }
-    use {
-        'lewis6991/impatient.nvim',
-        --rocks = "mpack",
-        requires = {
-            "nvim-lua/plenary.nvim"
         }
     }
     use {
