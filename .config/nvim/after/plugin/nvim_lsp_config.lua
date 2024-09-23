@@ -1,5 +1,3 @@
--- verificar se essa merda ta instalada
-
 local lspconfig = require("lspconfig")
 local caps = vim.lsp.protocol.make_client_capabilities()
 

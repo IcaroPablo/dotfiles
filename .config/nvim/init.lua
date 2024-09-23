@@ -406,8 +406,8 @@ vim.cmd([[
 local status_ok, impatient = pcall(require, "impatient")
 if not status_ok then
     print("impatient-nvim not installed yet, it will work from the next neovim start")
--- else 
---     require('impatient')
+else 
+    require('impatient')
 end
 
 vim.api.nvim_create_user_command('SetDotfilesGitVars', function()
@@ -418,6 +418,16 @@ end, {})
 vim.api.nvim_create_user_command('DisableLSPColors', function()
     for _, group in ipairs(vim.fn.getcompletion("@lsp", "highlight")) do
       vim.api.nvim_set_hl(0, group, {})
+    end
+end, {})
+
+vim.api.nvim_create_user_command('Dig', function()
+    local root_dir = require('utils').get_root()
+
+    if(root_dir ~= nil) then
+        vim.cmd('cd ' .. root_dir)
+    else
+        print('root not found')
     end
 end, {})
 
