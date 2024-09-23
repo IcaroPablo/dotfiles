@@ -48,6 +48,7 @@ vim.opt.mouse = "a"                 -- pretend you didn't see this shit here
 -- vim.opt.shadafile = "NONE"
 
 vim.g.mapleader = ' '
+-- vim.loader.enable()
 
 -- local set = vim.opt
 -- set.background = "light"
@@ -402,13 +403,6 @@ vim.cmd([[
 vim.cmd([[
     autocmd FileType man colorscheme gruvbox
 ]])
-
-local status_ok, impatient = pcall(require, "impatient")
-if not status_ok then
-    print("impatient-nvim not installed yet, it will work from the next neovim start")
-else 
-    require('impatient')
-end
 
 vim.api.nvim_create_user_command('SetDotfilesGitVars', function()
     vim.env.GIT_WORK_TREE = vim.fn.expand("~")
