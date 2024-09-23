@@ -158,13 +158,7 @@ return require('packer').startup(function(use)
         --"junegunn/vim-easy-align",
         --keys = "<Plug>(EasyAlign)",
     --})
-    --use({
-        --"mbbill/undotree",
-        --cmd = "UndotreeToggle",
-        --config = function()
-            --require("configs.undotree")
-        --end,
-    --})
+    use { "mbbill/undotree" }
     --use({
         --"ur4ltz/surround.nvim",
         --event = "BufEnter",
@@ -210,7 +204,6 @@ return require('packer').startup(function(use)
     use 'l3mon4d3/luasnip'
     use 'saadparwaiz1/cmp_luasnip'
     use 'tpope/vim-commentary'
-    use 'nvim-treesitter/nvim-treesitter'
     ---- TS-RAINBOW: treesitter rainbow parentheses
     --use({
         --"p00f/nvim-ts-rainbow",
@@ -222,13 +215,13 @@ return require('packer').startup(function(use)
         --"nvim-treesitter/playground",
         --cmd = { "TSPlaygroundToggle" },
     --})
-    --use({
-        --"nvim-treesitter/nvim-treesitter",
-        --run = ":TSUpdate",
-        --config = function()
-            --require("configs.treesitter")
-        --end,
-    --})
+    use({
+        "nvim-treesitter/nvim-treesitter",
+        run = ":TSUpdate"
+        -- config = function()
+        --     require("configs.treesitter")
+        -- end,
+    })
     use 'neovim/nvim-lspconfig'
     --use({
         --"neovim/nvim-lspconfig",
