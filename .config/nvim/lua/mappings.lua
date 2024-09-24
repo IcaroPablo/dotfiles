@@ -71,8 +71,8 @@ function mappings.setup_basic_mappings()
     vim.keymap.set("n", "tt", require('utils').open_terminal_in_project_root, { noremap = true, silent = true })
 
     -- navigate quickfixes
-    vim.keymap.set("n", "[q", ":cprev<CR>", { noremap = true, silent = true })
-    vim.keymap.set("n", "]q", ":cnext<CR>", { noremap = true, silent = true })
+    vim.keymap.set("n", "<c-p>", ":cprev<CR>zz", { noremap = true, silent = true })
+    vim.keymap.set("n", "<c-n>", ":cnext<CR>zz", { noremap = true, silent = true })
 
     -- center search results
     -- vim.keymap.set("n", "n", "nzz", {noremap = true, silent = true})
@@ -213,7 +213,6 @@ function mappings.setup_nvim_dap(bufnr)
 end
 
 function mappings.setup_neotree()
-    vim.keymap.set("n", "<leader>t", ":Neotree reveal<CR>", { noremap = true, silent = true })
     vim.keymap.set("n", "<C-f>", require('lf_integration').reveal, {noremap = true, silent = true})
 end
 
@@ -227,7 +226,6 @@ function mappings.setup_telescope()
     vim.keymap.set('n', '<leader>gf', function() require('telescope.builtin').git_files({hidden = true, cwd = vim.fs.root(0, {".git", "mvnw", "gradlew", "pom.xml"})}) end, { noremap = true, silent = true })
     vim.keymap.set('n', '<leader>lg', function() require('telescope.builtin').live_grep({hidden = true, cwd = vim.fs.root(0, {".git", "mvnw", "gradlew", "pom.xml"})}) end, { noremap = true, silent = true })
     vim.keymap.set('n', '<leader>d', function() require('telescope.builtin').diagnostics({ severity_bound = 0 }) end, { noremap = true, silent = true })
-    vim.keymap.set("n", "<leader>gs", function() require('telescope.builtin').grep_string({ search = vim.fn.input('Grep For > ')}) end, {noremap = true, silent = true})
     -- nnoremap("<leader>fm", "<cmd>Telescope marks<cr>", "Find mark")
     -- nnoremap("<leader>fr", "<cmd>Telescope lsp_references<cr>", "Find references (LSP)")
     -- nnoremap("<leader>fs", "<cmd>Telescope lsp_document_symbols<cr>", "Find symbols (LSP)")
