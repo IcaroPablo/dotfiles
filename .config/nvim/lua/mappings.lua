@@ -66,9 +66,10 @@ function mappings.setup_basic_mappings()
     vim.keymap.set("v", "<A-j>", ":m '>+1<CR>gv=gv", { noremap = true, silent = true })
     vim.keymap.set("v", "<A-k>", ":m '<-2<CR>gv=gv", { noremap = true, silent = true })
 
-    -- terminal window
+    -- utils
     vim.keymap.set("n", "TT", function() require('utils').open_terminal_in(vim.fn.expand('%:p:h')) end, { noremap = true, silent = true })
     vim.keymap.set("n", "tt", require('utils').open_terminal_in_project_root, { noremap = true, silent = true })
+    vim.keymap.set("n", "<C-f>", require('lf_integration').reveal, {noremap = true, silent = true})
 
     -- navigate quickfixes
     vim.keymap.set("n", "<c-p>", ":cprev<CR>zz", { noremap = true, silent = true })
@@ -77,11 +78,14 @@ function mappings.setup_basic_mappings()
     -- center search results
     -- vim.keymap.set("n", "n", "nzz", {noremap = true, silent = true})
     -- vim.keymap.set("n", "N", "Nzz", {noremap = true, silent = true})
-    -- vim.keymap.set("n", "*", "*zz", { silent = true, noremap = true })
+    vim.keymap.set("n", "<C-d>", "<C-d>zz")
+    vim.keymap.set("n", "<C-u>", "<C-u>zz")
     -- vim.keymap.set("n", "#", "#zz", { silent = true, noremap = true })
     -- vim.keymap.set("n", "g*", "g*zz", { silent = true, noremap = true })
     -- vim.keymap.set("n", "g#", "g#zz", { silent = true, noremap = true })
     vim.keymap.set("n", "<leader>w", "*N", { silent = true, noremap = true })
+    vim.keymap.set("x", "<leader>p", [["_dP]])
+    vim.keymap.set("n", "<leader>ra", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 
     -- deactivate space because of annoying behaviour since its my leader key :)
     vim.keymap.set("n", "<Space>", "<Nop>", { noremap = true, silent = true})
@@ -210,10 +214,6 @@ function mappings.setup_nvim_dap(bufnr)
     -- 	{ silent = true, noremap = true }
     -- )
 
-end
-
-function mappings.setup_neotree()
-    vim.keymap.set("n", "<C-f>", require('lf_integration').reveal, {noremap = true, silent = true})
 end
 
 function mappings.setup_telescope()
