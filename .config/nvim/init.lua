@@ -11,7 +11,6 @@ vim.opt.laststatus = 2              -- last window will always have a status lin
 vim.opt.showmode = false            -- the status bar already shows the current mode
 vim.opt.showcmd = false             -- don't really remember :)
 
-vim.opt.expandtab = true            -- uses tabs instead of spaces
 vim.opt.autoindent = true           -- self-describing
 vim.opt.smartindent = true          -- inserts an automatic indent after common C-like expressions or keywords
 
@@ -28,6 +27,7 @@ vim.opt.number = true               -- numbered lines
 vim.opt.relativenumber = true       -- numbered lines are now relative to the current line
 vim.opt.cursorline = true           -- display the current line
 
+vim.opt.expandtab = true            -- uses tabs instead of spaces
 vim.opt.tabstop = 4
 vim.opt.softtabstop = 4
 vim.opt.shiftwidth = 4
@@ -37,6 +37,7 @@ vim.opt.splitright = true           -- vertical split goes right of the current 
 
 vim.opt.termguicolors = true        -- uses true color
 vim.opt.swapfile = false            -- self-describing
+-- vim.opt.updatetime = 50
 -- vim.opt.shadafile = "NONE"
 vim.opt.scrolloff = 10              -- offvim.opt.for scrolling
 -- vim.opt.path += **                  -- useful for :find
