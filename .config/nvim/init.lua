@@ -41,23 +41,19 @@ vim.opt.swapfile = false            -- self-describing
 -- vim.opt.shadafile = "NONE"
 vim.opt.scrolloff = 10              -- offvim.opt.for scrolling
 -- vim.opt.path += **                  -- useful for :find
-vim.opt.history = 1000              -- sometimes i wanna undo many steps
-vim.opt.wildmenu = true             -- useful for autocompletion
--- vim.opt.clipboard = vim.opt.clipboard + "unnamedplus"   -- uses the + register (aka the system clipboard) as vim clipboard 
-vim.cmd [[set clipboard+=unnamedplus]]
-vim.cmd [[set t_md=]]
-vim.opt.mouse = "a"                 -- pretend you didn't see this shit here
-vim.g.mapleader = ' '
--- vim.loader.enable()
 
--- This allows you to undo changes to a file even after saving it.
-vim.cmd([[
-    if version >= 703
-        set undodir=~/.vim/backup
-        set undofile
-        set undoreload=10000
-    endif
-]])
+vim.opt.history = 1000
+vim.opt.undodir = vim.fn.expand('~/.vim/backup')
+vim.opt.undofile = true
+vim.opt.undoreload = 10000
+
+vim.opt.wildmenu = true             -- useful for autocompletion
+vim.opt.clipboard = "unnamedplus"   -- uses the + register (aka the system clipboard) as vim clipboard 
+vim.opt.mouse = "a"                 -- pretend you didn't see this shit here
+
+vim.g.mapleader = ' '
+
+-- vim.loader.enable()
 
 -- Displays cursorline ONLY in active window.
 vim.cmd([[
