@@ -25,6 +25,6 @@ vim.api.nvim_create_autocmd({ 'User' }, {
     pattern = "SessionLoadPost",
     group = config_group,
     callback = function()
-        vim.cmd('cd ' .. require('utils').get_root() or vim.uv.cwd())
+        vim.cmd('cd ' .. (require('utils').get_root() or vim.uv.cwd()))
     end
 })
