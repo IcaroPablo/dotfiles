@@ -78,7 +78,8 @@ vim.cmd ([[
             close
             return
         endif
-            bp | sp | bn | bd!
+            "bp | sp | bn | bd!
+            bd
     endfunction
 ]])
 
