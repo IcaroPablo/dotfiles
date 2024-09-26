@@ -82,9 +82,12 @@ lspconfig.lua_ls.setup({
 ---------------------------------
 vim.diagnostic.config({
     float = {
-        source = "always",
-        border = border
+        -- source = "always",
+        -- source = "if_many",
+        source = true,
+        -- border = border
     },
+	underline = false,
     virtual_text = false,
     signs = true,
 })
