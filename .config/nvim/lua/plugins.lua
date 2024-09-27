@@ -47,9 +47,13 @@ require('packer').init({
 
 return require('packer').startup(function(use)
     use 'wbthomason/packer.nvim'
+    use {
+        'smoka7/hop.nvim',
+        tag = '*', -- optional but strongly recommended
+    }
     use({
         "lewis6991/gitsigns.nvim",
-        event = "BufRead",
+        -- event = "BufRead",
         requires = { "nvim-lua/plenary.nvim" },
         config = function()
             require('gitsigns').setup({
@@ -153,7 +157,7 @@ return require('packer').startup(function(use)
             --vim.cmd('let g:UltiSnipsSnippetDirectories=[$HOME."/.config/nvim/ultisnips"]')
         --end,
     --})
-    use 'nvim-treesitter/nvim-treesitter-context'
+    -- use 'nvim-treesitter/nvim-treesitter-context'
     use({
         "nvim-treesitter/nvim-treesitter",
         run = ":TSUpdate"

@@ -18,7 +18,7 @@ ulimit -c 0
 
 simplegrep() {
     # rg -n --hidden "$1" ./* || grep -nRI "$1" ./*
-    grep -nRI "$1" ./*
+    grep -nRIi "$1" ./*
 }
 
 deps() {
