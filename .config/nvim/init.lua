@@ -118,14 +118,6 @@ end, {})
 
 require('plugins')
 
--- easily manage tabs
-vim.keymap.set("n", "<leader>n", ":tabnew<CR>", nore_silent)
-vim.keymap.set("n", "<Right>", ":tabnext<CR>", nore_silent)
-vim.keymap.set("n", "<Left>", ":tabprev<CR>", nore_silent)
-vim.keymap.set("n", "<leader>bt", ":tab sball<CR>", nore_silent)
-vim.keymap.set("n", "<leader>c", ":tabclose<CR>", nore_silent)
-vim.keymap.set("n", "<leader>C", ":tabonly<CR>", nore_silent)
-
 -- easily manage buffers
 vim.keymap.set("n", "<Tab>", ":bnext<CR>:redraw<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<S-Tab>", ":bprevious<CR>:redraw<CR>", { noremap = true, silent = true })
@@ -156,9 +148,6 @@ vim.keymap.set("", "<c-up>", "<c-w>+", { noremap = true, silent = true })
 vim.keymap.set("", "<c-down>", "<c-w>-", { noremap = true, silent = true })
 vim.keymap.set("", "<c-left>", "<c-w>>", { noremap = true, silent = true })
 vim.keymap.set("", "<c-right>", "<c-w><", { noremap = true, silent = true })
-
-vim.keymap.set("", "<Leader>v", "<c-w>v", { noremap = true, silent = true })
-vim.keymap.set("", "<Leader>s", "<c-w>s", { noremap = true, silent = true })
 
 -- move lines up and down using alt key
 vim.keymap.set("n", "<A-j>", ":m .+1<CR>==", { noremap = true, silent = true })
