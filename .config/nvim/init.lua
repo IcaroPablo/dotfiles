@@ -53,7 +53,9 @@ vim.opt.mouse = "a"                 -- pretend you didn't see this shit here
 
 vim.g.mapleader = ' '
 
--- vim.loader.enable()
+if (not vim.loader.enabled) then
+    vim.loader.enable()
+end
 
 -- Displays cursorline ONLY in active window.
 vim.cmd([[
@@ -115,4 +117,88 @@ vim.api.nvim_create_user_command('Dig', function()
 end, {})
 
 require('plugins')
-require('mappings').setup_basic_mappings()
+
+-- easily manage tabs
+vim.keymap.set("n", "<leader>n", ":tabnew<CR>", nore_silent)
+vim.keymap.set("n", "<Right>", ":tabnext<CR>", nore_silent)
+vim.keymap.set("n", "<Left>", ":tabprev<CR>", nore_silent)
+vim.keymap.set("n", "<leader>bt", ":tab sball<CR>", nore_silent)
+vim.keymap.set("n", "<leader>c", ":tabclose<CR>", nore_silent)
+vim.keymap.set("n", "<leader>C", ":tabonly<CR>", nore_silent)
+
+-- easily manage buffers
+vim.keymap.set("n", "<Tab>", ":bnext<CR>:redraw<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<S-Tab>", ":bprevious<CR>:redraw<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>q", ":call EasyClose()<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>Q", ":quit!<CR>", { noremap = true, silent = true })
+-- map("n", "<A-<>", "<cmd>BufferMovePrevious<CR>", { silent = true, noremap = true })
+-- map("n", "<A->>", "<cmd>BufferMoveNext<CR>", { silent = true, noremap = true })
+-- map("n", "<A-1>", "<cmd>BufferGoto 1<CR>", { silent = true, noremap = true })
+-- map("n", "<A-2>", "<cmd>BufferGoto 2<CR>", { silent = true, noremap = true })
+-- map("n", "<A-3>", "<cmd>BufferGoto 3<CR>", { silent = true, noremap = true })
+-- map("n", "<A-4>", "<cmd>BufferGoto 4<CR>", { silent = true, noremap = true })
+-- map("n", "<A-5>", "<cmd>BufferGoto 5<CR>", { silent = true, noremap = true })
+-- map("n", "<A-6>", "<cmd>BufferGoto 6<CR>", { silent = true, noremap = true })
+-- map("n", "<A-7>", "<cmd>BufferGoto 7<CR>", { silent = true, noremap = true })
+-- map("n", "<A-8>", "<cmd>BufferGoto 8<CR>", { silent = true, noremap = true })
+-- map("n", "<A-9>", "<cmd>BufferLast<CR>", { silent = true, noremap = true })
+-- map("n", "<A-t>", "<cmd>BufferPin<CR>", { silent = true, noremap = true })
+-- map("n", "<A-c>", "<cmd>BufferClose<CR>", { silent = true, noremap = true })
+-- map("n", "<A-u>", "<cmd>BufferPick<CR>", { silent = true, noremap = true })
+
+-- easily manage windows
+vim.keymap.set("", "<c-j>", "<c-w>j", { noremap = true, silent = true })
+vim.keymap.set("", "<c-k>", "<c-w>k", { noremap = true, silent = true })
+vim.keymap.set("", "<c-h>", "<c-w>h", { noremap = true, silent = true })
+vim.keymap.set("", "<c-l>", "<c-w>l" ,{ noremap = true, silent = true })
+
+vim.keymap.set("", "<c-up>", "<c-w>+", { noremap = true, silent = true })
+vim.keymap.set("", "<c-down>", "<c-w>-", { noremap = true, silent = true })
+vim.keymap.set("", "<c-left>", "<c-w>>", { noremap = true, silent = true })
+vim.keymap.set("", "<c-right>", "<c-w><", { noremap = true, silent = true })
+
+vim.keymap.set("", "<Leader>v", "<c-w>v", { noremap = true, silent = true })
+vim.keymap.set("", "<Leader>s", "<c-w>s", { noremap = true, silent = true })
+
+-- move lines up and down using alt key
+vim.keymap.set("n", "<A-j>", ":m .+1<CR>==", { noremap = true, silent = true })
+vim.keymap.set("n", "<A-k>", ":m .-2<CR>==", { noremap = true, silent = true })
+vim.keymap.set("i", "<A-j>", "<Esc>:m .+1<CR>==gi", { noremap = true, silent = true })
+vim.keymap.set("i", "<A-k>", "<Esc>:m .-2<CR>==gi", { noremap = true, silent = true })
+vim.keymap.set("v", "<A-j>", ":m '>+1<CR>gv=gv", { noremap = true, silent = true })
+vim.keymap.set("v", "<A-k>", ":m '<-2<CR>gv=gv", { noremap = true, silent = true })
+
+-- utils
+vim.keymap.set("n", "TT", function() require('utils').open_terminal_in(vim.fn.expand('%:p:h')) end, { noremap = true, silent = true })
+vim.keymap.set("n", "tt", require('utils').open_terminal_in_project_root, { noremap = true, silent = true })
+vim.keymap.set("n", "<C-f>", require('lf_integration').reveal, {noremap = true, silent = true})
+
+-- navigate quickfixes
+vim.keymap.set("n", "<c-p>", ":cprev<CR>zz", { noremap = true, silent = true })
+vim.keymap.set("n", "<c-n>", ":cnext<CR>zz", { noremap = true, silent = true })
+
+-- center search results
+-- vim.keymap.set("n", "n", "nzz", {noremap = true, silent = true})
+-- vim.keymap.set("n", "N", "Nzz", {noremap = true, silent = true})
+vim.keymap.set("n", "<C-d>", "<C-d>zz")
+vim.keymap.set("n", "<C-u>", "<C-u>zz")
+-- vim.keymap.set("n", "#", "#zz", { silent = true, noremap = true })
+-- vim.keymap.set("n", "g*", "g*zz", { silent = true, noremap = true })
+-- vim.keymap.set("n", "g#", "g#zz", { silent = true, noremap = true })
+vim.keymap.set("n", "<leader>w", "*N", { silent = true, noremap = true })
+vim.keymap.set("x", "<leader>p", [["_dP]])
+vim.keymap.set("n", "<leader>ra", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
+
+-- deactivate space because of annoying behaviour since its my leader key :)
+vim.keymap.set("n", "<Space>", "<Nop>", { noremap = true, silent = true})
+
+-- word substitution
+-- vim.keymap.set("n", "<C-j>", "ciw<C-r>0<ESC>", {silent = true})
+vim.keymap.set("n", "<C-s>", "\"1yiwciw<C-r>0<ESC>/<C-r>1<CR>", {silent = true})
+vim.keymap.set("n", "<Leader>jq", ":%!jq '.'<CR>", {silent = true})
+
+-- other niceties
+vim.keymap.set("v", "<", "<gv", { silent = true, noremap = true })
+vim.keymap.set("v", ">", ">gv", { silent = true, noremap = true })
+vim.keymap.set("n", "<Leader><Leader>", ":write<CR>", {noremap = true, silent = true})
+vim.keymap.set("n", "<c-[>", "<esc>:nohlsearch<CR>", {silent = true})
