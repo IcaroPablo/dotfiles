@@ -6,66 +6,65 @@ local on_attach = function(client, bufnr)
     -- require'jdtls'.setup_dap()
     -- require('jdtls').setup_dap({ hotcodereplace = 'auto' })
     require('mappings').setup_nvim_lsp_on_attach(bufnr)
-    require('mappings').setup_nvim_dap(bufnr)
-    require('mappings').setup_jdtls(bufnr)
+
+    -- DAP
+
+    local bufopts = { noremap = true, silent = true, buffer = bufnr }
+
+    vim.keymap.set("n", "<Leader>jtb", "<cmd>lua require'dap'.toggle_breakpoint()<cr>", bufopts)
+    vim.keymap.set("n", "<Leader>jsb", "<cmd>lua require'dap'.set_breakpoint(vim.fn.input('Breakpoint condition: '))<cr>", bufopts)
+    -- vim.keymap.set("n", "<Leader>bl", "<cmd>lua require'dap'.set_breakpoint(nil, nil, vim.fn.input('Log point message: '))<cr>", "Set log point")
+    -- vim.keymap.set("n", '<Leader>br', "<cmd>lua require'dap'.clear_breakpoints()<cr>", "Clear breakpoints")
+    -- vim.keymap.set("n", '<Leader>ba', '<cmd>Telescope dap list_breakpoints<cr>', "List breakpoints")
+
+    vim.keymap.set("n", "<Leader>dc", "<cmd>lua require'dap'.continue()<cr>", bufopts)
+    -- vim.keymap.set("n", "<Leader>dj", "<cmd>lua require'dap'.step_over()<cr>", "Step over")
+    -- vim.keymap.set("n", "<Leader>dk", "<cmd>lua require'dap'.step_into()<cr>", "Step into")
+    -- vim.keymap.set("n", "<Leader>do", "<cmd>lua require'dap'.step_out()<cr>", "Step out")
+    -- vim.keymap.set("n", '<Leader>dd', "<cmd>lua require'dap'.disconnect()<cr>", "Disconnect")
+    vim.keymap.set("n", '<Leader>dt', "<cmd>lua require'dap'.terminate()<cr>", bufopts)
+    vim.keymap.set("n", "<Leader>dr", "<cmd>lua require'dap'.repl.toggle()<cr>", bufopts)
+    -- vim.keymap.set("n", "<Leader>dl", "<cmd>lua require'dap'.run_last()<cr>", "Run last")
+    -- vim.keymap.set("n", '<Leader>di', function() require"dap.ui.widgets".hover() end, "Variables")
+    -- vim.keymap.set("n", '<Leader>d?', function() local widgets=require"dap.ui.widgets";widgets.centered_float(widgets.scopes) end, "Scopes")
+    -- vim.keymap.set("n", '<Leader>df', '<cmd>Telescope dap frames<cr>', "List frames")
+    -- vim.keymap.set("n", '<Leader>dh', '<cmd>Telescope dap commands<cr>', "List commands")
+    --
+    -- map("n", "<leader>er", "<cmd>lua require'dapui'.toggle()<CR>", { silent = true, noremap = true })
+    -- map("n", "<leader>es", "<cmd>lua require'dap'.continue()<CR>", { silent = true, noremap = true })
+    -- map("n", "<leader>eu", "<cmd>lua require'dap'.step_over()<CR>", { silent = true, noremap = true })
+    -- map("n", "<leader>ei", "<cmd>lua require'dap'.step_into()<CR>", { silent = true, noremap = true })
+    -- map("n", "<F4>", "<cmd>lua require'dap'.step_into()<CR>", { silent = true, noremap = true })
+    -- map("n", "<leader>eo", "<cmd>lua require'dap'.step_out()<CR>", { silent = true, noremap = true })
+    -- map("n", "<leader>eb", "<cmd>lua require'dap'.toggle_breakpoint()<CR>", { silent = true, noremap = true })
+    -- map(
+    -- 	"n",
+    -- 	"<leader>ec",
+    -- 	"<cmd>lua require'dap'.set_breakpoint(vim.fn.input('Breakpoint condition: '))<CR>",
+    -- 	{ silent = true, noremap = true }
+    -- )
+    -- map(
+    -- 	"n",
+    -- 	"<leader>ef",
+    -- 	"<cmd>lua require'dap'.set_breakpoint(nil, nil, vim.fn.input('Log point message: '))<CR>",
+    -- 	{ silent = true, noremap = true }
+    -- )
+
+    -- JDTLS
+
+    vim.keymap.set("n", "<leader>jdi", require('jdtls').organize_imports, bufopts)
+    vim.keymap.set("n", "<leader>jev", require('jdtls').extract_variable, bufopts)
+    vim.keymap.set("v", "<leader>jev", function() require('jdtls').extract_variable({true, 'variable'}) end, bufopts)
+    vim.keymap.set('v', '<Leader>jec', function() require('jdtls').extract_constant({true, 'constant'}) end, bufopts)
+    vim.keymap.set("v", "<leader>jem", function() require('jdtls').extract_method({true, function() return 'extracted' end}) end, bufopts)
+
+    -- for tests (ver quais outras funções estão disponíveis também)
+    vim.keymap.set("n", "<leader>jtc", require('jdtls').test_class, bufopts)
+    vim.keymap.set("n", "<leader>jtm", require('jdtls').test_nearest_method, bufopts)
+    -- require("jdtls.tests").generate()
+    -- require("jdtls.tests").goto_subjects()
 
 -----------------------------------------------------------------------------------------------------------------------
-
-    -- require'lsp-status'.register_progress()
-
-    -- require'compe'.setup {
-    --     enabled = true;
-    --     autocomplete = true;
-    --     debug = false;
-    --     min_length = 1;
-    --     preselect = 'enable';
-    --     throttle_time = 80;
-    --     source_timeout = 200;
-    --     incomplete_delay = 400;
-    --     max_abbr_width = 100;
-    --     max_kind_width = 100;
-    --     max_menu_width = 100;
-    --     documentation = true;
-
-    --     source = {
-    --         path = true;
-    --         buffer = true;
-    --         calc = true;
-    --         vsnip = false;
-    --         nvim_lsp = true;
-    --         nvim_lua = true;
-    --         spell = true;
-    --         tags = true;
-    --         snippets_nvim = false;
-    --         treesitter = true;
-    --     };
-    -- }
-
-    -- require'lspkind'.init()
-    -- require'lspsaga'.init_lsp_saga()
-
-    -- require'formatter'.setup{
-    --     filetype = {
-    --         java = {
-    --             function()
-    --                 return {
-    --                     exe = 'java',
-    --                     args = { '-jar', os.getenv('HOME') .. '/.local/jars/google-java-format.jar', vim.api.nvim_buf_get_name(0) },
-    --                     stdin = true
-    --                 }
-    --             end
-    --         }
-    --     }
-    -- }
-
------------------------------------------------------------------------------------------------------------------------
-
-    -- vim.api.nvim_exec([[
-    --     augroup FormatAutogroup
-    --     autocmd!
-    --     autocmd BufWritePost *.java FormatWrite
-    --     augroup end
-    -- ]], true)
 
     -- vim.api.nvim_exec([[
     --     hi LspReferenceRead cterm=bold ctermbg=red guibg=LightYellow
