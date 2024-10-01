@@ -23,17 +23,15 @@
 
 [core]
     pager = bat
+#     autocrlf = input
+#     pager = delta
+#     quotePath = false
 
 [pull]
     rebase = true
 
 [fetch]
     prune = true
-
-# [core]
-#     autocrlf = input
-#     pager = delta
-#     quotePath = false
 
 # [credential]
 #     helper = !pass-git-helper
@@ -68,6 +66,9 @@
 [mergetool]
     prompt = false
 
+[rerere]
+    enabled = true
+
 [alias]
     ## am (a+)
     # aa = add .
@@ -95,6 +96,8 @@
     # no-verifies
     cnv = commit --no-verify
 
+    ds = diff --staged
+
     ## fetch (f+)
     fa = fetch --all
 
@@ -104,6 +107,9 @@
     lostm = log --oneline --stat
     lpm = log -p
     lnns = ln --name-status
+    lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
+	; ls = log --pretty=format:\"%C(yellow)%h %C(blue)%ad%C(red)%d %C(reset)%s%C(green) [%cn]\" --decorate --date=short
+	lg-full = log --name-status --pretty=fuller
 
     # no-merges
     ln = lnm --no-merges
@@ -112,6 +118,38 @@
 
     ## push (p+)
     pf = push -f
+
+    # pull
+    psn = "!f(){\
+            TRACKING=origin; \
+            case $# in \
+                0) \
+                    BRANCH=$(git get-default-branch);; \
+                1) \
+                    BRANCH=$1;; \
+                2) \
+                    BRANCH=$2; \
+                    TRACKING=$1;; \
+            esac; \
+            git stash -S; \
+            BEFORE=$(git stash list | wc -l); \
+            git stash; \
+            AFTER=$(git stash list | wc -l); \
+            git fetch $TRACKING; \
+            UPDATE=0; \
+            test $(git branch --show-current) = $BRANCH || UPDATE=1; \
+            test $UPDATE = 1 && git checkout $BRANCH; \
+            UNPOP=0; \
+            git pull $TRACKING $BRANCH && UNPOP=1; \
+            test $UPDATE = 1 && { \
+                git checkout -; \
+                git ro $TRACKING $BRANCH && UNPOP=1; \
+            }; \
+            test $UNPOP = 1 && { \
+                test $BEFORE = $AFTER || git stash pop; \
+                echo \"updated\"; \
+            }; \
+        };f"
 
     ## rebase (r+ ~[v])
     ra = rebase --abort
@@ -126,6 +164,7 @@
 
     ## remote (r+)
     rv = remote -v
+    drb = branch -dr #remote/branch
 
     ## stash (s+ ~[t])
     ssp = stash show -p
