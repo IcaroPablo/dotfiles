@@ -1,0 +1,45 @@
+[user]
+name = "Ícaro Andrade"
+email = "ic4ro.p4blo@gmail.com"
+
+[snapshot]
+max-new-file-size = "2M"
+
+[ui]
+default-command = "show"
+color = "auto"
+editor = "nvim"
+diff-editor = "nvimdiff"
+merge-editor = "nvim -f -c \"Gvdiffsplit!\""
+
+# [git]
+#     auto-local-branch = false
+
+[aliases]
+b = ["branch"]
+chocolate = ["git", "init", "--colocate"]
+sb = ["branch", "set", "-r", "@-"]
+smb = ["branch", "set", "-r", "@-", "main"]
+d = ["describe"]
+da = ["describe", "@-"]
+e = ["edit"]
+ep = ["edit", "@-"]
+en = ["edit", "@+"]
+get = ["git", "fetch"]
+getu = ["git", "fetch", "--remote", "upstream"]
+push = ["git", "push"]
+pm = ["git", "push", "-b", "main"]
+h = ["abandon"]
+la = ["log", "-r", "::@"]
+ls = ["log", "-s"]
+nah = ["new", "@-"]
+nm = ["new", "main"]
+r = ["rebase"]
+rr = ["rebase", "-r"]
+ra = ["rebase", "-s", "@"]
+rs = ["rebase", "-s"]
+s = ["split"]
+sq = ["squash", "-i"]
+mf = ["squash", "-i", "--from"]
+mt = ["squash", "-i", "--to"]
+sst = ["show", "--stat"]
