@@ -1,35 +1,45 @@
--- verificar instalação do jdtls ??????????
-
 local on_attach = function(client, bufnr)
 
-    -- require'jdtls.setup'.add_commands()
-    -- require'jdtls'.setup_dap()
-    -- require('jdtls').setup_dap({ hotcodereplace = 'auto' })
-    require('mappings').setup_nvim_lsp_on_attach(bufnr)
+    local nore_silent = { noremap = true, silent = true };
 
-    -- DAP
+    vim.keymap.set("n", "<Leader>e", vim.diagnostic.open_float, nore_silent)
+    vim.keymap.set("n", "[d", function() vim.diagnostic.jump({count = -1}) end, nore_silent)
+    vim.keymap.set("n", "]d", function() vim.diagnostic.jump({count = 1}) end, nore_silent)
 
     local bufopts = { noremap = true, silent = true, buffer = bufnr }
 
-    vim.keymap.set("n", "<Leader>jtb", "<cmd>lua require'dap'.toggle_breakpoint()<cr>", bufopts)
-    vim.keymap.set("n", "<Leader>jsb", "<cmd>lua require'dap'.set_breakpoint(vim.fn.input('Breakpoint condition: '))<cr>", bufopts)
-    -- vim.keymap.set("n", "<Leader>bl", "<cmd>lua require'dap'.set_breakpoint(nil, nil, vim.fn.input('Log point message: '))<cr>", "Set log point")
+    vim.keymap.set("n", "gD", vim.lsp.buf.declaration, bufopts)
+    vim.keymap.set("n", "gd", vim.lsp.buf.definition, bufopts)
+    vim.keymap.set("n", "gi", vim.lsp.buf.implementation, bufopts)
+    vim.keymap.set("n", "K", vim.lsp.buf.hover, bufopts)
+    vim.keymap.set("n", "<C-k>", vim.lsp.buf.signature_help, bufopts)
+    -- vim.keymap.set("n", "<Leader>wa", vim.lsp.buf.add_workspace_folder, bufopts)
+    -- vim.keymap.set("n", "<Leader>wr", vim.lsp.buf.remove_workspace_folder, bufopts)
+    -- vim.keymap.set("n", "<Leader>wl", function() print(vim.inspect(vim.lsp.buf.list_workspace_folders())) end, bufopts)
+    vim.keymap.set("n", "<Leader>rn", vim.lsp.buf.rename, bufopts)
+    vim.keymap.set({"n", 'v'}, "<Leader>ca", vim.lsp.buf.code_action, bufopts)
+    vim.keymap.set("n", "gr", vim.lsp.buf.references, bufopts)
+    vim.keymap.set('n', 'gt', vim.lsp.buf.type_definition, bufopts)
+    vim.keymap.set("n", "<Leader>cf", function() vim.lsp.buf.format({async = true}) end, bufopts)
+
+    -- vim.keymap.set("n", "<Leader>jtb", "<cmd>lua require'dap'.toggle_breakpoint()<cr>", bufopts)
+    -- vim.keymap.set("n", "<Leader>jsb", "<cmd>lua require'dap'.set_breakpoint(vim.fn.input('Breakpoint condition: '))<cr>", bufopts)
     -- vim.keymap.set("n", '<Leader>br', "<cmd>lua require'dap'.clear_breakpoints()<cr>", "Clear breakpoints")
     -- vim.keymap.set("n", '<Leader>ba', '<cmd>Telescope dap list_breakpoints<cr>', "List breakpoints")
 
-    vim.keymap.set("n", "<Leader>dc", "<cmd>lua require'dap'.continue()<cr>", bufopts)
+    -- vim.keymap.set("n", "<Leader>dc", "<cmd>lua require'dap'.continue()<cr>", bufopts)
     -- vim.keymap.set("n", "<Leader>dj", "<cmd>lua require'dap'.step_over()<cr>", "Step over")
     -- vim.keymap.set("n", "<Leader>dk", "<cmd>lua require'dap'.step_into()<cr>", "Step into")
     -- vim.keymap.set("n", "<Leader>do", "<cmd>lua require'dap'.step_out()<cr>", "Step out")
     -- vim.keymap.set("n", '<Leader>dd', "<cmd>lua require'dap'.disconnect()<cr>", "Disconnect")
-    vim.keymap.set("n", '<Leader>dt', "<cmd>lua require'dap'.terminate()<cr>", bufopts)
-    vim.keymap.set("n", "<Leader>dr", "<cmd>lua require'dap'.repl.toggle()<cr>", bufopts)
+    -- vim.keymap.set("n", '<Leader>dt', "<cmd>lua require'dap'.terminate()<cr>", bufopts)
+    -- vim.keymap.set("n", "<Leader>dr", "<cmd>lua require'dap'.repl.toggle()<cr>", bufopts)
     -- vim.keymap.set("n", "<Leader>dl", "<cmd>lua require'dap'.run_last()<cr>", "Run last")
     -- vim.keymap.set("n", '<Leader>di', function() require"dap.ui.widgets".hover() end, "Variables")
     -- vim.keymap.set("n", '<Leader>d?', function() local widgets=require"dap.ui.widgets";widgets.centered_float(widgets.scopes) end, "Scopes")
     -- vim.keymap.set("n", '<Leader>df', '<cmd>Telescope dap frames<cr>', "List frames")
     -- vim.keymap.set("n", '<Leader>dh', '<cmd>Telescope dap commands<cr>', "List commands")
-    --
+
     -- map("n", "<leader>er", "<cmd>lua require'dapui'.toggle()<CR>", { silent = true, noremap = true })
     -- map("n", "<leader>es", "<cmd>lua require'dap'.continue()<CR>", { silent = true, noremap = true })
     -- map("n", "<leader>eu", "<cmd>lua require'dap'.step_over()<CR>", { silent = true, noremap = true })
@@ -37,20 +47,8 @@ local on_attach = function(client, bufnr)
     -- map("n", "<F4>", "<cmd>lua require'dap'.step_into()<CR>", { silent = true, noremap = true })
     -- map("n", "<leader>eo", "<cmd>lua require'dap'.step_out()<CR>", { silent = true, noremap = true })
     -- map("n", "<leader>eb", "<cmd>lua require'dap'.toggle_breakpoint()<CR>", { silent = true, noremap = true })
-    -- map(
-    -- 	"n",
-    -- 	"<leader>ec",
-    -- 	"<cmd>lua require'dap'.set_breakpoint(vim.fn.input('Breakpoint condition: '))<CR>",
-    -- 	{ silent = true, noremap = true }
-    -- )
-    -- map(
-    -- 	"n",
-    -- 	"<leader>ef",
-    -- 	"<cmd>lua require'dap'.set_breakpoint(nil, nil, vim.fn.input('Log point message: '))<CR>",
-    -- 	{ silent = true, noremap = true }
-    -- )
-
-    -- JDTLS
+    -- map("n", "<leader>ec", "<cmd>lua require'dap'.set_breakpoint(vim.fn.input('Breakpoint condition: '))<CR>", { silent = true, noremap = true })
+    -- map("n", "<leader>ef", "<cmd>lua require'dap'.set_breakpoint(nil, nil, vim.fn.input('Log point message: '))<CR>", { silent = true, noremap = true })
 
     vim.keymap.set("n", "<leader>jdi", require('jdtls').organize_imports, bufopts)
     vim.keymap.set("n", "<leader>jev", require('jdtls').extract_variable, bufopts)
@@ -58,34 +56,20 @@ local on_attach = function(client, bufnr)
     vim.keymap.set('v', '<Leader>jec', function() require('jdtls').extract_constant({true, 'constant'}) end, bufopts)
     vim.keymap.set("v", "<leader>jem", function() require('jdtls').extract_method({true, function() return 'extracted' end}) end, bufopts)
 
-    -- for tests (ver quais outras funções estão disponíveis também)
     vim.keymap.set("n", "<leader>jtc", require('jdtls').test_class, bufopts)
     vim.keymap.set("n", "<leader>jtm", require('jdtls').test_nearest_method, bufopts)
     -- require("jdtls.tests").generate()
     -- require("jdtls.tests").goto_subjects()
 
------------------------------------------------------------------------------------------------------------------------
-
-    -- vim.api.nvim_exec([[
-    --     hi LspReferenceRead cterm=bold ctermbg=red guibg=LightYellow
-    --     hi LspReferenceText cterm=bold ctermbg=red guibg=LightYellow
-    --     hi LspReferenceWrite cterm=bold ctermbg=red guibg=LightYellow
-    --     augroup lsp_document_highlight
-    --     autocmd!
-    --     autocmd CursorHold <buffer> lua vim.lsp.buf.document_highlight()
-    --     autocmd CursorMoved <buffer> lua vim.lsp.buf.clear_references()
-    --     augroup END
-    -- ]], false)
-
 end
 
 -----------------------------------------------------------------------------------------------------------------------
 
--- UI
 -- local finders = require'telescope.finders'
 -- local sorters = require'telescope.sorters'
 -- local actions = require'telescope.actions'
 -- local pickers = require'telescope.pickers'
+
 -- require('jdtls.ui').pick_one_async = function(items, prompt, label_fn, cb)
 --     local opts = {}
 --     pickers.new(opts, {

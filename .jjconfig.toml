@@ -11,6 +11,7 @@ color = "auto"
 editor = "nvim"
 diff-editor = "nvimdiff"
 merge-editor = "nvim -f -c \"Gvdiffsplit!\""
+paginate = "never"
 
 # [git]
 #     auto-local-branch = false
