@@ -1,0 +1,19 @@
+#!/usr/local/bin/bash
+
+export FZF_DEFAULT_COMMAND='ag --hidden --ignore .git -g ""'
+
+file="$(fzf --preview 'bat --color always {}' | sed 's/ /\\ /g')"
+
+if [ -n "$file" ]; then
+    full_path="$(realpath $file)"
+
+    file_folder="$(dirname <<< $full_path)"
+
+    repo_path="$(git -C $file_folder rev-parse --show-toplevel)"
+
+    if $? -eq 0; then
+        cd $repo_path
+    fi
+
+    nvim $full_path
+fi
