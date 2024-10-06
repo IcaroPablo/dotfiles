@@ -460,6 +460,10 @@ function open_terminal_in(project_folder)
     os.execute(full_command)
 end
 
+function log_messages()
+    vim.cmd('redir! > ~/nvim_msgs.txt')
+end
+
 -- easily manage buffers
 vim.keymap.set("n", "<Tab>", ":bnext<CR>:redraw<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<S-Tab>", ":bprevious<CR>:redraw<CR>", { noremap = true, silent = true })

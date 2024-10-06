@@ -71,8 +71,8 @@
 
 [alias]
     ## am (a+)
-    # aa = add .
-    aa = am --abort
+    aa = add --all
+    # aa = am --abort
 
     ## add (a+)
     ap = add -p
