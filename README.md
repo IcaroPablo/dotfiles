@@ -6,22 +6,17 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
 
 >Although these are general purpose dotfiles, they are primarily focused on my OpenBSD desktop setup
 
->These dotfiles are managed using the [git bare repo method](https://www.atlassian.com/git/tutorials/dotfiles) though a small shellscript called "[dot](.local/scripts/dot)" for ease of use.
-
 - Update to current
-
-  `# sysupgrade -s`
+  - `# sysupgrade -s`
 
 - Download fonts (and remove bold style with an [utility script](.local/scripts/disableboldfont.sh))
-
   - [Cozette](https://github.com/slavfox/Cozette) (my go-to for low res monitors)
   - [Korean]()
   - [Japanese]()
   - [Chinese]()
 
 - Install packages (usually exported with `$ pkg_info -mz > pkg_list.txt`)
-
-  `$ pkg_add -l pkg_list.txt`
+  - `$ pkg_add -l pkg_list.txt`
  
 - Install my graphical environment (I use Xorg)
     - [st](https://github.com/IcaroPablo/st)
@@ -29,6 +24,7 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
     - [dmenu](https://github.com/IcaroPablo/dmenu)
 
 - Setup my dotfiles
+    >These dotfiles are managed using the [git bare repo method](https://www.atlassian.com/git/tutorials/dotfiles) through a small shellscript called "dot" for ease of use.
     - download only the [dot script](.local/scripts/dot)
     - `$ dot start https://github.com/IcaroPablo/dotfiles`
 
