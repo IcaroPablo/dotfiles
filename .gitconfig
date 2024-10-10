@@ -124,31 +124,14 @@
             TRACKING=origin; \
             case $# in \
                 0) \
-                    BRANCH=$(git get-default-branch);; \
+                    BRANCH=$(git rev-parse --abbrev-ref HEAD);; \
                 1) \
                     BRANCH=$1;; \
                 2) \
                     BRANCH=$2; \
                     TRACKING=$1;; \
             esac; \
-            git stash -S; \
-            BEFORE=$(git stash list | wc -l); \
-            git stash; \
-            AFTER=$(git stash list | wc -l); \
-            git fetch $TRACKING; \
-            UPDATE=0; \
-            test $(git branch --show-current) = $BRANCH || UPDATE=1; \
-            test $UPDATE = 1 && git checkout $BRANCH; \
-            UNPOP=0; \
-            git pull $TRACKING $BRANCH && UNPOP=1; \
-            test $UPDATE = 1 && { \
-                git checkout -; \
-                git ro $TRACKING $BRANCH && UNPOP=1; \
-            }; \
-            test $UNPOP = 1 && { \
-                test $BEFORE = $AFTER || git stash pop; \
-                echo \"updated\"; \
-            }; \
+            git pull $TRACKING $BRANCH; \
         };f"
 
     ## rebase (r+ ~[v])
@@ -175,6 +158,7 @@
     st = status -sb
     sp = --paginate status
     us = restore --staged .
+    rsp = restore --staged -p .
     rp = restore -p
 
     ## misc
