@@ -86,6 +86,10 @@
     ## commit (c*)
     c = commit
     cm = commit -m
+    jcm = "!f(){\
+            BRANCH="$(git rev-parse --abbrev-ref HEAD)"; \
+            git cm \"[$BRANCH] $1\"; \
+        };f"
     cf = commit --fixup
     csq = commit --squash
     cs = commit -s
