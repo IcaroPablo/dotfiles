@@ -35,6 +35,7 @@ export PATH=$HOME/.local/scripts/:$PATH
 export PATH=$JAVA_HOME/bin:$PATH
 export PS1="[$(whoami)@$(hostname -s)] [\$PWD] $ "
 export SKORN_EDITOR='nvim +"set ft=sh"'
+export TERM_CMD="st -e"
 
 # Added by Toolbox App
 export PATH="$PATH:/home/icaro/.local/share/JetBrains/Toolbox/scripts"

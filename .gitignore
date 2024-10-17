@@ -93,6 +93,7 @@
 .lesshst
 .local/.local.iml
 .local/bin
+.local/curls
 .local/etc
 .local/lib
 .local/lua-language-server
@@ -143,6 +144,7 @@
 .zlua
 .zoom
 .zsh*
+Documents
 Downloads
 Jasper*
 Pictures
