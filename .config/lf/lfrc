@@ -9,6 +9,7 @@ set ifs "\n"
 set incfilter
 set incsearch true
 set number true
+set cursorpreviewfmt ""
 set previewer "~/.config/lf/preview"
 # set promptfmt "
 # \033[48;2;35;38;39;38;2;28;220;156m  
@@ -64,7 +65,7 @@ map T $trash $fx
 map v :toggle; down
 map V :invert
 map w
-map X !$f # execute current file (must be executable)
+map X $dw --edit-input-file --executable --ignore-input $f # execute current file (must be executable)
 map Y $printf "%s" "$fx" | xclip -selection clipboard # Copy selected file names -- to do: usar xsel em vez de xclip
 
 map <esc> :clear; unselect

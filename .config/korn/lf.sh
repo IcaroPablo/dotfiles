@@ -1,4 +1,4 @@
-# verificar se o lf tá instalado
+# todo: verificar se o lf tá instalado
 
 lfcd() {
     tmp="$(mktemp)"

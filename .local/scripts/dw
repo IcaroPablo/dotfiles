@@ -1,0 +1,65 @@
+#!/bin/sh
+
+CACHE_FILE="/tmp/dw_cache"
+
+[ ! -f "$CACHE_FILE" ] && touch "$CACHE_FILE"
+
+output="$(mktemp)"
+ignore_input=false
+edit_input_file=false
+is_executable=false
+open_files=""
+
+while IFS= read -r line; do
+    if lsof "$line" > /dev/null 2>&1; then
+        open_files="$open_files\n$line"
+        continue
+    fi
+
+    [ -n "$line" ] && command rm "$line"
+done < "$CACHE_FILE"
+
+echo "$open_files" > "$CACHE_FILE"
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --ignore-input)
+            ignore_input=true
+            shift;;
+        --executable)
+            is_executable=true
+            shift;;
+        --edit-input-file)
+            edit_input_file=true
+            shift;;
+        *)
+            break;;
+    esac
+done
+
+if [ "$ignore_input" = false ]; then
+    echo "$@" > $output
+    printf "\n--------------------\n\n" >> $output
+fi
+
+input="$@"
+
+if [ "$is_executable" = true ]; then
+    if [ ! -f "$@" ]; then
+        echo "not a file"
+        exit 1
+    fi
+
+    input="$(echo "$@" | sed 's/ /\\ /g')"
+fi
+
+if [ "$edit_input_file" = true ]; then
+    if [ "$is_executable" = true ]; then
+        eval "$EDITOR $input"
+        #TO-DO: alguma maneira de interromper a execução nessa etapa
+    fi
+fi
+
+eval "$input" >> $output
+echo "$output" >> "$CACHE_FILE"
+eval "$TERM_CMD "less $output" 2>/dev/null &"

@@ -27,6 +27,9 @@
 #     pager = delta
 #     quotePath = false
 
+# [color]
+#     status = always
+
 [pull]
     rebase = true
 
