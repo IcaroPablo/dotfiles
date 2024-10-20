@@ -55,11 +55,33 @@ fi
 
 if [ "$edit_input_file" = true ]; then
     if [ "$is_executable" = true ]; then
+        before="$(mktemp)"
+
+        echo "$(cat $input)" > "$before"
+        echo "$before" >> "$CACHE_FILE"
+
         eval "$EDITOR $input"
-        #TO-DO: alguma maneira de interromper a execução nessa etapa
+
+        after="$(mktemp)"
+
+        echo "$(cat $input)" > "$after"
+        echo "$after" >> "$CACHE_FILE"
+        # if lsof "$input" > /dev/null 2>&1; then
+        #     echo "file already opened"
+        # else
+        #     eval "$EDITOR $input"
+        # fi
+
+        difference="$(diff $before $after)"
+
+        if [ "$difference" = "" ]; then
+            echo "file not changed, aborting"
+            exit 1
+        fi
     fi
 fi
 
 eval "$input" >> $output
 echo "$output" >> "$CACHE_FILE"
 eval "$TERM_CMD "less $output" 2>/dev/null &"
+# eval "$TERM_CMD less $output" 2>/dev/null &

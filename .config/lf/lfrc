@@ -65,11 +65,12 @@ map T $trash $fx
 map v :toggle; down
 map V :invert
 map w
-map X $dw --edit-input-file --executable --ignore-input $f # execute current file (must be executable)
+map X $dw --executable --ignore-input $f # execute current file (must be executable)
 map Y $printf "%s" "$fx" | xclip -selection clipboard # Copy selected file names -- to do: usar xsel em vez de xclip
 
 map <esc> :clear; unselect
 map <space>
+map <c-d> $split_scr "lf $PWD"
 # map <c-r> reload
 
 cmap <tab> cmd-menu-complete
