@@ -45,6 +45,7 @@ alias "o"="openfile"
 alias "play"="mpv --shuffle ."
 alias "rm"="rm -i"
 alias "rr"="commandsearch"
+alias "ss"="split_scr"
 alias "x"="ssh -YC4 icaro@192.168.1.23 'x2x -east -to :0'"
 
 # dvtm
