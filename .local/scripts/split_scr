@@ -1,0 +1,3 @@
+#!/bin/sh
+
+eval "$TERM_CMD "$1" 2>/dev/null &"
