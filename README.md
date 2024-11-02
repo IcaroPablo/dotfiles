@@ -2,12 +2,15 @@
 
 Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
 
-## OpenBSD install guide
+## OpenBSD post-install guide
 
 >Although these are general purpose dotfiles, they are primarily focused on my OpenBSD desktop setup
 
 - Update to current
   - `# sysupgrade -s`
+
+- Add wheel to doas.conf
+  - `#cat 'permit persist :wheel' >> /etc/doas.conf`
 
 - Download fonts (and remove bold style with an [utility script](.local/scripts/disableboldfont.sh))
   - [Cozette](https://github.com/slavfox/Cozette) (my go-to for low res monitors)
