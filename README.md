@@ -64,3 +64,9 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
     # default: 1024
     kern.shminfo.shmmni=4096
     ```
+    - https://romanzolotarev.com/
+    - https://www.c0ffee.net/blog/openbsd-on-a-laptop/
+    - https://mizik.sk/blog/how-to-optimize-performance-on-openbsd-desktop/index.html
+    - https://www.youtube.com/watch?v=f8lloCtrpdk
+    - https://www.youtube.com/watch?v=LBozd4_GwIo
+    - https://calomel.org/network_performance.html
