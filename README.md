@@ -12,7 +12,7 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
 - Add wheel to doas.conf
   - `#cat 'permit persist :wheel' >> /etc/doas.conf`
 
-- Download fonts (and remove bold style with an [utility script](.local/scripts/disableboldfont.sh))
+- Download fonts
   - [Cozette](https://github.com/slavfox/Cozette) (my go-to for low res monitors)
   - [Korean]()
   - [Japanese]()
