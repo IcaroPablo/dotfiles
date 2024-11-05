@@ -21,12 +21,31 @@ simplegrep() {
     grep -nRIi "$1" ./*
 }
 
-deps() {
+req() {
+    #TODO: should turn this into a tree
+    in=0
+
+    printf "%s" "$(pkg_info $1)" | while IFS= read -r line; do
+        if [ "$in" = 0 ] && [ "$line" = "Required by:" ]; then
+            in=1
+            continue
+        fi
+
+        [ "$in" = 1 ] && [ "$line" = "" ] && in=0
+        [ "$in" = 1 ] && printf "$line\n"
+    done
+}
+
+req_by() {
     pkg_info -f "$1" | grep '^@depend' | cut -f 3 -d :
 }
 
 del() {
     doas pkg_delete "$1" && doas pkg_delete -a
+}
+
+x() {
+    eval "ssh -YC4 icaro@192.168.1.$1 'x2x -east -to :0'"
 }
 
 # Aliases
@@ -46,7 +65,6 @@ alias "play"="mpv --shuffle ."
 alias "rm"="rm -i"
 alias "rr"="commandsearch"
 alias "ss"="split_scr"
-alias "x"="ssh -YC4 icaro@192.168.1.23 'x2x -east -to :0'"
 
 # dvtm
 # . $HOME/.local/scripts/skorn
