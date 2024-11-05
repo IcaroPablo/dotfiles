@@ -1,4 +1,4 @@
-#!/bin/ksh
+#!/bin/sh
 
 # move files to trash folder
 

@@ -18,5 +18,3 @@ fi
 # case "$REPLY" in
 #     [yYsS]) rm -rf -- $fx ;;
 # esac
-
-

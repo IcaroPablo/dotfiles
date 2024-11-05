@@ -1,11 +1,19 @@
 #!/bin/ksh
 
+file="$1"
+
+# if [ "$#" -eq 0 ]; do
+if [ -z "$file" ]; then
+    file="$(fzfsimpleprompt "Enter file name (directories end with an '/'): ")"
+fi
+
 # todo: verificar se já existe arquivo/pasta com aquele nome
 
 # Check if the input ends with a /
-if [[ $1 == @(*/) ]] ; then
-    mkdir -p "$1"
+# if [[ $1 == @(*/) ]] ; then
+if [[ $file == @(*/) ]] ; then
+    mkdir -p "$file"
 else
     # Input doesn't end with /, so create a file
-    touch "$1"
+    touch "$file"
 fi

@@ -45,7 +45,8 @@ cmd on-cd ${{
 
 # MAPPINGS
 
-map a $createprompt
+# map a $createprompt
+map a $create
 # map b $setbg
 map c
 map cd push :zlua
