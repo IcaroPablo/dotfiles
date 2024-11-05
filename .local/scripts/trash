@@ -6,5 +6,6 @@ set -f
 
 TRASH_FOLDER="$HOME/.trash"
 
-mkdir -p "$TRASH_FOLDER"
+[ -f "$TRASH_FOLDER" ] || mkdir -p "$TRASH_FOLDER"
+
 mv "$@" "$TRASH_FOLDER"
