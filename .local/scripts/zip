@@ -1,4 +1,4 @@
-#!/bin/ksh
+#!/bin/sh
 
 #todo: fazer menu de seleção com o fzf
 
