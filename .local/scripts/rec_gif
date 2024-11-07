@@ -1,6 +1,46 @@
-#!/bin/bash
+#!/bin/sh
 
-slop=$(slop -f "%x %y %w %h %g %i") || exit 1
-read -r X Y W H G ID <<< $slop
+coords="$(slop -f "%x %y %w %h %g %i")" || exit 1
+
+W="$(echo "$coords" | awk '{print $3}')"
+H="$(echo "$coords" | awk '{print $4}')"
+X="$(echo "$coords" | awk '{print $1}')"
+Y="$(echo "$coords" | awk '{print $2}')"
+
+#TODO: record full screen passing -s flag
+
+file="$(date +'%Y-%m-%d_%H-%M-%S').gif"
+
+# ffmpeg -f sndio -i snd/0 -f x11grab -r 12 -s 800x600 -i $DISPLAY -c:v libx264 -preset ultrafast games/screenrec/test.mkv
 # ffmpeg -f x11grab -s "$W"x"$H" -i :0.0+$X,$Y -f alsa -i pulse ~/myfile.webm
-ffmpeg -f x11grab -s "$W"x"$H" -i :0.0+$X,$Y ~/myfile.webm
+# eval "ffmpeg -f x11grab -s \"$W\"x\"$H\" -i :0.0+$X,$Y $file"
+
+# -framerate 20 \
+# -s "$(xdpyinfo | grep dimensions | awk '{ print $2 }' )" \
+# -c:v libx264 \
+# -preset superfast \
+# -crf 21 \
+
+# https://www.baeldung.com/linux/gif-screen-recording
+# https://stackoverflow.com/questions/42980663/ffmpeg-high-quality-animated-gif
+# https://bnhr.xyz/2018/01/05/make-a-gif-from-a-video-using-ffmpeg-and-imagemagick-on-linux.html
+# https://raymii.org/s/snippets/Record_your_Linux_Desktop_with_ffmpeg_and_slop.html
+# https://mskelton.dev/bytes/creating-gifs-using-ffmpeg
+# https://www.loganayliffe.com/til/ffmpeg/how-to-make-gifs-from-screen-recordings-using-ffmpeg/
+# https://www.techpowerup.com/forums/threads/is-fraps-still-a-thing-for-screen-recording.325992/page-3
+# https://www.youtube.com/watch?v=F4iD4uxyMyo
+# https://www.youtube.com/watch?v=4He9W2e5R-4
+# https://github.com/OpenBSDGuy/ffmpeg_openbsd
+# https://rsadowski.de/posts/2024-01-14-openbsd-video-audio-screen-recording/
+
+# Do you mean an actual GIF-formatted animated image? I would strongly caution against using GIF. There may some very very old web applications that don't allow WebM (LiveJournal maybe?), but outside of that, there is literally no use case where GIF is ever appropriate. Often different technologies offer different pluses and minuses, but with GIF vs WebM, that is not the case: WebM is actually superior in every possible way. It has better browser support, better mobile support, smaller file sizes, higher quality, less CPU require to encode, etc. Even if you wanted a retro GIF look, you would be better off doing a low FPS 256-colour-palette WebM than an actual GIF file.
+# Anyway, I would recommend using ffmpeg in either case. You can use something like recordmydesktop to do the capture and then ffmpeg to convert to WebM/GIF/whatever format you want with whatever filters, effects, etc. you want.
+
+eval "ffmpeg \
+        -f x11grab \
+        -y \
+        -s \"$W\"x\"$H\" \
+        -i :0.0+$X,$Y \
+        \"$file\""
+
+xclip -selection clipboard -target image/gif -i "$file"
