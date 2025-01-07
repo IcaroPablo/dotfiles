@@ -33,6 +33,7 @@
 .config/enchant
 .config/eog
 .config/evolution
+.config/fontconfig
 .config/gedit
 .config/ghc/ghci_history
 .config/github-copilot*
