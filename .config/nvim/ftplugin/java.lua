@@ -202,7 +202,8 @@ local jdtls_config = {
                     -- },
                     {
                         name = 'JavaSE-17',
-                        path = '/usr/local/jdk-17/' -- sensible
+                        -- path = '/usr/local/jdk-17/' -- sensible
+                        path = home .. '/.sdkman/candidates/java/17.0.8-tem/'
                     }
                 }
             },
