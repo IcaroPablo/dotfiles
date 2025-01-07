@@ -1,0 +1,3 @@
+#!/bin/sh
+
+scp -c aes128-cbc -r /home/icaro/z/ treebeard@192.168.1.23:/home/treebeard/
