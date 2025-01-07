@@ -44,14 +44,17 @@ del() {
     doas pkg_delete "$1" && doas pkg_delete -a
 }
 
-x() {
-    eval "ssh -YC4 icaro@192.168.1.$1 'x2x -east -to :0'"
-}
+# alias x="ssh -YC4c aes128-cbc treebeard@192.168.1.21 'x2x -west -to :0'"
+# alias x='ssh -YC4 -c aes128-cbc treebeard@192.168.1.21 '\''x2x -east -to :0'\'
+# x() {
+#     eval "ssh -YC4 icaro@192.168.1.$1 'x2x -east -to :0'"
+# }
 
 # Aliases
 
 alias "a"="create"
 alias "add"="doas pkg_add -Dsnap"
+alias "bright"="xrandr --output eDP-1 --brightness"
 alias "chkclock"="ntpctl -s all"
 alias "f"="findfile"
 alias "g"="simplegrep"
@@ -61,10 +64,20 @@ alias "la"="ls -a"
 alias "ls"="eza -lh --group-directories-first"
 alias "nvim"="launch_nvim"
 alias "o"="openfile"
+alias "offmon"="xrandr --output eDP-1 --off"
+alias "onmon"="xrandr --output eDP-1 --auto"
 alias "play"="mpv --shuffle ."
 alias "rm"="rm -i"
 alias "rr"="commandsearch"
 alias "ss"="split_scr"
+alias "oF"='cd $(find . -type d -print | fzf) && nvim'
+alias "of"='cd $(find . -type d -print | fzf)'
+alias "ot"="fzf --preview 'bat --color always {}' | sed 's/ /\\ /g' | xargs -r nvim"
+
+# Git
+alias gcm="git checkout master"
+alias gpom="git pull origin master"
+alias newb="git checkout master && git pull origin master && git checkout -b "
 
 # dvtm
 # . $HOME/.local/scripts/skorn
