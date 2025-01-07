@@ -14,7 +14,8 @@ export EDITOR='nvim'
 export ENABLE_WASM=true
 export ENV=$HOME/.kshrc
 export FCEDIT='nvim'
-export HISTFILE=$HOME/.sh_history
+# export FZF_DEFAULT_COMMAND='ag --hidden --ignore .git -g ""'
+# export HISTFILE=$HOME/.sh_history
 export JAVA_HOME=/usr/local/jdk-17
 # export JAVA_HOME=/usr/local/jdk-11
 export LANG="en_US.UTF-8"
@@ -34,6 +35,9 @@ export PATH=$HOME/.local/lib/python3.10/site-packages:$PATH
 export PATH=$HOME/.local/scripts/:$PATH
 export PATH=$JAVA_HOME/bin:$PATH
 export PS1="[$(whoami)@$(hostname -s)] [\$PWD] $ "
+#NL=$'\n'
+#PROMPT="┌[%F{cyan}%n%f@%F{cyan}%m%f] [%F{cyan}%y%f]${NL}└[%F{cyan}%d%f] "
+#PROMPT="%F{yellow}┌[%f%n%F{yellow}@%f%m%F{yellow}] [%f%y%F{yellow}]${NL}└[%f%d%F{yellow}]%f $ "
 export SKORN_EDITOR='nvim +"set ft=sh"'
 export TERM_CMD="st -e"
 
