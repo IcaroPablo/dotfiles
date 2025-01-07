@@ -14,6 +14,7 @@
 .config/Code
 .config/Debauchee/Barrier.conf
 .config/GIMP
+.config/InputLeap
 .config/InputLeap/InputLeap.conf
 .config/JetBrains
 .config/QtProject.conf
@@ -55,6 +56,7 @@
 .config/nvim/lua/.luarc.json
 .config/nvim/plugin
 .config/nyxt
+.config/pavucontrol*
 .config/pavucontrol.ini
 .config/pdiary
 .config/pgcli
@@ -148,7 +150,9 @@ Documents
 Downloads
 Jasper*
 Pictures
+Scripts
 Workspace
+input-leap
 mbox
 snap
 steam*

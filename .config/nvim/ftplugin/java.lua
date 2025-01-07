@@ -58,7 +58,7 @@ local on_attach = function(client, bufnr)
 
     vim.keymap.set("n", "<leader>jtc", require('jdtls').test_class, bufopts)
     vim.keymap.set("n", "<leader>jtm", require('jdtls').test_nearest_method, bufopts)
-    -- require("jdtls.tests").generate()
+    vim.keymap.set("n", "<leader>jgt", require('jdtls.tests').generate, bufopts)
     -- require("jdtls.tests").goto_subjects()
 
 end
@@ -179,6 +179,7 @@ local jdtls_config = {
                     "org.junit.jupiter.api.Assertions.*",
                     "java.util.Objects.requireNonNull",
                     "java.util.Objects.requireNonNullElse",
+                    "java.util.Collections",
                     "org.mockito.Mockito.*"
                 },
                 filteredTypes = {
