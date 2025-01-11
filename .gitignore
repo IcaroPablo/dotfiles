@@ -6,6 +6,7 @@
 .aws
 .bash*
 .bash_history
+.cabal-packages
 .cache
 .cargo
 .clojure
@@ -85,6 +86,7 @@
 .fonts.conf
 .fonts/.uuid
 .fonts/JetBrains*
+.ghc
 .gnupg
 .hidden
 .idea
