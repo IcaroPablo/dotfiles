@@ -33,9 +33,21 @@ export PATH=$HOME/.local/bin:$PATH
 export PATH=$HOME/.local/lib/python3.10/site-packages:$PATH
 export PATH=$HOME/.local/scripts/:$PATH
 export PATH=$JAVA_HOME/bin:$PATH
-export PS1="[$(whoami)@$(hostname -s)] [\$PWD] $ "
+# export PS1="[$(whoami)@$(hostname -s)] [\$PWD] $ "
+export PS1="[$(whoami)@$(hostname -s)] [$(pwd)] $ "
 export SKORN_EDITOR='nvim +"set ft=sh"'
 export TERM_CMD="st -e"
 
 # Added by Toolbox App
 export PATH="$PATH:/home/icaro/.local/share/JetBrains/Toolbox/scripts"
+
+# .kshrc
+
+# if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
+# if [ -z "$DISPLAY" ]; then
+    # if [ -x /bin/distrobox ]; then
+        # startx distrobox enter -n arch
+    # else
+        # startx
+    # fi
+# fi
