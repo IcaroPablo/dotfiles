@@ -8,6 +8,7 @@
 .bash_history
 .cache
 .cargo
+.clang-repl-history
 .clojure
 .config/*/zoom*
 .config/.gsd-keyboard.settings-ported
@@ -32,10 +33,13 @@
 .config/enchant
 .config/eog
 .config/evolution
+.config/font-manager
+.config/fontconfig
 .config/gedit
 .config/ghc/ghci_history
 .config/github-copilot*
 .config/gnome*
+.config/go
 .config/google-chrome
 .config/gtk*
 .config/gtk-2.0/gtkfilechooser.ini
@@ -67,10 +71,12 @@
 .config/totem
 .config/unity*
 .config/user-dirs.dirs
+.config/user-dirs.locale
 .config/vlc
 .config/warpd
 .config/xfce*
 .config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml
+.config/xmonad
 .config/zoom*
 .cshrc
 .cvsrc
@@ -125,6 +131,7 @@
 .sndio
 .sonarlint
 .ssh
+.stack
 .steam*
 .sudo_as_admin_successful
 .swt

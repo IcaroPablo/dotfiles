@@ -65,6 +65,8 @@ alias "play"="mpv --shuffle ."
 alias "rm"="rm -i"
 alias "rr"="commandsearch"
 alias "ss"="split_scr"
+alias "same"="xrandr --output HDMI-1 --same-as eDP-1"
+alias "fr"="flatpak run \"\$(flatpak list --columns=application | fzf)\""
 
 # dvtm
 # . $HOME/.local/scripts/skorn
