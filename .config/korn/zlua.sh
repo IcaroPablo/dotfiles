@@ -3,7 +3,8 @@
 # verificar a instalação do script "fzfprompt"
 # a variável PS1 não pode ser sobrescrita para o funcionamento correto
 
-eval "$(lua54 $HOME/.local/bin/z.lua --init posix legacy)"
+# eval "$(lua54 $HOME/.local/bin/z.lua --init posix legacy)"
+# eval "$(lua $HOME/.local/bin/z.lua --init posix legacy)"
 
 cdz() {
     if [ "$1" = "" ]; then
