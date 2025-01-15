@@ -1,4 +1,4 @@
-#!/bin/ksh
+#!/bin/sh
 
 file="$1"
 
@@ -11,7 +11,8 @@ fi
 
 # Check if the input ends with a /
 # if [[ $1 == @(*/) ]] ; then
-if [[ $file == @(*/) ]] ; then
+# if [[ $file == @(*/) ]] ; then
+if echo "$file" | grep -q '/$'; then
     mkdir -p "$file"
 else
     # Input doesn't end with /, so create a file
