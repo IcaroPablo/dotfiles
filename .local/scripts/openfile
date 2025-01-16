@@ -1,4 +1,4 @@
-#!/bin/ksh
+#!/bin/sh
 
 # define a custom 'open' command
 # This command is called when current file is not a directory. You may want to
