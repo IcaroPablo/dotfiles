@@ -8,7 +8,11 @@ set -o vi
 # set -o vi-tabcomplete
 ulimit -c 0
 
-. $HOME/.profile
+if [ -x "$(which lua)" ] && [ -f "$HOME/.local/bin/z.lua" ]; then
+    eval "$(lua54 $HOME/.local/bin/z.lua --init posix legacy)"
+fi
+
+# . $HOME/.profile
 . $HOME/.config/korn/lf.sh
 
 # Functions
@@ -72,23 +76,25 @@ alias "a"="create"
 alias "add"="doas pkg_add -Dsnap"
 alias "bright"="xrandr --output eDP-1 --brightness"
 alias "chkclock"="ntpctl -s all"
+alias "ea"="e -a"
 alias "f"="findfile"
+alias "fr"="flatpak run \"\$(flatpak list --columns=application | fzf)\""
 alias "g"="simplegrep"
 alias "img"="nsxiv --thumbnail"
-alias "ea"="e -a"
 alias "nvim"="launch_nvim"
 alias "o"="openfile"
+alias "oF"='cd $(find . -type d -print | fzf) && nvim'
+alias "of"='cd $(find . -type d -print | fzf)'
 alias "offmon"="xrandr --output eDP-1 --off"
 alias "onmon"="xrandr --output eDP-1 --auto"
+alias "ot"="fzf --preview 'bat --color always {}' | sed 's/ /\\ /g' | xargs -r nvim"
 alias "play"="mpv --shuffle ."
 alias "rm"="rm -i"
 alias "rr"="commandsearch"
+alias "same"="xrandr --output HDMI-1 --same-as eDP-1"
 alias "same"="xrandr --output eDP-1 --same-as HDMI-1"
 alias "sensors"="systat -s 1 sensors"
 alias "ss"="split_scr"
-alias "oF"='cd $(find . -type d -print | fzf) && nvim'
-alias "of"='cd $(find . -type d -print | fzf)'
-alias "ot"="fzf --preview 'bat --color always {}' | sed 's/ /\\ /g' | xargs -r nvim"
 
 # Git
 alias gcm="git checkout master"

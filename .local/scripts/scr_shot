@@ -1,0 +1,11 @@
+#!/bin/sh
+
+scr="$(which scrot)"
+
+if [ -x "$scr" ]; then
+    scrot -f -s -q 100 -e 'xclip -selection clipboard -target image/png -i $f && rm $f'
+elif [ -x "$(which distrobox)" ];then
+    distrobox enter -n arch -- scrot -f -s -q 100 -e 'xclip -selection clipboard -target image/png -i $f && rm $f'
+fi
+
+#scrot -f -q 100 -e 'xclip -selection clipboard -target image/png -i $f && rm $f'
