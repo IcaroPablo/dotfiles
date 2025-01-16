@@ -6,6 +6,7 @@
 .aws
 .bash*
 .bash_history
+.cabal-packages
 .cache
 .cargo
 .clang-repl-history
@@ -15,6 +16,7 @@
 .config/Code
 .config/Debauchee/Barrier.conf
 .config/GIMP
+.config/InputLeap
 .config/InputLeap/InputLeap.conf
 .config/JetBrains
 .config/QtProject.conf
@@ -34,6 +36,7 @@
 .config/eog
 .config/evolution
 .config/font-manager
+.config/fontconfig
 .config/fontconfig
 .config/gedit
 .config/ghc/ghci_history
@@ -59,6 +62,7 @@
 .config/nvim/lua/.luarc.json
 .config/nvim/plugin
 .config/nyxt
+.config/pavucontrol*
 .config/pavucontrol.ini
 .config/pdiary
 .config/pgcli
@@ -88,6 +92,7 @@
 .fonts.conf
 .fonts/.uuid
 .fonts/JetBrains*
+.ghc
 .gnupg
 .hidden
 .idea
@@ -155,7 +160,9 @@ Documents
 Downloads
 Jasper*
 Pictures
+Scripts
 Workspace
+input-leap
 mbox
 snap
 steam*
