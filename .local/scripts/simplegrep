@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# rg -n --hidden "$1" ./* || grep -nRI "$1" ./*
+grep -nRIi "$1" ./*
