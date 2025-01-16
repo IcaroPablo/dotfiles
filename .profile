@@ -35,6 +35,7 @@ export PATH=$HOME/.local/lib/python3.10/site-packages:$PATH
 export PATH=$HOME/.local/scripts/:$PATH
 export PATH=$JAVA_HOME/bin:$PATH
 export PS1="[$(whoami)@$(hostname -s)] [\$PWD] $ "
+# export PS1="[$(whoami)@$(hostname -s)] [$(pwd)] $ "
 #NL=$'\n'
 #PROMPT="┌[%F{cyan}%n%f@%F{cyan}%m%f] [%F{cyan}%y%f]${NL}└[%F{cyan}%d%f] "
 #PROMPT="%F{yellow}┌[%f%n%F{yellow}@%f%m%F{yellow}] [%f%y%F{yellow}]${NL}└[%f%d%F{yellow}]%f $ "
@@ -44,6 +45,6 @@ export TERM_CMD="st -e"
 # Added by Toolbox App
 export PATH="$PATH:/home/icaro/.local/share/JetBrains/Toolbox/scripts"
 
-if [ -x "$(which lua54)" ] && [ -f "$HOME/.local/bin/z.lua" ]; then
-    eval "$(lua54 $HOME/.local/bin/z.lua --init posix legacy)"
+if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
+    startx
 fi

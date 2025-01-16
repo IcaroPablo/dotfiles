@@ -1,4 +1,4 @@
-#!/bin/ksh
+#!/bin/sh
 
 message="$1"
 echo -e | fzf --prompt="$message" --print-query

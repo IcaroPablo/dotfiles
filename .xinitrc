@@ -55,6 +55,10 @@ xset 0 0 0
 $HOME/.fehbg &
 # setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.\+=\([0-9]\+\).\+/\1/'` br &
 setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.*=//' | awk '{print $1}'` br &
-bar &
-#exec dwm
-exec startdwm
+setxkbmap br &
+bar.sh &
+exec dwm
+# exec startdwm
+# exec sowm
+# xhost +SI:localuser:$USER
+# exec distrobox enter -T -n arch -- xmonad
