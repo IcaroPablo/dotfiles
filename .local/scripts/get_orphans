@@ -1,0 +1,24 @@
+#!/bin/sh
+
+req() {
+    #TODO: should turn this into a tree
+    in=0
+
+    printf "%s" "$(pkg_info $1)" | while IFS= read -r line; do
+        if [ "$in" = 0 ] && [ "$line" = "Required by:" ]; then
+            in=1
+            continue
+        fi
+
+        [ "$in" = 1 ] && [ "$line" = "" ] && in=0
+        [ "$in" = 1 ] && printf "$line\n"
+    done
+}
+
+for pkg in $(pkg_info -mz); do
+    pkg_name="$(echo $pkg | sed 's/--$//')"
+
+    if [ "$(req $pkg_name)" = "" ]; then
+        echo "$pkg_name"
+    fi
+done

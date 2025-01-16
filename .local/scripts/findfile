@@ -1,3 +1,4 @@
 #!/bin/sh
 
-doas find ./* -iname "*$1*" | less
+# doas find ./* -iname "*$1*" | less
+doas find ./* -iname "*$1*"
