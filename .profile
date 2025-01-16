@@ -43,3 +43,7 @@ export TERM_CMD="st -e"
 
 # Added by Toolbox App
 export PATH="$PATH:/home/icaro/.local/share/JetBrains/Toolbox/scripts"
+
+if [ -x "$(which lua54)" ] && [ -f "$HOME/.local/bin/z.lua" ]; then
+    eval "$(lua54 $HOME/.local/bin/z.lua --init posix legacy)"
+fi
