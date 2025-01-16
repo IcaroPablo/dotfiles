@@ -10,7 +10,7 @@ ulimit -c 0
 
 # Variables
 
-. $HOME/.profile
+# . $HOME/.profile
 . $HOME/.config/korn/zlua.sh
 . $HOME/.config/korn/lf.sh
 
