@@ -41,13 +41,6 @@ export TERM_CMD="st -e"
 # Added by Toolbox App
 export PATH="$PATH:/home/icaro/.local/share/JetBrains/Toolbox/scripts"
 
-# .kshrc
-eval "$(lua $HOME/.local/bin/z.lua --init posix legacy)"
-
-# if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
-if [ -z "$DISPLAY" ]; then
-    if [ ! -f "/tmp/xstarted" ]; then
-        touch /tmp/xstarted
+if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
         startx
-    fi
 fi
