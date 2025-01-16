@@ -14,6 +14,9 @@ cdz() {
     # ultima alternativa não funciona
     # command cd "$1" 2> /dev/null || z -I "$1" || (echo "cd: File or Directory not found: $1" >&2 && exit 1)
     builtin cd "$1" 2> /dev/null || z -I "$1" || (echo "cd: File or Directory not found: $1" >&2 && exit 1)
+
+    clear
+    eza -lh --group-directories-first --color always | bat --color always --plain
 }
 
 cdzprompt() {
