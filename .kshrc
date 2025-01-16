@@ -8,18 +8,34 @@ set -o vi
 # set -o vi-tabcomplete
 ulimit -c 0
 
-# Variables
-
 . $HOME/.profile
-. $HOME/.config/korn/zlua.sh
 . $HOME/.config/korn/lf.sh
 
 # Functions
 
-simplegrep() {
-    # rg -n --hidden "$1" ./* || grep -nRI "$1" ./*
-    grep -nRIi "$1" ./*
+e() {
+    eza -lh $1 --group-directories-first --color always | bat --color always --plain
 }
+
+cd() {
+    if [ "$1" = "" ]; then
+        # command cd
+        builtin cd
+    fi
+
+    # command cd "$1" 2> /dev/null || z -I "$1"
+    builtin cd "$1" 2> /dev/null || z -I "$1"
+
+    clear
+    e
+}
+
+# cdzprompt() {
+#     message="directory query: "
+#     directory="$(fzfsimpleprompt "$message")"
+#
+#     cd "$directory"
+# }
 
 req() {
     #TODO: should turn this into a tree
@@ -58,10 +74,8 @@ alias "bright"="xrandr --output eDP-1 --brightness"
 alias "chkclock"="ntpctl -s all"
 alias "f"="findfile"
 alias "g"="simplegrep"
-# alias "htop"="TERM=xterm-256color && htop"
 alias "img"="nsxiv --thumbnail"
-alias "la"="ls -a"
-alias "ls"="eza -lh --group-directories-first"
+alias "la"="e -a"
 alias "nvim"="launch_nvim"
 alias "o"="openfile"
 alias "offmon"="xrandr --output eDP-1 --off"
@@ -84,6 +98,4 @@ alias newb="git checkout master && git pull origin master && git checkout -b "
 # dvtm
 # . $HOME/.local/scripts/skorn
 
-#THIS MUST BE AT THE END OF THE FILE FOR SDKMAN TO WORK!!!
-# export SDKMAN_DIR="$HOME/.sdkman"
-# [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
+e
