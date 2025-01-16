@@ -256,7 +256,6 @@ require('packer').startup(function(use)
     --})
     use 'vinnymeller/swagger-preview.nvim'
     use 'l3mon4d3/luasnip'
-    use 'saadparwaiz1/cmp_luasnip'
     --use({
         --"quangnguyen30192/cmp-nvim-ultisnips",
         --after = "nvim-cmp",
@@ -402,6 +401,7 @@ require('packer').startup(function(use)
             "hrsh7th/cmp-nvim-lsp",
             "hrsh7th/cmp-path",
             'hrsh7th/cmp-vsnip',
+            'saadparwaiz1/cmp_luasnip',
             'hrsh7th/vim-vsnip'
         },
     }

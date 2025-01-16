@@ -76,6 +76,11 @@
     ## am (a+)
     aa = add --all
     # aa = am --abort
+    acmp = "!f(){ \
+            git aa; \
+            git cm \"$1\"; \
+            git push; \
+        };f"
 
     ## add (a+)
     ap = add -p
