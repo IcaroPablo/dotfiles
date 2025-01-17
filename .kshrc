@@ -9,7 +9,7 @@ set -o vi
 ulimit -c 0
 
 if [ -x "$(which lua)" ] && [ -f "$HOME/.local/bin/z.lua" ]; then
-    eval "$(lua54 $HOME/.local/bin/z.lua --init posix legacy)"
+    eval "$(lua $HOME/.local/bin/z.lua --init posix legacy)"
 fi
 
 # . $HOME/.profile
