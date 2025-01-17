@@ -13,6 +13,7 @@ if [ -x "$(which lua)" ] && [ -f "$HOME/.local/bin/z.lua" ]; then
 fi
 
 # . $HOME/.profile
+# . $HOME/.config/korn/zlua.sh
 . $HOME/.config/korn/lf.sh
 
 # Functions
