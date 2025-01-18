@@ -100,7 +100,7 @@ alias chkclock="ntpctl -s all"
 alias doas="${DOAS} "   # doas <- sudo
 alias ea="e -a"
 alias f="findfile"
-alias r="flatpak run \"\$(flatpak list --columns=application | fzf)\""
+alias fr="flatpak run \"\$(flatpak list --columns=application | fzf)\""
 alias g="simplegrep"
 alias img="nsxiv --thumbnail"
 alias nvim="launch_nvim"
