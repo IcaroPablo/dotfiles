@@ -47,6 +47,53 @@ cd() {
 #     cd "$directory"
 # }
 
+# search history; rerun a command or grep for a command
+hist() {
+	# NAME
+	#      hist - list commands or search for commands in history
+	#
+	# SYNOPSIS
+	#      hist [arg...]
+	#      hist - [arg...]
+	#
+	# DESCRIPTION
+	#      In the first form, the hist function lists the commands
+	#      in the history that matches the given argument (or lists
+	#      all commands, if no argument is passed).
+	#
+	#      In the second form, the hist function also lists commands
+	#      as in the previous form, but inserts a number before each
+	#      command.  It then prompts the user for a number and rerun
+	#      the command listed after this number.  If the user enters
+	#      a number preceded with the character "e", the $EDITOR is
+	#      called to edit the command before rerun it.
+
+	case "$1" in
+	-)
+		# rerun a command
+		shift
+		fc -l 1 | fgrep "$1" || return 0
+		read -r n || return 0
+		case "$n" in
+		"")
+			return 0
+			;;
+		e*)
+			n="${n#"e"}"
+			fc $n
+			;;
+		*)
+			fc -s $n
+			;;
+		esac
+		;;
+	*)
+		# list history grepping for given argument
+		fc -ln 1 | fgrep "$1" || return 0
+		;;
+	esac
+}
+
 req() {
     #TODO: should turn this into a tree
     in=0
@@ -85,6 +132,15 @@ complete() {
 	fi
 }
 
+# run previous non-doas command with doas; or retry previous doas command
+fuck() {
+	typeset n=$(fc -l 1 | egrep -v '^[0-9]+[ ]*fuck' | tail -n 1 | cut -d'	' -f1)
+	fc -e "ed -s" "$n" <<-EOF
+		,v/^${DOAS}/s/^/${DOAS} /
+		w
+	EOF
+}
+
 # alias x="ssh -YC4c aes128-cbc treebeard@192.168.1.21 'x2x -west -to :0'"
 # alias x='ssh -YC4 -c aes128-cbc treebeard@192.168.1.21 '\''x2x -east -to :0'\'
 # x() {
@@ -114,7 +170,7 @@ alias play="mpv --shuffle ."
 alias rm="rm -i"
 alias rr="commandsearch"
 alias same="xrandr --output HDMI-1 --same-as eDP-1"
-alias same="xrandr --output eDP-1 --same-as HDMI-1"
+# alias same="xrandr --output eDP-1 --same-as HDMI-1"
 alias sensors="systat -s 1 sensors"
 alias ss="split_scr"
 
