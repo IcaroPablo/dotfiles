@@ -2,24 +2,22 @@
 
 set -e
 
+# TODO
 # flag para não limpar o arquivo de seleção (apenas incrementar)
 # flag para listar o que tá selecionado
 # flag para apenas usar o que tá selecionado (sem incrementar)
+# preview para pastas
 
 SEL_FILE="/tmp/sel_items"
 
-# criar o arquivo de seleção em tmp
 [ ! -f "$SEL_FILE" ] && touch "$SEL_FILE"
 
 cat /dev/null > "$SEL_FILE"
 
-# preview para pastas
-# ver a parada do container do docker que sempre sobre sozinho
 item_list="$(eza --group-directories-first --icons always)"
 
 lines="$(echo "$item_list" | wc -l)"
 
-# buscar nova pasta ou arquivo usando fzf
 echo "$item_list" | fzf -m \
     --height $(expr $lines + 2) \
     --bind 'ctrl-v:toggle+clear-query' \
