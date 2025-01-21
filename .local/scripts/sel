@@ -1,0 +1,34 @@
+#!/bin/sh
+
+SEL_FILE="/tmp/sel_items"
+
+# criar o arquivo de seleção em tmp
+[ ! -f "$SEL_FILE" ] && touch "$SEL_FILE"
+
+cat /dev/null > "$SEL_FILE"
+
+selected_item=""
+
+# como integrar isso aqui facilmente com comandos ? sintaxy sel <comando> ?
+# ver a parada do container do docker que sempre sobre sozinho
+item_list="$(eza --group-directories-first --icons always)"
+
+lines="$(echo "$item_list" | wc -l)"
+
+# buscar nova pasta ou arquivo usando fzf
+# --border=horizontal \
+selected_item="$(echo "$item_list" | fzf -m \
+    --height $(expr $lines + 2) \
+    --bind 'ctrl-v:toggle+clear-query' \
+    --bind 'alt-v:toggle-all+clear-query' \
+    --reverse \
+    --preview='echo {} | sed s/^..// | xargs preview')"
+
+if [ "$selected_item" != "" ]; then
+    selected_item="$(echo "$selected_item" | sed 's/^..//' | xargs readlink -f)"
+
+    # inserir o item no arquivo de seleção caso ele já não esteja lá
+    grep -q "$selected_item" "$SEL_FILE" || echo $selected_item >> $SEL_FILE
+fi
+
+cat $SEL_FILE
