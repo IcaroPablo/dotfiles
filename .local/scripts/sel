@@ -1,5 +1,11 @@
 #!/bin/sh
 
+set -e
+
+# flag para não limpar o arquivo de seleção (apenas incrementar)
+# flag para listar o que tá selecionado
+# flag para apenas usar o que tá selecionado (sem incrementar)
+
 SEL_FILE="/tmp/sel_items"
 
 # criar o arquivo de seleção em tmp
@@ -7,28 +13,27 @@ SEL_FILE="/tmp/sel_items"
 
 cat /dev/null > "$SEL_FILE"
 
-selected_item=""
-
-# como integrar isso aqui facilmente com comandos ? sintaxy sel <comando> ?
+# preview para pastas
 # ver a parada do container do docker que sempre sobre sozinho
 item_list="$(eza --group-directories-first --icons always)"
 
 lines="$(echo "$item_list" | wc -l)"
 
 # buscar nova pasta ou arquivo usando fzf
-# --border=horizontal \
-selected_item="$(echo "$item_list" | fzf -m \
+echo "$item_list" | fzf -m \
     --height $(expr $lines + 2) \
     --bind 'ctrl-v:toggle+clear-query' \
     --bind 'alt-v:toggle-all+clear-query' \
+    --color=bg+:-1 \
+    --border=horizontal \
+    --info=inline \
     --reverse \
-    --preview='echo {} | sed s/^..// | xargs preview')"
+    --preview='echo {} | sed s/^..// | xargs preview' >> $SEL_FILE
 
-if [ "$selected_item" != "" ]; then
-    selected_item="$(echo "$selected_item" | sed 's/^..//' | xargs readlink -f)"
-
-    # inserir o item no arquivo de seleção caso ele já não esteja lá
-    grep -q "$selected_item" "$SEL_FILE" || echo $selected_item >> $SEL_FILE
+if [ "$(cat $SEL_FILE)" != "" ];then
+    cat "$SEL_FILE" | sed 's/^..//' | xargs readlink -f | tee -a "$SEL_FILE"
 fi
 
-cat $SEL_FILE
+if [ "$1" != "" ]; then
+    eval "cat $SEL_FILE | xargs $1"
+fi
