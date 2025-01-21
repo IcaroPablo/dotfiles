@@ -24,7 +24,7 @@ fi
 # Functions
 
 e() {
-    eza -lh $1 --group-directories-first --color always | bat --color always --plain
+    eza -lh $1 --group-directories-first --icons always --color always | bat --color always --plain
 }
 
 cd() {
