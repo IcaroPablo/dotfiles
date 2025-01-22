@@ -14,24 +14,22 @@ SEL_FILE="/tmp/sel_items"
 
 cat /dev/null > "$SEL_FILE"
 
-item_list="$(eza --group-directories-first --icons always)"
+temp="$(mktemp)"
 
-lines="$(echo "$item_list" | wc -l)"
-
-echo "$item_list" | fzf -m \
-    --height $(expr $lines + 2) \
+eza --group-directories-first --icons always -a | fzf -m \
     --bind 'ctrl-v:toggle+clear-query' \
     --bind 'alt-v:toggle-all+clear-query' \
+    --height 100% \
     --color=bg+:-1 \
-    --border=horizontal \
+    --border=sharp \
     --info=inline \
     --reverse \
-    --preview='echo {} | sed s/^..// | xargs preview' >> $SEL_FILE
+    --preview='echo {} | sed s/^..// | xargs preview' >> $temp
 
-if [ "$(cat $SEL_FILE)" != "" ];then
-    cat "$SEL_FILE" | sed 's/^..//' | xargs readlink -f | tee -a "$SEL_FILE"
+if [ "$(cat $temp)" != "" ];then
+    cat "$temp" | sed 's/^..//' | xargs readlink -f | tee -a "$SEL_FILE"
 fi
 
 if [ "$1" != "" ]; then
-    eval "cat $SEL_FILE | xargs $1"
+    eval "cat $SEL_FILE | xargs -I {} $@ {}"
 fi
