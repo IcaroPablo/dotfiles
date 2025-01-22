@@ -24,6 +24,7 @@ fi
 # Functions
 
 e() {
+    clear
     eza -lh $1 --group-directories-first --icons always --color always | bat --color always --plain
 }
 
@@ -36,7 +37,6 @@ cd() {
     # command cd "$1" 2> /dev/null || z -I "$1"
     builtin cd "$1" 2> /dev/null || z -I "$1"
 
-    clear
     e
 }
 
@@ -167,6 +167,8 @@ alias offmon="xrandr --output eDP-1 --off"
 alias onmon="xrandr --output eDP-1 --auto"
 alias ot="fzf --preview 'bat --color always {}' | sed 's/ /\\ /g' | xargs -r nvim"
 alias play="mpv --shuffle ."
+alias p="cat /tmp/sel_items | xargs -I {} cp -Rv {} ."
+alias m="cat /tmp/sel_items | xargs -I {} mv -v {} ."
 alias rm="rm -i"
 alias rr="commandsearch"
 alias same="xrandr --output HDMI-1 --same-as eDP-1"
