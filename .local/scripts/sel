@@ -2,17 +2,33 @@
 
 set -e
 
-# TODO
-# flag para não limpar o arquivo de seleção (apenas incrementar)
-# flag para listar o que tá selecionado
-# flag para apenas usar o que tá selecionado (sem incrementar)
-# preview para pastas
-
 SEL_FILE="/tmp/sel_items"
 
 [ ! -f "$SEL_FILE" ] && touch "$SEL_FILE"
 
-cat /dev/null > "$SEL_FILE"
+increment_only=false
+show_selected=false
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --increment-only)
+            increment_only=true
+            break;;
+        --show-selected)
+            show_selected=true
+            break;;
+        # TODO
+        # --use-selected-only)
+        #     use_selected_only=true
+        #     break;;
+        *)
+            break;;
+    esac
+done
+
+[ "$show_selected" = true ] && cat "$SEL_FILE" && exit 0
+
+[ ! "$increment_only" = true ] && cat /dev/null > "$SEL_FILE"
 
 temp="$(mktemp)"
 
@@ -30,6 +46,4 @@ if [ "$(cat $temp)" != "" ];then
     cat "$temp" | sed 's/^..//' | xargs readlink -f | tee -a "$SEL_FILE"
 fi
 
-if [ "$1" != "" ]; then
-    eval "cat $SEL_FILE | xargs -I {} $@ {}"
-fi
+[ "$1" != "" ] && eval "cat $SEL_FILE | xargs -I {} $@ {}"
