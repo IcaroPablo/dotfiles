@@ -16,7 +16,7 @@ handlenoextension() {
             batorcat "$1"
             break ;;
         inode/directory)
-            eza -l --group-directories-first --icons always -a "$1" | awk '{print $7, $8}'
+            eza -1 --group-directories-first --icons always -a "$1"
             break ;;
         *)
             break ;;
