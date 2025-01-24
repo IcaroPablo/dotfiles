@@ -4,7 +4,7 @@ file="$1"
 
 # if [ "$#" -eq 0 ]; do
 if [ -z "$file" ]; then
-    file="$(fzfsimpleprompt "Enter file name (directories end with an '/'): ")"
+    file="$(echo -e | fzf --prompt="Enter file name (directories end with an '/'): " --print-query)"
 fi
 
 # todo: verificar se já existe arquivo/pasta com aquele nome
