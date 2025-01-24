@@ -8,14 +8,21 @@ SEL_FILE="/tmp/sel_items"
 
 increment_only=false
 show_selected=false
+show_hidden=false
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --increment-only)
             increment_only=true
+            shift
             break;;
         --show-selected)
             show_selected=true
+            shift
+            break;;
+        --show-hidden)
+            show_hidden=true
+            shift
             break;;
         # TODO
         # --use-selected-only)
@@ -30,9 +37,16 @@ done
 
 [ ! "$increment_only" = true ] && cat /dev/null > "$SEL_FILE"
 
+
+if [ "$show_hidden" = true ];then
+    items="$(eza -1 --group-directories-first --icons always -a)"
+else
+    items="$(eza -1 --group-directories-first --icons always)"
+fi
+
 temp="$(mktemp)"
 
-eza --group-directories-first --icons always -a | fzf -m \
+echo "$items" | fzf -m \
     --bind 'tab:toggle+clear-query' \
     --bind 'shift-tab:toggle-all+clear-query' \
     --height 100% \
