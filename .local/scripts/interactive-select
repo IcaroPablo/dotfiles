@@ -46,4 +46,19 @@ if [ "$(cat $temp)" != "" ];then
     cat "$temp" | sed 's/^..//' | xargs readlink -f | tee -a "$SEL_FILE"
 fi
 
-[ "$1" != "" ] && eval "cat $SEL_FILE | xargs -I {} $@ {}"
+rm "$temp"
+
+if [ "$1" != "" ]; then
+    cmd="$@"
+
+    while [ "$#" -gt 0 ]; do
+        shift
+    done
+
+    while IFS= read -r line; do
+        set -- "$@" "$line"
+    done < /tmp/sel_items
+
+    $cmd "$@"
+fi
+# [ "$1" != "" ] && eval "cat $SEL_FILE | xargs $@"
