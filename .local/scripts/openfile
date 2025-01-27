@@ -44,6 +44,8 @@
 
 first="$1"
 
+[ "$first" = "" ] && interactive-select openfile
+
 # echo "$first"
 echo "$@"
 # escaped_terms=""
