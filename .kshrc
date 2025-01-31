@@ -173,9 +173,12 @@ alias rm="rm -i"
 alias rr="commandsearch"
 alias s="interactive-select"
 alias sa="interactive-select --show-hidden"
+alias so="interactive-select openfile"
 alias same="xrandr --output HDMI-1 --same-as eDP-1"
 alias sensors="systat -s 1 sensors"
 alias ss="split_scr"
+alias t="trash"
+alias u="cd .."
 
 #seninha's
 # alias cp="cp -Riv"      # recursive, interactive, verbose cp
