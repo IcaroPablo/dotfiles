@@ -1,0 +1,43 @@
+aifileextractservice
+
+tablea: file Id
+message em jsonb ou string para resposta do serviço de IA
+e outro para o businss data
+createdBy
+fileName
+
+
+-----------------------------------------------------------------------------------------------------------------
+
+CREATE TABLE finance.ai_file_extraction (
+    id uuid NOT NULL,
+    tenant_id int8 NOT NULL,
+    file_id text NOT NULL,
+    bucket text NOT NULL,
+    path text NOT NULL,
+    filename text NOT NULL,
+    status text NOT NULL CHECK (status in ('PENDING', 'SUCCESS', 'FAILED')),
+    message text,
+    extraction jsonb,
+    busines_data jsonb,
+    created_by int8 NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+
+    CONSTRAINT ai_file_extraction_pkey PRIMARY KEY (id)
+)
+
+COMMENT ON TABLE  finance.ai_file_extraction IS 'Tabela de dados extraídos por IA de arquivos importados';
+COMMENT ON COLUMN finance.ai_file_extraction.id IS 'Identificador do registro do arquivo';
+COMMENT ON COLUMN finance.ai_file_extraction.tenant_id IS 'Identificador do tenant da empresa';
+COMMENT ON COLUMN finance.ai_file_extraction.file_id IS 'Identificador do arquivo';
+COMMENT ON COLUMN finance.ai_file_extraction.bucket IS 'Nome do bucket S3 onde o arquivo está armazenado';
+COMMENT ON COLUMN finance.ai_file_extraction.path IS 'Caminho para o arquivo dentro do bucket S3';
+COMMENT ON COLUMN finance.ai_file_extraction.filename IS 'Nome do arquivo salvo no bucket S3';
+COMMENT ON COLUMN finance.ai_file_extraction.status IS 'Estado do processo de extração de dados do arquivo enviado';
+COMMENT ON COLUMN finance.ai_file_extraction.message IS 'Mensagem breve sobre o resultado da extração de dados';
+COMMENT ON COLUMN finance.ai_file_extraction.extraction IS 'Dados estruturados do arquivo enviado';
+COMMENT ON COLUMN finance.ai_file_extraction.business_data IS 'Dados tratados para criação de lançamento financeiro';
+COMMENT ON COLUMN finance.ai_file_extraction.created_by IS 'Idenficador do usuário que fez a ação';
+COMMENT ON COLUMN finance.ai_file_extraction.created_at IS 'Data e hora da persistência do registro';
+COMMENT ON COLUMN finance.ai_file_extraction.updated_at IS 'Data e hora da atualização do registro';
