@@ -19,7 +19,7 @@ fi
 
 # . $HOME/.profile
 # . $HOME/.config/korn/zlua.sh
-. $HOME/.config/korn/lf.sh
+# . $HOME/.config/korn/lf.sh
 
 # Functions
 
@@ -28,16 +28,24 @@ e() {
     eza -lh $1 --group-directories-first --icons always --color always | bat --color always --plain
 }
 
-cd() {
+c() {
     if [ "$1" = "" ]; then
-        # command cd
         builtin cd
+    else
+        builtin cd "$1" 2> /dev/null || z -I "$1"
     fi
 
-    # command cd "$1" 2> /dev/null || z -I "$1"
-    builtin cd "$1" 2> /dev/null || z -I "$1"
-
     e
+
+    temp="$(mktemp)"
+
+    interactive-select openfile --dir-path "$temp"
+
+    destdir="$(cat $temp)"
+
+    rm -f "$temp"
+
+    [ -d "$destdir" ] && [ "$destdir" != "$(pwd)" ] && c "$destdir"
 }
 
 # cdzprompt() {
