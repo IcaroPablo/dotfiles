@@ -37,7 +37,6 @@ done
 
 [ ! "$increment_only" = true ] && cat /dev/null > "$SEL_FILE"
 
-
 if [ "$show_hidden" = true ];then
     items="$(eza -1 --group-directories-first --icons always -a)"
 else
@@ -46,9 +45,18 @@ fi
 
 temp="$(mktemp)"
 
-echo "$items" | fzf -m \
-    --bind 'tab:toggle+clear-query' \
-    --bind 'shift-tab:toggle-all+clear-query' \
+echo "$items" | fzf \
+    --multi \
+    --prompt="$(pwd)/" \
+    --bind 'tab:toggle+clear-query+down' \
+    --bind 'shift-tab:toggle+clear-query+up' \
+    --bind 'ctrl-t:toggle-all' \
+    --bind 'ctrl-e:deselect-all' \
+    --bind 'alt-j:jump,jump:toggle' \
+    --bind 'alt-g:first' \
+    --bind 'alt-G:last' \
+    --bind 'ctrl-h:print(....)+accept' \
+    --bind 'ctrl-l:accept' \
     --height 100% \
     --color=bg+:-1 \
     --border=sharp \
