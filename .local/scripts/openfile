@@ -42,33 +42,50 @@
 # image/vnd.djvu|application/pdf|application/octet-stream|application/postscript) setsid -f zathura $fx >/dev/null 2>&1 ;;
 # setsid não funciona
 
-first="$1"
+dir_path=""
 
-[ "$first" = "" ] && interactive-select openfile
+if [ "$1" = "--dir-path" ]; then
+    shift
+    dir_path="$1"
+    shift
+fi
 
-# echo "$first"
-echo "$@"
-# escaped_terms=""
+[ "$1" = "" ] && interactive-select openfile
 
 # for current in "$@"; do
 #     escaped_term="$(echo "$current" | sed 's/ /\\ /g')"
 #     escaped_terms="$escaped_terms $escaped_term"
 # done
 
-# echo "$escaped_terms"
+handlenoextension() {
+    case "$(file -ibL "$1" | sed 's/;.*//')" in
+        # text/*)
+        #     batorcat "$1"
+        #     break ;;
+        inode/directory)
+            [ "$dir_path" = "" ] && echo "$1" || echo "$1" > "$dir_path"
+            break ;;
+        *) for f in $@ ; do setsid xdg-open "$f" > /dev/null 2> /dev/null & done ;;
+    esac
+}
+
+first="$1"
 
 test -L "$first" && first="$(readlink -f "$first")"
+
 case "$(file --mime-type "$first" -b)" in
     # text/*|application/json|*shellscript|application/x-empty) $(echo $NVIM_TERMINAL) -e nvim --cmd "let g:lf_server='$lf_server'" "$@" > /dev/null 2> /dev/null & ;;
     # text/*|application/json|*shellscript|application/x-empty) [[ -z "$NVIM_SOCKET" ]] && launch_nvim "$escaped_terms" || nvr --servername 127.0.0.1:$NVIM_SOCKET "$escaped_terms" ;;
-    text/*|application/json|*shellscript|application/x-empty) launch_nvim "$@" ;;
+    text/*|application/json|*shellscript|application/x-empty|application/octet-stream) launch_nvim "$@" ;;
     application/pdf|application/vnd.djvu|application/epub*) zathura "$@" ;;
     # application/pdf|application/vnd.djvu|application/epub*) setsid -f zathura $fx >/dev/null 2>&1 ;;
-    audio/*|video/x-ms-asf|application/octet-stream) mpv --shuffle --no-audio-display "$@" ;;
+    # audio/*|video/x-ms-asf|application/octet-stream) mpv --shuffle --no-audio-display "$@" ;;
+    audio/*|video/x-ms-asf) mpv --shuffle --no-audio-display "$@" ;;
     # video/*) setsid -f mpv "$@" -quiet >/dev/null 2>&1 ;;
     video/*) mpv "$@" >/dev/null 2>&1 ;;
     # image/*) setsid -f nsxiv -aio "$@" 2>/dev/null ;;
     image/*) nsxiv -a --thumbnail "$@" ;;
-    *) for f in $@ ; do setsid xdg-open "$f" > /dev/null 2> /dev/null & done ;;
+	*) handlenoextension "$@" ;;
+    # *) for f in $@ ; do setsid xdg-open "$f" > /dev/null 2> /dev/null & done ;;
     # *) for f in $fx; do setsid -f $OPENER $f >/dev/null 2>&1; done;;
 esac
