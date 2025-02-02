@@ -56,8 +56,8 @@ echo "$items" | fzf -m \
     --reverse \
     --preview='echo {} | sed s/^..// | xargs preview' >> $temp
 
-if [ "$(cat $temp)" != "" ];then
-    cat "$temp" | sed 's/^..//' | xargs readlink -f | tee -a "$SEL_FILE"
+if [ "$(cat $temp)" != "" ]; then
+    cat "$temp" | sed 's/^..//' | xargs readlink -f >> "$SEL_FILE"
 fi
 
 rm "$temp"
@@ -75,4 +75,5 @@ if [ "$1" != "" ]; then
 
     $cmd "$@"
 fi
+
 # [ "$1" != "" ] && eval "cat $SEL_FILE | xargs $@"
