@@ -154,7 +154,7 @@
     ria = ri --autosquash
 
     ## reset
-    rh = reset --hard
+    rh = reset --hard HEAD^
     rs = reset --soft HEAD^
 
     ## remote (r+)
