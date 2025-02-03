@@ -43,7 +43,7 @@ c() {
         esac
     done
 
-    if [ -d "$1" ] && [ "$1" != "$(pwd)" ]; then
+    if [ -d "$1" ]; then
         cd "$1"
         z --add "$1"
     elif [ -f "$1" ]; then
@@ -54,9 +54,7 @@ c() {
 
     [ "$lastdir" != "$(pwd)" ] && e
 
-    if [ "$1" != "" ] && [ "$interactive" = "false" ]; then
-        return
-    fi
+    [ "$1" != "" ] && [ "$interactive" = "false" ] && return
 
     temp="$(mktemp)"
 
@@ -98,28 +96,23 @@ hist() {
 	#      called to edit the command before rerun it.
 
 	case "$1" in
-	-)
-		# rerun a command
-		shift
-		fc -l 1 | fgrep "$1" || return 0
-		read -r n || return 0
-		case "$n" in
-		"")
-			return 0
-			;;
-		e*)
-			n="${n#"e"}"
-			fc $n
-			;;
-		*)
-			fc -s $n
-			;;
-		esac
-		;;
-	*)
-		# list history grepping for given argument
-		fc -ln 1 | fgrep "$1" || return 0
-		;;
+        -)
+            # rerun a command
+            shift
+            fc -l 1 | fgrep "$1" || return 0
+            read -r n || return 0
+            case "$n" in
+                "")
+                    return 0;;
+                e*)
+                    n="${n#"e"}"
+                    fc $n;;
+                *)
+                    fc -s $n;;
+            esac;;
+        *)
+            # list history grepping for given argument
+            fc -ln 1 | fgrep "$1" || return 0;;
 	esac
 }
 
@@ -134,6 +127,7 @@ req() {
         fi
 
         [ "$in" = 1 ] && [ "$line" = "" ] && in=0
+
         [ "$in" = 1 ] && printf "$line\n"
     done
 }
@@ -226,7 +220,6 @@ alias u="cd .."
 # alias d='dir'           # lazyman dir
 # alias r='readme'        # lazyman readme
 # alias scheme='rlwrap -q\" chibi-scheme'         # interactive scheme REPL
-
 
 # Git
 alias gcm="git checkout master"
