@@ -92,6 +92,7 @@
 .fonts.conf
 .fonts/.uuid
 .fonts/JetBrains*
+.fzf
 .ghc
 .gnupg
 .hidden
