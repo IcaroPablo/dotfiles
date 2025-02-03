@@ -182,6 +182,7 @@ alias a="create"
 alias add="doas pkg_add -Dsnap"
 alias bright="xrandr --output eDP-1 --brightness"
 alias chkclock="ntpctl -s all"
+alias ci="c -i"
 alias doas="${DOAS} "   # doas <- sudo
 alias ea="e -a"
 alias f="findfile"
@@ -189,7 +190,6 @@ alias fr="flatpak run \"\$(flatpak list --columns=application | fzf)\""
 alias g="simplegrep"
 alias img="nsxiv --thumbnail"
 alias nvim="launch_nvim"
-alias o="openfile"
 alias oF='cd $(find . -type d -print | fzf) && nvim'
 alias of='cd $(find . -type d -print | fzf)'
 alias offmon="xrandr --output eDP-1 --off"
