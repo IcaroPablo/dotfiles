@@ -37,7 +37,7 @@ done
 
 [ ! "$increment_only" = true ] && cat /dev/null > "$SEL_FILE"
 
-if [ "$show_hidden" = true ];then
+if [ "$show_hidden" = true ]; then
     items="$(eza -1 --group-directories-first --icons always -a)"
 else
     items="$(eza -1 --group-directories-first --icons always)"

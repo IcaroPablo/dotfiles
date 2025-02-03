@@ -29,13 +29,34 @@ e() {
 }
 
 c() {
-    if [ "$1" = "" ]; then
-        builtin cd
+    interactive=false
+    lastdir="$(pwd)"
+
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            -i|--interactive)
+                interactive=true
+                shift
+                break;;
+            *)
+                break;;
+        esac
+    done
+
+    if [ -d "$1" ] && [ "$1" != "$(pwd)" ]; then
+        cd "$1"
+        z --add "$1"
+    elif [ -f "$1" ]; then
+        openfile "$1"
     else
-        builtin cd "$1" 2> /dev/null || z -I "$1"
+        z -I "$1"
     fi
 
-    e
+    [ "$lastdir" != "$(pwd)" ] && e
+
+    if [ "$1" != "" ] && [ "$interactive" = "false" ]; then
+        return
+    fi
 
     temp="$(mktemp)"
 
@@ -45,7 +66,7 @@ c() {
 
     rm -f "$temp"
 
-    [ -d "$destdir" ] && [ "$destdir" != "$(pwd)" ] && c "$destdir"
+    [ "$destdir" != "" ] && c -i "$destdir"
 }
 
 # cdzprompt() {
