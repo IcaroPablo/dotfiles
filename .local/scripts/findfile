@@ -1,4 +1,8 @@
 #!/bin/sh
 
 # doas find ./* -iname "*$1*" | less
-doas find ./* -iname "*$1*"
+if [ -x "$(which fdfind)" ]; then
+    fdfind "$1"
+else
+    find ./* -iname "*$1*"
+fi

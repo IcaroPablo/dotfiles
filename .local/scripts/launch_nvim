@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# TODO get absolute path for each entry
+
 if [ -n "$NVIM_SOCKET" ]; then
     command nvim --server 127.0.0.1:$NVIM_SOCKET --remote "$@"
 else
