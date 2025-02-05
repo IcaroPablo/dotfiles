@@ -1,0 +1,34 @@
+#!/bin/sh
+
+set -e
+
+STORAGE_FILE="/tmp/sel_items"
+
+[ ! -f "$STORAGE_FILE" ] && touch "$STORAGE_FILE"
+
+increment_only=false
+show_selected=false
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --increment-only)
+            increment_only=true
+            shift
+            break;;
+        --show-selected)
+            show_selected=true
+            shift
+            break;;
+        *)
+            break;;
+    esac
+done
+
+[ "$show_selected" = true ] && cat "$STORAGE_FILE" && exit 0
+
+[ ! "$increment_only" = true ] && cat /dev/null > "$STORAGE_FILE"
+
+while [ "$#" -gt 0 ]; do
+    echo "$1" >> "$STORAGE_FILE"
+    shift
+done
