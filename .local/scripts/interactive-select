@@ -7,7 +7,7 @@ COMMAND_FILE="/tmp/command_file"
 cat /dev/null > "$COMMAND_FILE"
 
 show_hidden=false
-cmd="echo"
+cmd="cat"
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
@@ -41,6 +41,7 @@ echo "$items" | fzf \
     --bind 'alt-G:last' \
     --bind 'ctrl-h:print(....)+accept' \
     --bind 'alt-enter:execute(printf "command: "; read -r new_cmd; echo "$new_cmd" > /tmp/command_file)+accept' \
+    --bind 'ctrl-l:accept' \
     --height 100% \
     --color=bg+:-1 \
     --border=sharp \
@@ -71,6 +72,11 @@ while IFS= read -r line; do
     set -- "$@" "$line"
 done < "$selection"
 
-rm "$selection"
+if [ "$cmd" != "cat" ]; then
+    $cmd "$@"
+else
+    cat "$selection"
+    # echo "$@"
+fi
 
-$cmd "$@"
+rm "$selection"

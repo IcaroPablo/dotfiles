@@ -29,42 +29,25 @@ e() {
 }
 
 c() {
-    interactive=false
-    lastdir="$(pwd)"
+    if [ "$1" = "" ]; then
+        selection="$(interactive-select)"
 
-    while [ "$#" -gt 0 ]; do
-        case "$1" in
-            -i|--interactive)
-                interactive=true
-                shift
-                break;;
-            *)
-                break;;
-        esac
-    done
+        [ "$selection" = "" ] && return
 
-    if [ -d "$1" ]; then
-        cd "$1"
-        z --add "$1"
-    elif [ -f "$1" ]; then
-        openfile "$1"
-    else
-        z -I "$1"
+        echo "$selection" | while IFS= read -r line; do; set -- "$@" "$line"; done
     fi
 
-    [ "$lastdir" != "$(pwd)" ] && e
+    if [ -f "$1" ]; then
+        openfile "$@"
+    else
+        lastdir="$(pwd)"
 
-    [ "$1" != "" ] && [ "$interactive" = "false" ] && return
+        cd "$1" || z -I "$1"
 
-    temp="$(mktemp)"
+        [ "$lastdir" != "$(pwd)" ] && e && z --add "$1"
 
-    interactive-select openfile --dir-path "$temp"
-
-    destdir="$(cat $temp)"
-
-    rm -f "$temp"
-
-    [ "$destdir" != "" ] && c -i "$destdir"
+        c
+    fi
 }
 
 # cdzprompt() {
