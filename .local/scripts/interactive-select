@@ -2,40 +2,23 @@
 
 set -e
 
-SEL_FILE="/tmp/sel_items"
+COMMAND_FILE="/tmp/command_file"
 
-[ ! -f "$SEL_FILE" ] && touch "$SEL_FILE"
+cat /dev/null > "$COMMAND_FILE"
 
-increment_only=false
-show_selected=false
 show_hidden=false
+cmd="echo"
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        --increment-only)
-            increment_only=true
-            shift
-            break;;
-        --show-selected)
-            show_selected=true
-            shift
-            break;;
         --show-hidden)
             show_hidden=true
             shift
             break;;
-        # TODO
-        # --use-selected-only)
-        #     use_selected_only=true
-        #     break;;
         *)
             break;;
     esac
 done
-
-[ "$show_selected" = true ] && cat "$SEL_FILE" && exit 0
-
-[ ! "$increment_only" = true ] && cat /dev/null > "$SEL_FILE"
 
 if [ "$show_hidden" = true ]; then
     items="$(eza -1 --group-directories-first --icons always -a)"
@@ -43,7 +26,8 @@ else
     items="$(eza -1 --group-directories-first --icons always)"
 fi
 
-temp="$(mktemp)"
+raw_selection="$(mktemp)"
+selection="$(mktemp)"
 
 echo "$items" | fzf \
     --multi \
@@ -56,32 +40,37 @@ echo "$items" | fzf \
     --bind 'alt-g:first' \
     --bind 'alt-G:last' \
     --bind 'ctrl-h:print(....)+accept' \
-    --bind 'ctrl-l:accept' \
+    --bind 'alt-enter:execute(printf "command: "; read -r new_cmd; echo "$new_cmd" > /tmp/command_file)+accept' \
     --height 100% \
     --color=bg+:-1 \
     --border=sharp \
     --info=inline \
     --reverse \
-    --preview='echo {} | sed s/^..// | xargs preview' >> $temp
+    --preview='echo {} | sed s/^..// | xargs preview' >> "$raw_selection"
 
-if [ "$(cat $temp)" != "" ]; then
-    cat "$temp" | sed 's/^..//' | xargs readlink -f >> "$SEL_FILE"
+if [ "$(cat $raw_selection)" != "" ]; then
+    cat "$raw_selection" | sed 's/^..//' | xargs readlink -f >> "$selection"
 fi
 
-rm "$temp"
+rm "$raw_selection"
 
-if [ "$1" != "" ]; then
+new_command="$(cat $COMMAND_FILE)"
+
+if [ "$new_command" != "" ]; then
+    cmd="$new_command"
+elif [ "$1" != "" ]; then
     cmd="$@"
-
-    while [ "$#" -gt 0 ]; do
-        shift
-    done
-
-    while IFS= read -r line; do
-        set -- "$@" "$line"
-    done < /tmp/sel_items
-
-    $cmd "$@"
 fi
 
-# [ "$1" != "" ] && eval "cat $SEL_FILE | xargs $@"
+# clean args
+while [ "$#" -gt 0 ]; do
+    shift
+done
+
+while IFS= read -r line; do
+    set -- "$@" "$line"
+done < "$selection"
+
+rm "$selection"
+
+$cmd "$@"
