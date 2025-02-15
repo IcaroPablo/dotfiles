@@ -460,6 +460,23 @@ function open_terminal_in(project_folder)
     os.execute(full_command)
 end
 
+function PipeToCommand()
+    local start_line, start_col = unpack(vim.api.nvim_buf_get_mark(0, '<'))
+    local end_line, end_col = unpack(vim.api.nvim_buf_get_mark(0, '>'))
+
+    local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+    local selected_text = table.concat(lines, '\n')
+
+    local command = vim.fn.input("command: ")
+    local full_command = 'echo "' .. selected_text .. '" | ' .. command .. ' 2>/dev/null 1>/dev/null &'
+    -- print(full_command)
+
+    local handle = os.execute(full_command)
+    -- handle:close()
+
+    -- print(output)
+end
+
 function log_messages()
     vim.cmd('redir! > ~/nvim_msgs.txt')
 end
@@ -556,3 +573,6 @@ vim.keymap.set("v", "<", "<gv", { silent = true, noremap = true })
 vim.keymap.set("v", ">", ">gv", { silent = true, noremap = true })
 vim.keymap.set("n", "<Leader><Leader>", ":write<CR>", {noremap = true, silent = true})
 vim.keymap.set("n", "<c-[>", "<esc>:nohlsearch<CR>", {silent = true})
+-- vim.keymap.set('v', '<leader>p', function() PipeToCommand() end, { noremap = true, silent = true })
+vim.api.nvim_set_keymap('v', '<leader>p', ':lua PipeToCommand()<CR>', { noremap = true, silent = true })
+vim.api.nvim_set_keymap('n', '<leader>r', 'vip:lua PipeToCommand()<CR>q<CR>', { noremap = true, silent = true })
