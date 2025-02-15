@@ -127,6 +127,8 @@
 .pam_environment
 .parsec
 .pki
+.pspg_history
+.psql_history
 .pulse-cookie
 .purple
 .python_history

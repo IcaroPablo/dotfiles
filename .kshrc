@@ -183,6 +183,7 @@ alias so="interactive-select openfile"
 alias same="xrandr --output HDMI-1 --same-as eDP-1"
 alias sensors="systat -s 1 sensors"
 alias ss="split_scr"
+alias sysls="systemctl --type=service --state=running"
 alias t="trash"
 alias u="cd .."
 
