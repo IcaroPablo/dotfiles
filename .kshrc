@@ -37,20 +37,21 @@ c() {
             builtin cd "$1"
         else
             z -I "$1"
+        # [ "$lastdir" != "$(pwd)" ] && e && z --add "$1"
         fi
     fi
 
-    if [ -f "$1" ]; then
-        openfile "$@"
-    else
-        lastdir="$(pwd)"
+    # e
 
-        cd "$1" || z -I "$1"
+    temp="$(mktemp)"
 
-        [ "$lastdir" != "$(pwd)" ] && e && z --add "$1"
+    interactive-select openfile --dir-path "$temp"
 
-        c
-    fi
+    folder="$(cat $temp)"
+
+    rm "$temp"
+
+    [ -n "$folder" ] && [ -d "$folder" ] && c "$folder"
 }
 
 # cdzprompt() {
