@@ -64,8 +64,47 @@ for _, server in ipairs(servers) do
 		flags = {
 			debounce_text_changes = 150,
 		},
+        init_options = {
+            updateOnSave = true,
+            updateOnSaveWaitMillis = 1000
+        }
 	})
 end
+
+lspconfig.rust_analyzer.setup({
+    on_attach = on_attach,
+    settings = {
+        ["rust-analyzer"] = {
+            -- imports = {
+            --     granularity = {
+            --         group = "module",
+            --     },
+            --     prefix = "self",
+            -- },
+            -- cargo = {
+            --     buildScripts = {
+            --         enable = true,
+            --     },
+            -- },
+            -- procMacro = {
+            --     enable = true
+            -- },
+            checkOnSave = {
+                enable = false
+            },
+            diagnostics = {
+                enable = false
+            }
+        }
+    }
+})
+
+require("lspconfig").bacon_ls.setup({
+    init_options = {
+        updateOnSave = true,
+        updateOnSaveWaitMillis = 1000
+    }
+})
 
 lspconfig.texlab.setup({
 	on_attach = on_attach,
@@ -137,10 +176,10 @@ lspconfig.lua_ls.setup({
             -- root_dir = root_pattern(".luarc.json", ".luarc.jsonc", ".luacheckrc", ".stylua.toml", "stylua.toml", "selene.toml", "selene.yml", ".git")
         },
     },
-    cmd = {os.getenv('HOME') .. '/lua-language-server-rust/target/release/lua-language-server'},
+    -- cmd = {os.getenv('HOME') .. '/lua-language-server-rust/target/release/lua-language-server'},
     -- cmd = {'/usr/local/bin/lua-language-server'},
     -- cmd = {'/usr/local/lib/lua-language-server/bin/lua-language-server'},
-    -- cmd = {'lua-language-server'},
+    cmd = {'lua-language-server'},
     capabilities = caps,
     on_attach = on_attach_config
 })
