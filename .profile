@@ -49,3 +49,4 @@ export PATH="$PATH:/home/icaro/.local/share/JetBrains/Toolbox/scripts"
 if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then
     startx
 fi
+. "$HOME/.cargo/env"

@@ -29,12 +29,15 @@ e() {
 }
 
 c() {
-    if [ "$1" = "" ]; then
-        selection="$(interactive-select)"
-
-        [ "$selection" = "" ] && return
-
-        echo "$selection" | while IFS= read -r line; do; set -- "$@" "$line"; done
+    if [ -n "$1" ]; then
+        if [ -f "$1" ]; then
+            openfile "$@"
+            return
+        elif [ -d "$1" ]; then
+            builtin cd "$1"
+        else
+            z -I "$1"
+        fi
     fi
 
     if [ -f "$1" ]; then
