@@ -521,8 +521,8 @@ vim.keymap.set("v", "<A-j>", ":m '>+1<CR>gv=gv", { noremap = true, silent = true
 vim.keymap.set("v", "<A-k>", ":m '<-2<CR>gv=gv", { noremap = true, silent = true })
 
 -- utils
-vim.keymap.set("n", "TT", function() open_terminal_in(vim.fn.expand('%:p:h')) end, { noremap = true, silent = true })
-vim.keymap.set("n", "tt", 
+vim.keymap.set("n", "tt", function() open_terminal_in(vim.fn.expand('%:p:h')) end, { noremap = true, silent = true })
+vim.keymap.set("n", "TT", 
     function()
         local project_folder = get_root() or vim.fn.expand('%:p:h')
 
