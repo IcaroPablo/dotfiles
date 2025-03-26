@@ -69,6 +69,7 @@ end
 
 lspconfig.rust_analyzer.setup({
     on_attach = on_attach_config,
+    -- cmd = {"export OPENSSL_DIR=\"/bin\" && " .. os.getenv('HOME') .. "/.cargo/bin/rust-analyzer"},
     settings = {
         ["rust-analyzer"] = {
             -- imports = {
@@ -86,12 +87,12 @@ lspconfig.rust_analyzer.setup({
             --     enable = true
             -- },
             checkOnSave = {
-                -- enable = false
-                enable = true
+                enable = false
+                -- enable = true
             },
             diagnostics = {
-                -- enable = false
-                enable = true
+                enable = false
+                -- enable = true
             }
         }
     }
