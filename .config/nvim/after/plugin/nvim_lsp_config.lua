@@ -59,20 +59,16 @@ local servers = {
 
 for _, server in ipairs(servers) do
 	lspconfig[server].setup({
-		on_attach = on_attach,
-		capabilities = capabilities,
+		on_attach = on_attach_config,
+		capabilities = caps,
 		flags = {
 			debounce_text_changes = 150,
 		},
-        init_options = {
-            updateOnSave = true,
-            updateOnSaveWaitMillis = 1000
-        }
 	})
 end
 
 lspconfig.rust_analyzer.setup({
-    on_attach = on_attach,
+    on_attach = on_attach_config,
     settings = {
         ["rust-analyzer"] = {
             -- imports = {
@@ -90,25 +86,32 @@ lspconfig.rust_analyzer.setup({
             --     enable = true
             -- },
             checkOnSave = {
-                enable = false
+                -- enable = false
+                enable = true
             },
             diagnostics = {
-                enable = false
+                -- enable = false
+                enable = true
             }
         }
     }
 })
 
-require("lspconfig").bacon_ls.setup({
-    init_options = {
-        updateOnSave = true,
-        updateOnSaveWaitMillis = 1000
-    }
-})
+-- require("lspconfig").bacon_ls.setup({
+--     on_attach = on_attach_config,
+--     capabilities = caps,
+--     flags = {
+--         debounce_text_changes = 150,
+--     },
+--     init_options = {
+--         updateOnSave = true,
+--         updateOnSaveWaitMillis = 1000
+--     }
+-- })
 
 lspconfig.texlab.setup({
-	on_attach = on_attach,
-	capabilities = capabilities,
+	on_attach = on_attach_config,
+	capabilities = caps,
 	flags = {
 		debounce_text_changes = 150,
 	},
