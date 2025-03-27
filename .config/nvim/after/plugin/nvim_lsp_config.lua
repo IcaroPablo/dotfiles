@@ -98,17 +98,17 @@ lspconfig.rust_analyzer.setup({
     }
 })
 
--- require("lspconfig").bacon_ls.setup({
---     on_attach = on_attach_config,
---     capabilities = caps,
---     flags = {
---         debounce_text_changes = 150,
---     },
---     init_options = {
---         updateOnSave = true,
---         updateOnSaveWaitMillis = 1000
---     }
--- })
+require("lspconfig").bacon_ls.setup({
+    on_attach = on_attach_config,
+    capabilities = caps,
+    flags = {
+        debounce_text_changes = 150,
+    },
+    init_options = {
+        updateOnSave = true,
+        updateOnSaveWaitMillis = 1000
+    }
+})
 
 lspconfig.texlab.setup({
 	on_attach = on_attach_config,
