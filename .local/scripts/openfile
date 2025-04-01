@@ -76,7 +76,7 @@ test -L "$first" && first="$(readlink -f "$first")"
 case "$(file --mime-type "$first" -b)" in
     # text/*|application/json|*shellscript|application/x-empty) $(echo $NVIM_TERMINAL) -e nvim --cmd "let g:lf_server='$lf_server'" "$@" > /dev/null 2> /dev/null & ;;
     # text/*|application/json|*shellscript|application/x-empty) [[ -z "$NVIM_SOCKET" ]] && launch_nvim "$escaped_terms" || nvr --servername 127.0.0.1:$NVIM_SOCKET "$escaped_terms" ;;
-    text/*|application/json|*shellscript|application/x-empty|application/octet-stream) launch_nvim "$@" ;;
+    inode/x-empty|text/*|application/json|*shellscript|application/x-empty|application/octet-stream) launch_nvim "$@" ;;
     application/pdf|application/vnd.djvu|application/epub*) zathura "$@" ;;
     # application/pdf|application/vnd.djvu|application/epub*) setsid -f zathura $fx >/dev/null 2>&1 ;;
     # audio/*|video/x-ms-asf|application/octet-stream) mpv --shuffle --no-audio-display "$@" ;;
