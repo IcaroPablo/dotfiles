@@ -21,9 +21,11 @@ while [ "$#" -gt 0 ]; do
 done
 
 if [ "$show_hidden" = true ]; then
-    items="$(eza -1 --group-directories-first --icons always -a)"
+    items="$(eza -1 --group-directories-first --no-quotes --icons always -a)"
+    # items="$(eza -1 --group-directories-first --icons always -a)"
 else
-    items="$(eza -1 --group-directories-first --icons always)"
+    items="$(eza -1 --group-directories-first --no-quotes --icons always)"
+    # items="$(eza -1 --group-directories-first --icons always)"
 fi
 
 raw_selection="$(mktemp)"
@@ -50,7 +52,7 @@ echo "$items" | fzf \
     --preview='echo {} | sed s/^..// | xargs preview' >> "$raw_selection"
 
 if [ "$(cat $raw_selection)" != "" ]; then
-    cat "$raw_selection" | sed 's/^..//' | xargs readlink -f >> "$selection"
+    cat "$raw_selection" | sed 's/^..//' | sed s/^/\'/ | sed s/$/\'/ | xargs readlink -f >> "$selection"
 fi
 
 rm "$raw_selection"

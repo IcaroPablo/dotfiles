@@ -25,7 +25,8 @@ fi
 
 e() {
     clear
-    eza -lh $1 --group-directories-first --icons always --color always | bat --color always --plain
+    # eza -lh $1 --group-directories-first --no-quotes --icons always --color always | bat --color always --plain
+    eza -lh $1 --group-directories-first --no-quotes --icons always --color always
 }
 
 c() {
