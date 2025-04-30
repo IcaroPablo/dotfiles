@@ -35,6 +35,7 @@ export PATH=$HOME/.local/bin:$PATH
 export PATH=$HOME/.local/lib/python3.10/site-packages:$PATH
 export PATH=$HOME/.local/scripts/:$PATH
 export PATH=$JAVA_HOME/bin:$PATH
+export PATH=/var/lib/flatpak/exports/bin:$PATH
 export PS1="[$(whoami)@$(hostname -s)] [\$PWD] $ "
 # export PS1="[$(whoami)@$(hostname -s)] [$(pwd)] $ "
 #NL=$'\n'

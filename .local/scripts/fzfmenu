@@ -1,0 +1,11 @@
+#!/bin/sh
+
+dimensions="$(xdpyinfo | grep dimensions | awk '{print $2}' | sed 's/x/ /')"
+
+width="$(echo $dimensions | awk '{print $1}')"
+height="$(echo $dimensions | awk '{print $2}')"
+
+xoffset="$(($width / 2 - 50*3))"
+yoffset="$(($height / 2 - 30*3))"
+
+st -i -g 50x30+$xoffset+$yoffset -e sh -c "fzf $@ < /proc/$$/fd/0 > /proc/$$/fd/1"

@@ -255,6 +255,7 @@ require('packer').startup(function(use)
         --end,
     --})
     use 'vinnymeller/swagger-preview.nvim'
+    -- use 'xavierchow/vim-swagger-preview'
     use 'l3mon4d3/luasnip'
     --use({
         --"quangnguyen30192/cmp-nvim-ultisnips",
