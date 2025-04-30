@@ -30,6 +30,8 @@ e() {
 }
 
 c() {
+    current_folder="$(pwd)"
+
     if [ -n "$1" ]; then
         if [ -f "$1" ]; then
             openfile "$@"
@@ -38,11 +40,14 @@ c() {
             builtin cd "$1"
         else
             z -I "$1"
-        # [ "$lastdir" != "$(pwd)" ] && e && z --add "$1"
+
+            if [ "$current_folder" != "$(pwd)" ]; then
+                z --add "$1"
+            else
+                return
+            fi
         fi
     fi
-
-    # e
 
     temp="$(mktemp)"
 
@@ -53,6 +58,8 @@ c() {
     rm "$temp"
 
     [ -n "$folder" ] && [ -d "$folder" ] && c "$folder"
+
+    [ "$current_folder" != "$(pwd)" ] && e
 }
 
 # cdzprompt() {
