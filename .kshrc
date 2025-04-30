@@ -197,7 +197,7 @@ alias sensors="systat -s 1 sensors"
 alias ss="split_scr"
 alias sysls="systemctl --type=service --state=running"
 alias t="trash"
-alias u="cd .."
+alias u="cd .. && e"
 
 #seninha's
 # alias cp="cp -Riv"      # recursive, interactive, verbose cp
