@@ -103,6 +103,7 @@
 .ksh_history
 .kube
 .lesshst
+.lldb
 .local/.local.iml
 .local/bin
 .local/curls
@@ -154,6 +155,7 @@
 .vscode
 .wget-hsts
 .wine
+.workspace
 .xsessionrc
 .zcomp*
 .zcompdump
