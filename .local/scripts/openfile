@@ -65,6 +65,11 @@ handlenoextension() {
         inode/directory)
             [ "$dir_path" = "" ] && echo "$1" || echo "$1" > "$dir_path"
             break ;;
+        # inode/symlink)
+        #     echo "$1"
+        #     linked_path="$(ls -l \"$1\" | sed 's/.*> //')"
+        #     [ "$dir_path" = "" ] && echo "$linked_path" || echo "$linked_path" > "$dir_path"
+        #     break ;;
         *) for f in $@ ; do setsid xdg-open "$f" > /dev/null 2> /dev/null & done ;;
     esac
 }
