@@ -49,10 +49,14 @@ echo "$items" | fzf \
     --border=sharp \
     --info=inline \
     --reverse \
-    --preview="echo {} | sed s/^..// | sed s/^/\'/ | sed s/$/\'/ | xargs preview" >> "$raw_selection"
+    --preview="echo {} | sed s/^..// | sed s/^/\'/ | sed s/$/\'/ | sed s/\ [^\']*//g | xargs preview" >> "$raw_selection"
 
 if [ "$(cat $raw_selection)" != "" ]; then
-    cat "$raw_selection" | sed 's/^..//' | sed s/^/\'/ | sed s/$/\'/ | xargs readlink -f >> "$selection"
+    cat "$raw_selection" | sed 's/^..//' \
+                         | sed s/^/\'/ \
+                         | sed s/$/\'/ \
+                         | sed s/\ [^\']*//g \
+                         | xargs readlink -f >> "$selection"
 fi
 
 rm "$raw_selection"
