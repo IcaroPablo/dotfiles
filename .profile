@@ -17,6 +17,7 @@ export FCEDIT="${EDITOR:-"vi"}"
 # export FZF_DEFAULT_COMMAND='ag --hidden --ignore .git -g ""'
 export HISTFILE=$HOME/.sh_history
 # HISTSIZE=10000
+# export JAVA_HOME=/
 export JAVA_HOME=/usr/local/jdk-17
 # export JAVA_HOME=/usr/local/jdk-11
 export LANG="en_US.UTF-8"
