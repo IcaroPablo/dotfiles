@@ -56,9 +56,11 @@
 .config/menus
 .config/mimeapps.list
 .config/monitors*
+.config/musicca
 .config/nautilus
 .config/neofetch/config.conf
 .config/next
+.config/nkso
 .config/nvim/.luarc.json
 .config/nvim/lua/.luarc.json
 .config/nvim/plugin
