@@ -150,6 +150,7 @@
 .swt
 .synaptic
 .terminfo
+.terraform.d
 .testcontainers.properties
 .trash
 .var
