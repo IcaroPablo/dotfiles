@@ -44,6 +44,11 @@ if [ "$SSH_AGENT_PID" ]; then
     eval `ssh-agent -s -k`
 fi
 
+if [ "$(xrandr | grep HDMI)" != "" ]; then
+    xrandr --output HDMI-1 --same-as eDP-1
+    offmon
+fi
+
 xset r rate 300 100
 xset s off
 xset b off
