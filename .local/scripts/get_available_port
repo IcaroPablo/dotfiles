@@ -4,7 +4,6 @@
 is_port_available() {
     local port="$1"
     # Attempt to connect to the port using `nc`
-    # -w1 sets a 1-second timeout for the connection attempt
     if nc -z -w1 localhost "$port" >/dev/null 2>&1; then
         # Port is in use
         return 1
@@ -14,9 +13,8 @@ is_port_available() {
     fi
 }
 
-# Function to find an available port
 starting_port="$1"
-max_tries="${2:-100}"  # Default to 100 tries if not specified
+max_tries="${2:-100}"
 
 for port in $(seq "$starting_port" "$((starting_port + max_tries - 1))"); do
     if is_port_available "$port"; then
