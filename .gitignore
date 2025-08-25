@@ -11,7 +11,9 @@
 .cache
 .cargo
 .clang-repl-history
+.cljs
 .clojure
+.clojure_history
 .config/*/zoom*
 .config/.gsd-keyboard.settings-ported
 .config/Code
