@@ -2,6 +2,10 @@
 
 set -e
 
+# portable helpers (have); guard.sh is optional, fall back to an inline have()
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" 2>/dev/null || true
+command -v have >/dev/null 2>&1 || have() { command -v "$1" >/dev/null 2>&1; }
+
 COMMAND_FILE="$(mktemp)"
 
 show_hidden=false
@@ -18,12 +22,24 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 
-if [ "$show_hidden" = true ]; then
-    items="$(eza -1 --group-directories-first --no-quotes --icons always -a)"
-    # items="$(eza -1 --group-directories-first --icons always -a)"
+# List entries. eza (with icons) when present, else plain ls. The icon prefix
+# is 2 chars ("<icon> "), so STRIP removes it; without eza there is no prefix,
+# so STRIP is a no-op (cat). Both the preview and the selection parser use it,
+# keeping filenames intact either way.
+if have eza; then
+    STRIP='sed s/^..//'
+    if [ "$show_hidden" = true ]; then
+        items="$(eza -1 --group-directories-first --no-quotes --icons always -a)"
+    else
+        items="$(eza -1 --group-directories-first --no-quotes --icons always)"
+    fi
 else
-    items="$(eza -1 --group-directories-first --no-quotes --icons always)"
-    # items="$(eza -1 --group-directories-first --icons always)"
+    STRIP='cat'
+    if [ "$show_hidden" = true ]; then
+        items="$(ls -1A)"
+    else
+        items="$(ls -1)"
+    fi
 fi
 
 raw_selection="$(mktemp)"
@@ -47,15 +63,10 @@ echo "$items" | fzf \
     --border=sharp \
     --info=inline \
     --reverse \
-    --preview="echo {} | sed s/^..// | sed s/^/\'/ | sed s/$/\'/ | sed s/\ [^\']*//g | xargs preview" >> "$raw_selection"
+    --preview="echo {} | $STRIP | sed s/^/\'/ | sed s/$/\'/ | sed s/\ [^\']*//g | xargs preview" >> "$raw_selection"
 
 if [ "$(cat $raw_selection)" != "" ]; then
-    # cat "$raw_selection" | sed 's/^..//' \
-    #                      | sed s/^/\'/ \
-    #                      | sed s/$/\'/ \
-    #                      | sed s/\ [^\']*//g \
-    #                      | xargs readlink -f >> "$selection"
-    cat "$raw_selection" | sed 's/^..//' \
+    cat "$raw_selection" | $STRIP \
                          | sed s/^/\'/ \
                          | sed s/$/\'/ \
                          | xargs abspath >> "$selection"
@@ -86,7 +97,6 @@ if [ "$cmd" != "cat" ]; then
     $cmd "$@"
 else
     cat "$selection"
-    # echo "$@"
 fi
 
 rm "$selection"
