@@ -43,36 +43,22 @@ e() {
     fi
 }
 
-# c [target]: fuzzy/jump navigation. Opens files, cds into dirs, and uses the
-# interactive selector otherwise. The z (jump) branch is used only if present.
+# c [target]: fuzzy navigation. With no argument it opens fzf's recursive
+# directory walker under the current dir; pick a directory to cd into it, or a
+# file to open it with openfile. `c <file>` opens it, `c <dir>` cds and browses
+# it, and `c <query>` jumps first with zoxide/z. Preview via the preview script.
 c() {
-    current_folder="$(pwd)"
-
     if [ -n "$1" ]; then
-        if [ -f "$1" ]; then
-            openfile "$@"
-            return
-        elif [ -d "$1" ]; then
-            cd "$1" || return
-        elif have z; then
-            z -I "$1"
-            if [ "$current_folder" != "$(pwd)" ]; then
-                z --add "$1"
-            else
-                return
-            fi
-        else
-            return
+        if   [ -f "$1" ]; then openfile "$1"; return
+        elif [ -d "$1" ]; then cd "$1" || return
+        elif have z;      then z "$1" || return
         fi
     fi
 
-    temp="$(mktemp)"
-    interactive-select openfile --dir-path "$temp"
-    folder="$(cat "$temp")"
-    rm -f "$temp"
+    sel="$(fzf --walker=file,dir,follow,hidden --walker-skip='.git,node_modules' \
+               --reverse --preview 'preview {}')" || return
 
-    [ -n "$folder" ] && [ -d "$folder" ] && c "$folder"
-    [ "$current_folder" != "$(pwd)" ] && e
+    if [ -d "$sel" ]; then cd "$sel" && e; else openfile "$sel"; fi
 }
 
 # hist [arg] / hist - [arg]: list history matching arg; with '-', number the
