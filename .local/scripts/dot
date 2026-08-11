@@ -136,12 +136,18 @@ setup() {
 
     printf 'icaro-dotfiles :: setup (shell vigente: %s)\n' "$_shell"
 
+    # The login profile always sources env.sh, so login env and the auto-startx
+    # on tty1 fire at login. The interactive rc sources rc.sh on top.
     case "$_shell" in
         ksh|ksh93|oksh|mksh|pdksh|sh)
-            # interactive ksh/sh finds its rc via $ENV — point it at rc.sh
-            inject_block "$_profile" "ENV=\"\$HOME/.config/sh/rc.sh\"; export ENV" ;;
+            # ksh/sh have no separate interactive rc file — the profile sources
+            # env.sh and points $ENV at rc.sh (which re-pulls env.sh idempotently).
+            inject_block "$_profile" \
+". \"\$HOME/.config/sh/env.sh\"
+ENV=\"\$HOME/.config/sh/rc.sh\"; export ENV" ;;
         *)
-            # zsh/bash: source rc.sh from the interactive rc (rc.sh pulls env.sh)
+            # zsh/bash: profile sources env.sh; interactive rc sources rc.sh.
+            inject_block "$_profile" ". \"\$HOME/.config/sh/env.sh\""
             inject_block "$_rc" ". \"\$HOME/.config/sh/rc.sh\"" ;;
     esac
 
