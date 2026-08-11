@@ -42,8 +42,8 @@
 # image/vnd.djvu|application/pdf|application/octet-stream|application/postscript) setsid -f zathura $fx >/dev/null 2>&1 ;;
 # setsid não funciona
 
-# portable helpers (have/os_open); fall back to an inline opener if absent
-. "$HOME/.config/sh/lib/guard.sh" 2>/dev/null || true
+# portable helpers (have/os_open/mimetype); fall back to an inline opener if absent
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" 2>/dev/null || true
 if ! command -v os_open >/dev/null 2>&1; then
     os_open() {
         case "$(uname)" in
@@ -69,7 +69,7 @@ fi
 # done
 
 handlenoextension() {
-    case "$(file -ibL "$1" | sed 's/;.*//')" in
+    case "$(mimetype "$1")" in
         # text/*)
         #     batorcat "$1"
         #     break ;;
@@ -89,7 +89,7 @@ first="$1"
 
 test -L "$first" && first="$(abspath "$first")"
 
-case "$(file --mime-type "$first" -b)" in
+case "$(mimetype "$first")" in
     # text/*|application/json|*shellscript|application/x-empty) $(echo $NVIM_TERMINAL) -e nvim --cmd "let g:lf_server='$lf_server'" "$@" > /dev/null 2> /dev/null & ;;
     # text/*|application/json|*shellscript|application/x-empty) [[ -z "$NVIM_SOCKET" ]] && launch_nvim "$escaped_terms" || nvr --servername 127.0.0.1:$NVIM_SOCKET "$escaped_terms" ;;
     inode/x-empty|text/*|application/json|*shellscript|application/x-empty|application/octet-stream) launch_nvim "$@" ;;
