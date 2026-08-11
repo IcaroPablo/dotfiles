@@ -2,9 +2,7 @@
 
 set -e
 
-COMMAND_FILE="/tmp/command_file"
-
-cat /dev/null > "$COMMAND_FILE"
+COMMAND_FILE="$(mktemp)"
 
 show_hidden=false
 cmd="cat"
@@ -42,7 +40,7 @@ echo "$items" | fzf \
     --bind 'alt-g:first' \
     --bind 'alt-G:last' \
     --bind 'ctrl-h:print(....)+accept' \
-    --bind 'alt-enter:execute(printf "command: "; read -r new_cmd; echo "$new_cmd" > /tmp/command_file)+accept' \
+    --bind 'alt-enter:execute(printf "command: "; read -r new_cmd; echo "$new_cmd" > '"$COMMAND_FILE"')+accept' \
     --bind 'ctrl-l:accept' \
     --height 100% \
     --color=bg+:-1 \
@@ -60,12 +58,14 @@ if [ "$(cat $raw_selection)" != "" ]; then
     cat "$raw_selection" | sed 's/^..//' \
                          | sed s/^/\'/ \
                          | sed s/$/\'/ \
-                         | xargs readlink -f >> "$selection"
+                         | xargs abspath >> "$selection"
 fi
 
 rm "$raw_selection"
 
 new_command="$(cat $COMMAND_FILE)"
+
+rm -f "$COMMAND_FILE"
 
 if [ "$new_command" != "" ]; then
     cmd="$new_command"
