@@ -1,15 +1,17 @@
-# rc.sh — portable interactive shell config. POSIX sh; loads cleanly under
-# zsh, bash and ksh. Sourced from the shell's rc file via the wizard's block.
+# rc.sh — portable interactive shell config + per-OS interactive bits. POSIX sh;
+# loads cleanly under zsh, bash and ksh. Sourced by every interactive shell via
+# the wizard's block.
 #
-# It pulls the login env first (which also loads guard.sh and the per-OS
-# fragment), then defines the portable navigation/file core.
+# Environment variables come from env.sh at login and are INHERITED by every
+# descendant shell, so rc.sh does NOT source env.sh — it only sources guard.sh
+# for its helpers. rc.sh holds the functions and aliases (not inheritable), so
+# it is the file that runs per session.
 
 : "${XDG_CONFIG_HOME:="$HOME/.config"}"
 DOT_SH="$XDG_CONFIG_HOME/sh"
 
-# env.sh is idempotent; sourcing it here covers non-login interactive shells.
-[ -f "$DOT_SH/env.sh" ] && . "$DOT_SH/env.sh"
-# Fallback: define have() if guard.sh was not pulled in for some reason.
+# helpers (have/abspath/os_open/mimetype/batorcat)
+[ -f "$DOT_SH/lib/guard.sh" ] && . "$DOT_SH/lib/guard.sh"
 command -v have >/dev/null 2>&1 || have() { command -v "$1" >/dev/null 2>&1; }
 
 # --- privilege helper: prefer doas, fall back to sudo ---
@@ -29,7 +31,7 @@ elif have zoxide; then
     eval "$(zoxide init posix --cmd z 2>/dev/null)" 2>/dev/null || true
 fi
 
-# ------------------------------------------------------------------ functions
+# ------------------------------------------------------ portable functions
 
 # e [args]: list the current (or given) directory. eza when present, else ls.
 e() {
@@ -114,7 +116,7 @@ fuck() {
     unset _last
 }
 
-# -------------------------------------------------------------------- aliases
+# -------------------------------------------------------- portable aliases
 
 alias a="create"
 alias ci="c -i"
@@ -141,6 +143,55 @@ alias gcm="git checkout master"
 alias gpom="git pull origin master"
 alias newb="git checkout master && git pull origin master && git checkout -b "
 
+# ------------------------------------------- per-OS interactive bits (funcs)
+case "$(uname)" in
+    OpenBSD)
+        # global ksh rc — interactive setup, ksh only
+        [ -n "${KSH_VERSION:-}" ] && [ -f /etc/ksh.kshrc ] && . /etc/ksh.kshrc
+
+        # req <pkg>: list packages that require <pkg> (the "Required by:" block)
+        req() {
+            _in=0
+            printf "%s" "$(pkg_info "$1")" | while IFS= read -r _line; do
+                if [ "$_in" = 0 ] && [ "$_line" = "Required by:" ]; then _in=1; continue; fi
+                [ "$_in" = 1 ] && [ "$_line" = "" ] && _in=0
+                [ "$_in" = 1 ] && printf '%s\n' "$_line"
+            done
+        }
+        req_by() { pkg_info -f "$1" | grep '^@depend' | cut -f 3 -d :; }
+        del() { doas pkg_delete "$1" && doas pkg_delete -a; }
+        alias add="doas pkg_add -Dsnap"
+        have ntpctl && alias chkclock="ntpctl -s all"
+        have systat && alias sensors="systat -s 1 sensors"
+
+        # ksh programmable completions (`complete` is a bash/zsh builtin — ksh only)
+        if [ -n "${KSH_VERSION:-}" ]; then
+            complete() {
+                if have "$1"; then
+                    typeset _cmd="$1" _num="$2"
+                    shift 2
+                    set -A "complete_${_cmd}${_num:+"_$_num"}" -- "$@"
+                fi
+            }
+        fi
+        ;;
+    Linux)
+        have flatpak && alias fr='flatpak run "$(flatpak list --columns=application | fzf)"'
+        have systemctl && alias sysls="systemctl --type=service --state=running"
+        ;;
+esac
+
+# X11 / dwm desktop aliases (Linux + OpenBSD), keyed on capability — a single
+# block serves both graphical worlds without per-OS duplication. macOS skips it.
+have nsxiv && alias img="nsxiv --thumbnail"
+have mpv && alias play="mpv --shuffle ."
+if [ -n "${DISPLAY:-}" ] && have xrandr; then
+    alias bright="xrandr --output eDP-1 --brightness"
+    alias offmon="xrandr --output eDP-1 --off"
+    alias onmon="xrandr --output eDP-1 --auto"
+    alias same="xrandr --output HDMI-1 --same-as eDP-1"
+fi
+
 # --------------------------------------------------------------------- prompt
 
 # Dynamic, generic, POSIX prompt: user@host fixed once, ${PWD} re-expanded each
@@ -150,7 +201,5 @@ __prompt_id="${USER:-$(id -un)}@$(hostname 2>/dev/null | cut -d. -f1)"
 PS1='['"$__prompt_id"'] [${PWD}] $ '
 export PS1
 
-# List the directory on startup, but only when eza is present (matches the
-# original behavior and avoids clearing the screen on minimal systems).
-# Kept in an `if` so sourcing rc.sh exits 0 even when eza is absent.
+# List the directory on startup, but only when eza is present.
 if have eza; then e; fi
