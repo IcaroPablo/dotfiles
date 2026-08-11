@@ -1,0 +1,25 @@
+#!/bin/sh
+# abspath <path...> — print the absolute, symlink-resolved path of each arg.
+# Portable across macOS / Linux / OpenBSD: prefers realpath, then `readlink -f`,
+# then a POSIX fallback. Usable in pipelines (e.g. `... | xargs abspath`).
+# (Mirrors the abspath() helper in ~/.config/sh/lib/guard.sh.)
+
+for p in "$@"; do
+    if command -v realpath >/dev/null 2>&1 && realpath "$p" 2>/dev/null; then
+        continue
+    fi
+    if readlink -f / >/dev/null 2>&1 && readlink -f "$p" 2>/dev/null; then
+        continue
+    fi
+    d=$(dirname -- "$p")
+    b=$(basename -- "$p")
+    if d=$(CDPATH= cd -- "$d" 2>/dev/null && pwd -P); then
+        case "$b" in
+            /) printf '%s\n' "/" ;;
+            .) printf '%s\n' "$d" ;;
+            *) printf '%s\n' "${d%/}/$b" ;;
+        esac
+    else
+        printf '%s\n' "$p"
+    fi
+done

@@ -1,37 +1,272 @@
 #!/bin/sh
+#
+# dot — manage these dotfiles as a git bare repo, plus a tiny install wizard.
+#
+# Usage:
+#   dot start [<git repo>]   set up the bare repo (clone if a URL is given)
+#   dot setup [--uninstall]  wire the current shell to load ~/.config/sh, and
+#                            run the dependency doctor (never installs anything)
+#   dot doctor               report which dependencies are present / missing
+#   dot <git command>        run any git command against the dotfiles work tree
+#
+# POSIX sh only (works under dash/ksh/bash). No perl, no bashisms.
 
 DOTFILES_BARE_REPO="$HOME/.config/dotfiles"
 
-alias git_cmd="git --git-dir=$DOTFILES_BARE_REPO"
+: "${XDG_CONFIG_HOME:="$HOME/.config"}"
+DOT_SH="$XDG_CONFIG_HOME/sh"
+
+MARK_BEGIN="# >>> icaro-dotfiles >>>"
+MARK_END="# <<< icaro-dotfiles <<<"
+
+_OK='✓'
+_NO='✗'
+
+dotgit() { git --git-dir="$DOTFILES_BARE_REPO" "$@"; }
+
+have() { command -v "$1" >/dev/null 2>&1; }
 
 usage() {
-    printf "Dot is a script for managing dotfiles\n\nUsage:\n\n    dot [start <git repo> | <git command>]\n\n"
+    cat <<'EOF'
+Dot manages dotfiles as a git bare repo, with a small install wizard.
+
+Usage:
+
+    dot start [<git repo>]     set up the bare repo (clone if a URL is given)
+    dot setup [--uninstall]    wire the current shell to ~/.config/sh + doctor
+    dot doctor                 report present/missing dependencies
+    dot <git command>          run git against the dotfiles work tree
+
+EOF
 }
 
+# ----------------------------------------------------------------- bare repo
+
 start() {
-    dotfiles_repo="$(perl -le 'use File::Spec; print File::Spec->abs2rel(@ARGV)' $DOTFILES_BARE_REPO $HOME)"
+    # the bare repo always lives at $HOME/.config/dotfiles
+    dotfiles_repo=".config/dotfiles"
 
     if [ -n "$1" ]; then
-        echo "make sure your git repo ignores $dotfiles_repo (Abort/ok)"
+        printf 'make sure your git repo ignores %s (Abort/ok)\n' "$dotfiles_repo"
         read -r answer
-        [[ "$answer" == [aA] ]] || [[ -z "$answer" ]] && echo "aborting" && exit 1
+        case "$answer" in
+            a|A|"") echo "aborting"; exit 1 ;;
+            *) ;;
+        esac
         git clone --bare "$1" "$DOTFILES_BARE_REPO"
     else
-        if [ "$(git_cmd rev-parse --is-bare-repository)" == "true" ]; then
+        if [ "$(dotgit rev-parse --is-bare-repository 2>/dev/null)" = "true" ]; then
             echo "already set up in $DOTFILES_BARE_REPO"
         else
-            git_cmd init --bare "$DOTFILES_BARE_REPO"
-            git_cmd branch -m main
-            git_cmd config --local status.showUntrackedFiles no
-
-            [ "$(grep -q "$dotfiles_repo" "$HOME/.gitignore" 2>/dev/null ; echo "$?")" != "0" ]\
-                && echo "$dotfiles_repo" >> "$HOME/.gitignore"
+            dotgit init --bare "$DOTFILES_BARE_REPO"
+            dotgit branch -m main
+            dotgit config --local status.showUntrackedFiles no
+            grep -q "$dotfiles_repo" "$HOME/.gitignore" 2>/dev/null \
+                || printf '%s\n' "$dotfiles_repo" >> "$HOME/.gitignore"
         fi
     fi
 }
 
+# -------------------------------------------------------------- shell wiring
+
+detect_shell() {
+    _sh="${SHELL:-}"
+    [ -z "$_sh" ] && _sh="$(ps -p "$$" -o comm= 2>/dev/null)"
+    basename "$_sh" 2>/dev/null
+}
+
+rc_path_for() {
+    case "$1" in
+        zsh)  printf '%s\n' "${ZDOTDIR:-$HOME}/.zshrc" ;;
+        bash) printf '%s\n' "$HOME/.bashrc" ;;
+        ksh|ksh93|oksh|mksh|pdksh|sh) printf '%s\n' "$HOME/.kshrc" ;;
+        *)    printf '%s\n' "$HOME/.${1}rc" ;;
+    esac
+}
+
+profile_path_for() {
+    case "$1" in
+        zsh)  printf '%s\n' "${ZDOTDIR:-$HOME}/.zprofile" ;;
+        bash) printf '%s\n' "$HOME/.bash_profile" ;;
+        *)    printf '%s\n' "$HOME/.profile" ;;
+    esac
+}
+
+inject_block() {
+    _file="$1"; _line="$2"
+    if [ -f "$_file" ] && grep -qF "$MARK_BEGIN" "$_file" 2>/dev/null; then
+        printf '  %s [bloco já presente]\n' "$_file"
+        return 0
+    fi
+    printf '\n%s\n%s\n%s\n' "$MARK_BEGIN" "$_line" "$MARK_END" >> "$_file"
+    printf '  %s [bloco injetado]\n' "$_file"
+}
+
+remove_block() {
+    _file="$1"
+    [ -f "$_file" ] || return 0
+    grep -qF "$MARK_BEGIN" "$_file" 2>/dev/null || return 0
+    _tmp="$(mktemp)"
+    awk -v b="$MARK_BEGIN" -v e="$MARK_END" '
+        $0==b {skip=1; next}
+        $0==e {skip=0; next}
+        skip!=1 {print}
+    ' "$_file" > "$_tmp" && cat "$_tmp" > "$_file"
+    rm -f "$_tmp"
+    printf '  %s [bloco removido]\n' "$_file"
+}
+
+setup() {
+    _shell="$(detect_shell)"
+    _rc="$(rc_path_for "$_shell")"
+    _profile="$(profile_path_for "$_shell")"
+
+    case "$1" in
+        --uninstall)
+            printf 'icaro-dotfiles :: setup --uninstall (shell: %s)\n' "$_shell"
+            remove_block "$_rc"
+            remove_block "$_profile"
+            return 0 ;;
+    esac
+
+    if [ ! -f "$DOT_SH/rc.sh" ]; then
+        printf 'setup: %s/rc.sh não encontrado — rode `dot start <repo>` primeiro.\n' "$DOT_SH" >&2
+        return 1
+    fi
+
+    printf 'icaro-dotfiles :: setup (shell vigente: %s)\n' "$_shell"
+
+    case "$_shell" in
+        ksh|ksh93|oksh|mksh|pdksh|sh)
+            # interactive ksh/sh finds its rc via $ENV — point it at rc.sh
+            inject_block "$_profile" "ENV=\"\$HOME/.config/sh/rc.sh\"; export ENV" ;;
+        *)
+            # zsh/bash: source rc.sh from the interactive rc (rc.sh pulls env.sh)
+            inject_block "$_rc" ". \"\$HOME/.config/sh/rc.sh\"" ;;
+    esac
+
+    printf '\n'
+    doctor
+}
+
+# -------------------------------------------------------------------- doctor
+
+# present <tool>: true if the tool (or an accepted alternate) is available.
+present() {
+    case "$1" in
+        fd)     have fd || have fdfind ;;
+        zoxide) have zoxide || { have lua && [ -f "$HOME/.local/bin/z.lua" ]; } ;;
+        *)      have "$1" ;;
+    esac
+}
+
+# pkg_hint <tool>: print the install command for the current OS, or nothing.
+pkg_hint() {
+    _os="$(uname)"
+    case "$_os" in
+        Darwin)
+            case "$1" in
+                mktemp|file|open) echo '' ;;
+                nvim)     echo 'brew install neovim' ;;
+                fd)       echo 'brew install fd' ;;
+                exiftool) echo 'brew install exiftool' ;;
+                *)        echo "brew install $1" ;;
+            esac ;;
+        Linux)
+            case "$1" in
+                nvim)     echo 'apt install neovim' ;;
+                fd)       echo 'apt install fd-find' ;;
+                bat)      echo 'apt install bat  # binário: batcat' ;;
+                exiftool) echo 'apt install libimage-exiftool-perl' ;;
+                pdftoppm) echo 'apt install poppler-utils' ;;
+                doas)     echo 'apt install opendoas' ;;
+                xdg-open) echo 'apt install xdg-utils' ;;
+                mktemp)   echo '' ;;
+                *)        echo "apt install $1" ;;
+            esac ;;
+        OpenBSD)
+            case "$1" in
+                nvim)     echo 'pkg_add neovim' ;;
+                exiftool) echo 'pkg_add p5-Image-ExifTool' ;;
+                pdftoppm) echo 'pkg_add poppler-utils' ;;
+                mktemp|file|unzip|tar|doas) echo '' ;;
+                *)        echo "pkg_add $1" ;;
+            esac ;;
+        *) echo '' ;;
+    esac
+}
+
+# report_group <label> <tool...>: print ✓/✗ per tool + hints. Return non-zero
+# if any tool in the group is missing.
+report_group() {
+    _label="$1"; shift
+    _grp_missing=""
+    printf '%s\n  ' "$_label"
+    for _t in "$@"; do
+        if present "$_t"; then
+            printf '%s %s  ' "$_OK" "$_t"
+        else
+            printf '%s %s  ' "$_NO" "$_t"
+            _grp_missing="$_grp_missing $_t"
+        fi
+    done
+    printf '\n'
+    for _t in $_grp_missing; do
+        _h="$(pkg_hint "$_t")"
+        if [ -n "$_h" ]; then
+            printf '    → falta %s  (%s)\n' "$_t" "$_h"
+        else
+            printf '    → falta %s\n' "$_t"
+        fi
+    done
+    printf '\n'
+    [ -z "$_grp_missing" ]
+}
+
+_block_status() {
+    if [ -f "$1" ] && grep -qF "$MARK_BEGIN" "$1" 2>/dev/null; then
+        printf '  %s [bloco presente]\n' "$1"
+    else
+        printf '  %s [sem bloco]\n' "$1"
+    fi
+}
+
+doctor() {
+    _os="$(uname)"
+    printf 'icaro-dotfiles :: doctor (%s)\n\n' "$_os"
+
+    _core_ok=1
+    report_group "CORE" fzf eza nvim bat file mktemp || _core_ok=0
+    report_group "NÚCLEO" fd zoxide readlink || :
+    report_group "PREVIEW (opcional — recursos degradam sem)" \
+        pdftoppm ffmpegthumbnailer w3m exiftool unzip tar || :
+
+    case "$_os" in
+        Darwin)  report_group "OS/desktop (Darwin)" open || : ;;
+        Linux)   report_group "OS/desktop (Linux)" xdg-open flatpak || : ;;
+        OpenBSD) report_group "OS/desktop (OpenBSD)" doas || : ;;
+    esac
+
+    _shell="$(detect_shell)"
+    printf 'Shell vigente: %s\n' "$_shell"
+    _block_status "$(rc_path_for "$_shell")"
+    _block_status "$(profile_path_for "$_shell")"
+
+    printf '\n'
+    if [ "$_core_ok" = 1 ]; then
+        printf 'Resultado: núcleo CORE completo.\n'
+        return 0
+    fi
+    printf 'Resultado: dependência(s) CORE ausente(s).\n'
+    return 1
+}
+
+# ------------------------------------------------------------------ dispatch
+
 case "$1" in
-    "") usage;;
-    "start") start "$2" ;;
-    *) git_cmd --work-tree=$HOME "$@" ;;
+    "")      usage ;;
+    start)   start "$2" ;;
+    setup)   shift; setup "$@" ;;
+    doctor)  doctor ;;
+    *)       dotgit --work-tree="$HOME" "$@" ;;
 esac

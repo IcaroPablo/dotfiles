@@ -42,6 +42,17 @@
 # image/vnd.djvu|application/pdf|application/octet-stream|application/postscript) setsid -f zathura $fx >/dev/null 2>&1 ;;
 # setsid não funciona
 
+# portable helpers (have/os_open); fall back to an inline opener if absent
+. "$HOME/.config/sh/lib/guard.sh" 2>/dev/null || true
+if ! command -v os_open >/dev/null 2>&1; then
+    os_open() {
+        case "$(uname)" in
+            Darwin) open "$@" ;;
+            *) for _f in "$@"; do xdg-open "$_f" >/dev/null 2>&1 & done ;;
+        esac
+    }
+fi
+
 dir_path=""
 
 if [ "$1" = "--dir-path" ]; then
@@ -70,13 +81,13 @@ handlenoextension() {
         #     linked_path="$(ls -l \"$1\" | sed 's/.*> //')"
         #     [ "$dir_path" = "" ] && echo "$linked_path" || echo "$linked_path" > "$dir_path"
         #     break ;;
-        *) for f in $@ ; do setsid xdg-open "$f" > /dev/null 2> /dev/null & done ;;
+        *) os_open "$@" ;;
     esac
 }
 
 first="$1"
 
-test -L "$first" && first="$(readlink -f "$first")"
+test -L "$first" && first="$(abspath "$first")"
 
 case "$(file --mime-type "$first" -b)" in
     # text/*|application/json|*shellscript|application/x-empty) $(echo $NVIM_TERMINAL) -e nvim --cmd "let g:lf_server='$lf_server'" "$@" > /dev/null 2> /dev/null & ;;
