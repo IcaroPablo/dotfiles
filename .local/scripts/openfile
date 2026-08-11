@@ -93,14 +93,10 @@ case "$(mimetype "$first")" in
     # text/*|application/json|*shellscript|application/x-empty) $(echo $NVIM_TERMINAL) -e nvim --cmd "let g:lf_server='$lf_server'" "$@" > /dev/null 2> /dev/null & ;;
     # text/*|application/json|*shellscript|application/x-empty) [[ -z "$NVIM_SOCKET" ]] && launch_nvim "$escaped_terms" || nvr --servername 127.0.0.1:$NVIM_SOCKET "$escaped_terms" ;;
     inode/x-empty|text/*|application/json|*shellscript|application/x-empty|application/octet-stream) launch_nvim "$@" ;;
-    application/pdf|application/vnd.djvu|application/epub*) zathura "$@" ;;
-    # application/pdf|application/vnd.djvu|application/epub*) setsid -f zathura $fx >/dev/null 2>&1 ;;
-    # audio/*|video/x-ms-asf|application/octet-stream) mpv --shuffle --no-audio-display "$@" ;;
-    audio/*|video/x-ms-asf) mpv --shuffle --no-audio-display "$@" ;;
-    # video/*) setsid -f mpv "$@" -quiet >/dev/null 2>&1 ;;
-    video/*) mpv "$@" >/dev/null 2>&1 ;;
-    # image/*) setsid -f nsxiv -aio "$@" 2>/dev/null ;;
-    image/*) nsxiv -a --thumbnail "$@" ;;
+    application/pdf|application/vnd.djvu|application/epub*) have zathura && zathura "$@" || os_open "$@" ;;
+    audio/*|video/x-ms-asf) have mpv && mpv --shuffle --no-audio-display "$@" || os_open "$@" ;;
+    video/*) have mpv && mpv "$@" >/dev/null 2>&1 || os_open "$@" ;;
+    image/*) have nsxiv && nsxiv -a --thumbnail "$@" || os_open "$@" ;;
 	*) handlenoextension "$@" ;;
     # *) for f in $@ ; do setsid xdg-open "$f" > /dev/null 2> /dev/null & done ;;
     # *) for f in $fx; do setsid -f $OPENER $f >/dev/null 2>&1; done;;
