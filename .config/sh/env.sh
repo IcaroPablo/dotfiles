@@ -113,7 +113,12 @@ if [ -n "${DISPLAY:-}" ] && have xrandr; then
     alias same="xrandr --output HDMI-1 --same-as eDP-1"
 fi
 
-# Start X automatically on the first console (Linux and OpenBSD alike).
-if [ -z "${DISPLAY:-}" ] && [ "$(tty 2>/dev/null)" = "/dev/tty1" ] && have startx; then
+# Start X automatically on the first console (Linux and OpenBSD alike). The
+# once-guard keeps it from re-firing when the interactive rc re-sources env.sh
+# after X exits (login profile and rc.sh both pull env.sh in the same shell).
+if [ -z "${__DOT_STARTX_TRIED:-}" ] && [ -z "${DISPLAY:-}" ] \
+        && [ "$(tty 2>/dev/null)" = "/dev/tty1" ] && have startx; then
+    __DOT_STARTX_TRIED=1
+    export __DOT_STARTX_TRIED
     startx
 fi
