@@ -1,17 +1,10 @@
 #!/bin/sh
 
-batorcat() {
-	file="$1"
-	shift
-	if command -v bat > /dev/null 2>&1; then
-		bat --line-range=:100 "$file" "$@"
-	else
-		cat "$file"
-	fi
-}
+# portable helpers (have/abspath/mimetype/batorcat) shared with openfile
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" 2>/dev/null || true
 
 handlenoextension() {
-    case "$(file -ibL "$1" | sed 's/;.*//')" in
+    case "$(mimetype "$1")" in
         text/*)
             batorcat "$1"
             break ;;
@@ -23,7 +16,7 @@ handlenoextension() {
     esac
 }
 
-case "$(printf "%s\n" "$(readlink -f "$1")" | awk '{print tolower($0)}')" in
+case "$(printf "%s\n" "$(abspath "$1")" | awk '{print tolower($0)}')" in
 	*.tgz|*.tar.gz) tar tzf "$1" ;;
 	*.tar.bz2|*.tbz2) tar tjf "$1" ;;
 	*.tar.txz|*.txz) xz --list "$1" ;;
