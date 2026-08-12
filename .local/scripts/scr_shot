@@ -1,11 +1,15 @@
 #!/bin/sh
 
-scr="$(which scrot)"
-
-if [ -x "$scr" ]; then
-    scrot -f -s -q 100 -e 'xclip -selection clipboard -target image/png -i $f && rm $f'
-elif [ -x "$(which distrobox)" ];then
-    distrobox enter -n arch -- scrot -f -s -q 100 -e 'xclip -selection clipboard -target image/png -i $f && rm $f'
-fi
-
-#scrot -f -q 100 -e 'xclip -selection clipboard -target image/png -i $f && rm $f'
+case "$(uname)" in
+    Darwin)
+        screencapture -i -c
+        ;;
+    *)
+        if command -v scrot >/dev/null 2>&1; then
+            scrot -f -s -q 100 -e 'xclip -selection clipboard -target image/png -i $f && rm $f'
+        else
+            echo "scr_shot: scrot not found" >&2
+            exit 1
+        fi
+        ;;
+esac
