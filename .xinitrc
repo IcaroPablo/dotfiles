@@ -1,4 +1,4 @@
-!/bin/sh
+#!/bin/sh
 
 # $OpenBSD: xinitrc.cpp,v 1.13 2015/10/17 08:25:11 matthieu Exp $
 userresources=$HOME/.Xresources
@@ -28,42 +28,40 @@ id4=$HOME/.ssh/id_ecdsa
 id5=$HOME/.ssh/id_ed25519
 
 if [ -z "$SSH_AGENT_PID" ]; then
-	if [ -x /usr/bin/ssh-agent ] && [ -f $id1 -o -f $id2 -o -f $id3 -o -f $id4 -o -f $id5]; then
+	if [ -x /usr/bin/ssh-agent ] && [ -f $id1 -o -f $id2 -o -f $id3 -o -f $id4 -o -f $id5 ]; then
         eval `ssh-agent -s`
         ssh-add < /dev/null
     fi
 fi
 
-# start some nice programs
-# xclock -geometry 50x50-1+1 &
-# xconsole -iconic &
-# xterm -geometry 80x24 &
-# fvwm || xterm
-if [ "$SSH_AGENT_PID" ]; then
-    ssh-add -D < /dev/null
-    eval `ssh-agent -s -k`
-fi
-
 if [ "$(xrandr | grep HDMI)" != "" ]; then
-    xrandr --output HDMI-1 --same-as eDP-1
-    offmon
+    monitor same
+    monitor off
 fi
 
 xset r rate 300 100
 xset s off
 xset b off
 xset -dpms
-xset 0 0 0
+xset dpms 0 0 0
 #setterm -blank 0 -powerdown 0
 
-. $HOME/.profile
+. "$HOME/.config/sh/env.sh"
 $HOME/.fehbg &
 # setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.\+=\([0-9]\+\).\+/\1/'` br &
 setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.*=//' | awk '{print $1}'` br &
 setxkbmap br &
-bar.sh &
-exec dwm
+bar &
+
+# run the WM in the foreground (no exec) so the ssh-agent teardown below runs on logout
+dwm
 # exec startdwm
 # exec sowm
 # xhost +SI:localuser:$USER
 # exec distrobox enter -T -n arch -- xmonad
+
+# session ended: drop keys and stop the ssh-agent
+if [ "$SSH_AGENT_PID" ]; then
+    ssh-add -D < /dev/null
+    eval `ssh-agent -s -k`
+fi

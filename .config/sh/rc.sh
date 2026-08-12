@@ -140,10 +140,10 @@ esac
 have nsxiv && alias img="nsxiv --thumbnail"
 have mpv && alias play="mpv --shuffle ."
 if [ -n "${DISPLAY:-}" ] && have xrandr; then
-    alias bright="xrandr --output eDP-1 --brightness"
-    alias offmon="xrandr --output eDP-1 --off"
-    alias onmon="xrandr --output eDP-1 --auto"
-    alias same="xrandr --output HDMI-1 --same-as eDP-1"
+    alias bright="monitor bright"
+    alias offmon="monitor off"
+    alias onmon="monitor on"
+    alias same="monitor same"
 fi
 
 [ -n "${ZSH_VERSION:-}" ] && setopt PROMPT_SUBST 2>/dev/null
