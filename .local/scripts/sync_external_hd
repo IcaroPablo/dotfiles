@@ -1,12 +1,11 @@
 #!/bin/sh
+set -e
 
 local_mirror=/mnt/secretstuff/
 external_mirror=/mnt/external_backup_drive/
-files=exclude_from_sync.txt
+exclude="$HOME/.local/scripts/exclude_from_sync.txt"
+device=/dev/sd3i
 
-#TODO: verificar se a pasta de destino ja possui driver montado
-doas ntfs-3g /dev/sd3i $external_mirror || echo "mount failed"
-
-doas rsync -Dlrtvh --progress --size-only --delete --exclude-from=$files $local_mirror $external_mirror || echo "sync failed"
-
-doas umount $external_mirror || echo "umount failed"
+mount | grep -q "$external_mirror" || doas ntfs-3g "$device" "$external_mirror"
+doas rsync -Dlrtvh --progress --size-only --delete --exclude-from="$exclude" "$local_mirror" "$external_mirror"
+doas umount "$external_mirror"
