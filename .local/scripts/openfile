@@ -75,8 +75,6 @@ first="$1"
 test -L "$first" && first="$(abspath "$first")"
 
 case "$(mimetype "$first")" in
-    # text/*|application/json|*shellscript|application/x-empty) $(echo $NVIM_TERMINAL) -e nvim --cmd "let g:lf_server='$lf_server'" "$@" > /dev/null 2> /dev/null & ;;
-    # text/*|application/json|*shellscript|application/x-empty) [[ -z "$NVIM_SOCKET" ]] && launch_nvim "$escaped_terms" || nvr --servername 127.0.0.1:$NVIM_SOCKET "$escaped_terms" ;;
     inode/x-empty|text/*|application/json|*shellscript|application/x-empty|application/octet-stream) launch_nvim "$@" ;;
     application/pdf|application/vnd.djvu|application/epub*) have zathura && zathura "$@" || os_open "$@" ;;
     audio/*|video/x-ms-asf) have mpv && mpv --shuffle --no-audio-display "$@" || os_open "$@" ;;
