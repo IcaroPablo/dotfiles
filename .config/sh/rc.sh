@@ -147,8 +147,20 @@ if [ -n "${DISPLAY:-}" ] && have xrandr; then
 fi
 
 [ -n "${ZSH_VERSION:-}" ] && setopt PROMPT_SUBST 2>/dev/null
-__prompt_id="${USER:-$(id -un)}@$(hostname 2>/dev/null | cut -d. -f1)"
-PS1='['"$__prompt_id"'] [${PWD}] $ '
+if [ -n "${ZSH_VERSION:-}" ]; then _m1='%{'; _m2='%}'
+elif [ -n "${BASH_VERSION:-}" ]; then _m1='\['; _m2='\]'
+else _m1=''; _m2=''; fi
+if [ -n "${SSH_CONNECTION:-}" ]; then
+    _pid="[${USER:-$(id -un)}@$(hostname 2>/dev/null | cut -d. -f1)] "
+else
+    _pid=""
+fi
+if [ "$(id -u)" -eq 0 ]; then
+    PS1="${_m1}$(printf '\033[31m')${_m2}${_pid}[\${PWD}] \$ ${_m1}$(printf '\033[0m')${_m2}"
+else
+    PS1="${_pid}[\${PWD}] \$ "
+fi
 export PS1
+unset _m1 _m2 _pid
 
 if have eza; then e; fi
