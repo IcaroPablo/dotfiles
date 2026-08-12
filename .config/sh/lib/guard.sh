@@ -1,6 +1,9 @@
 # lib/guard.sh — portable helpers shared by the interactive rc and the wizard.
 # POSIX sh. Meant to be sourced, not executed. Safe to source more than once.
 
+: "${CLIPFILE:=${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/nav-clipboard}"
+export CLIPFILE
+
 # have <cmd>: succeed if <cmd> is an executable in PATH (or a shell builtin).
 have() { command -v "$1" >/dev/null 2>&1; }
 

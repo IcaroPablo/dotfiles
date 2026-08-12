@@ -43,36 +43,41 @@ e() {
     fi
 }
 
-# c [target]: fuzzy/jump navigation. Opens files, cds into dirs, and uses the
-# interactive selector otherwise. The z (jump) branch is used only if present.
 c() {
-    current_folder="$(pwd)"
+    _c_start="$(pwd)"
 
     if [ -n "$1" ]; then
+        if [ ! -e "$1" ] && have "$1"; then
+            interactive-select || { unset _c_start; return; }
+            [ -s "$CLIPFILE" ] && xargs -0 "$@" < "$CLIPFILE"
+            unset _c_start; return
+        fi
         if [ -f "$1" ]; then
             openfile "$@"
-            return
-        elif [ -d "$1" ]; then
-            cd "$1" || return
-        elif have z; then
-            z -I "$1"
-            if [ "$current_folder" != "$(pwd)" ]; then
-                z --add "$1"
-            else
-                return
-            fi
-        else
-            return
+            unset _c_start; return
         fi
+        if [ -d "$1" ]; then
+            cd "$1" || { unset _c_start; return; }
+        elif have zi; then
+            zi "$1"
+        fi
+        [ "$_c_start" = "$(pwd)" ] && { unset _c_start; return; }
     fi
 
-    temp="$(mktemp)"
-    interactive-select openfile --dir-path "$temp"
-    folder="$(cat "$temp")"
-    rm -f "$temp"
+    while :; do
+        interactive-select || break
+        [ -s "$CLIPFILE" ] || break
+        _c_n="$(tr -cd '\0' < "$CLIPFILE" | wc -c | tr -d '[:space:]')"
+        if [ "$_c_n" = 1 ]; then
+            _c_entry="$(tr -d '\0' < "$CLIPFILE")"
+            [ -d "$_c_entry" ] && { cd "$_c_entry" && continue; }
+        fi
+        xargs -0 openfile < "$CLIPFILE"
+        break
+    done
 
-    [ -n "$folder" ] && [ -d "$folder" ] && c "$folder"
-    [ "$current_folder" != "$(pwd)" ] && e
+    [ "$_c_start" != "$(pwd)" ] && e
+    unset _c_start _c_n _c_entry
 }
 
 # hist [arg] / hist - [arg]: list history matching arg; with '-', number the
@@ -116,6 +121,9 @@ fuck() {
     unset _last
 }
 
+p() { [ -s "$CLIPFILE" ] && xargs -0 -I{} cp -Rv -- {} . < "$CLIPFILE"; }
+m() { [ -s "$CLIPFILE" ] && xargs -0 -I{} mv -v -- {} . < "$CLIPFILE" && : > "$CLIPFILE"; }
+
 # -------------------------------------------------------- portable aliases
 
 alias a="create"
@@ -125,15 +133,10 @@ alias ea="e -a"
 alias f="findfile"
 alias g="simplegrep"
 alias nvim="launch_nvim"
-alias of='cd "$(find . -type d -print | fzf)"'
-alias oF='cd "$(find . -type d -print | fzf)" && nvim'
-alias ot="fzf --preview 'bat --color always {}' | sed 's/ /\\\\ /g' | xargs -r nvim"
-alias p="interactive-select --show-selected | xargs -I {} cp -Rv {} ."
-alias m="interactive-select --show-selected | xargs -I {} mv -v {} ."
 alias rm="rm -i"
 alias s="interactive-select"
 alias sa="interactive-select --show-hidden"
-alias so="interactive-select openfile"
+alias so="c openfile"
 alias ss="split_scr"
 alias t="trash"
 alias u="cd .. && e"
