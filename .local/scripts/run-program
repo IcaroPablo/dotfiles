@@ -1,5 +1,6 @@
 #!/bin/sh
 
 IFS=':'
+prog="$(for dir in $PATH; do ls "$dir" 2>/dev/null; done | sort -u | fzfmenu)"
 
-$(for p in $PATH; do ls "$p"; done | sort -u | fzfmenu)
+[ -n "$prog" ] && exec $prog
