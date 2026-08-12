@@ -1,10 +1,10 @@
 #!/bin/sh
 
-# TODO get absolute path for each entry
-
-if [ -n "$NVIM_SOCKET" ]; then
-    command nvim --server 127.0.0.1:$NVIM_SOCKET --remote "$@"
+if [ -n "$NVIM" ] && [ "$#" -gt 0 ]; then
+    . "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh"
+    n=$#
+    while [ "$n" -gt 0 ]; do set -- "$@" "$(abspath "$1")"; shift; n=$((n - 1)); done
+    exec nvim --server "$NVIM" --remote "$@"
 else
-    available_port=$(get_available_port "6660")
-    command nvim --listen 127.0.0.1:$available_port --cmd "let g:current_port='$available_port'" "$@"
+    exec nvim "$@"
 fi

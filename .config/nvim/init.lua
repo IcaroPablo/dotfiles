@@ -453,7 +453,7 @@ function get_root()
 end
 
 function open_terminal_in(project_folder)
-    local nvim_socket = "export NVIM_SOCKET=" .. vim.g.current_port
+    local nvim_socket = "export NVIM='" .. vim.v.servername .. "'"
     local initial_folder_command = "export INITIAL_FOLDER=" .. project_folder
     local terminal_command = nvim_socket  .. " ; " .. initial_folder_command .. " ; " .. os.getenv('NVIM_TERM_CMD')
     local full_command = terminal_command .. ' 2>/dev/null &'
@@ -535,7 +535,7 @@ vim.keymap.set("n", "<C-f>",
         -- local current_dir = vim.fn.expand('%:p:h')
         local current_file = vim.fn.expand("%:t")
 
-        local nvim_socket = "export NVIM_SOCKET=" .. vim.g.current_port .. " && "
+        local nvim_socket = "export NVIM='" .. vim.v.servername .. "' && "
         local terminal_command = nvim_socket .. os.getenv('NVIM_TERM_CMD')
         local command = 'lf ' .. (current_file:find('^.') ~= nil and '--command \'set hidden\' ' or '') .. vim.fn.expand('%:p')
         local full_command = terminal_command .. ' ' .. command .. ' 2>/dev/null 1>/dev/null &'
