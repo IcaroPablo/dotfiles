@@ -1,8 +1,10 @@
 #!/bin/sh
+# findfile <pattern> — search files by name; prefers fd, falls back to find.
 
-# doas find ./* -iname "*$1*" | less
-if [ -x "$(which fdfind)" ]; then
+if command -v fd >/dev/null 2>&1; then
+    fd "$1"
+elif command -v fdfind >/dev/null 2>&1; then
     fdfind "$1"
 else
-    find ./* -iname "*$1*"
+    find . -iname "*$1*"
 fi
