@@ -1,7 +1,4 @@
 #!/bin/sh
-# abspath <path...> — absolute, symlink-resolved path of each arg. Thin wrapper
-# over the abspath() helper in guard.sh, so there is ONE implementation. The
-# sourced function shadows this in-shell; this script serves `xargs abspath`.
 
 . "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh"
 

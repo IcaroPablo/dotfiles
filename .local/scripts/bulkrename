@@ -1,6 +1,4 @@
 #!/bin/sh
-# bulkrename — edit filenames in $EDITOR and apply the renames. Operates on lf's
-# selection ($fs) when set, otherwise on every entry in the current directory.
 
 old="$(mktemp)"; new="$(mktemp)"
 trap 'rm -f "$old" "$new"' EXIT
