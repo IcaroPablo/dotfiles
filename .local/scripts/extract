@@ -1,36 +1,17 @@
 #!/bin/sh
-
-# extract the current file with the right command
-# (xkcd link: https://xkcd.com/1168/)
+# extract <archive> — unpack by extension (https://xkcd.com/1168/).
 
 set -f
 
-case "$@" in
-    *.tar.bz|*.tar.bz2|*.tbz|*.tbz2) tar xjvf "$@";;
-    *.tar.gz|*.tgz) tar xzvf "$@";;
-    *.tar.xz|*.txz) tar xJvf "$@";;
-    *.zip) unzip "$@";;
-    *.rar) unrar x "$@";;
-    *.7z) 7z x "$@";;
+case "$1" in
+    *.tar.bz|*.tar.bz2|*.tbz|*.tbz2) tar xjvf "$1" ;;
+    *.tar.gz|*.tgz)                  tar xzvf "$1" ;;
+    *.tar.xz|*.txz)                  tar xJvf "$1" ;;
+    *.tar)                           tar xvf  "$1" ;;
+    *.zip)                           unzip "$1" ;;
+    *.rar)                           unrar x "$1" ;;
+    *.7z)                            7z x "$1" ;;
+    *.gz)                            gunzip "$1" ;;
+    *.bz2)                           bunzip2 "$1" ;;
+    *) echo "extract: unknown archive type: $1" >&2; exit 1 ;;
 esac
-
-# cmd extract ${{
-# 	clear; tput cup $(($(tput lines)/3)); tput bold
-# 	set -f
-# 	printf "%s\n\t" "$fx"
-# 	printf "extract?[y/N]"
-# 	read ans
-# 	[ $ans = "y" ] && aunpack $fx
-# }}
-
-# cmd extract ${{
-# 	clear; tput cup $(($(tput lines)/3)); tput bold
-# 	set -f
-# 	printf -- "%s\n" $fx
-# 	printf "\t\033[1;34m¿Extraer? \033[37m[\033[32ms\033[37m/\033[31mN\033[37m]\033[m "
-# 	read -r REPLY
-# 	case "$REPLY" in
-# 		[yYsS]) aunpack $fx ;;
-# 	esac
-# }}
-

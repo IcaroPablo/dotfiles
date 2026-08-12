@@ -1,11 +1,9 @@
 #!/bin/sh
+# trash <path...> — move paths into ~/.trash.
 
-# move files to trash folder
+[ "$#" -gt 0 ] || exit 0
 
-set -f
+TRASH="$HOME/.trash"
+[ -d "$TRASH" ] || mkdir -p -- "$TRASH"
 
-TRASH_FOLDER="$HOME/.trash"
-
-[ -f "$TRASH_FOLDER" ] || mkdir -p "$TRASH_FOLDER"
-
-mv "$@" "$TRASH_FOLDER"
+mv -- "$@" "$TRASH"
