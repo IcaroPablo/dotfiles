@@ -1,4 +1,5 @@
 #!/bin/sh
+# requires X11
 
 battery="${BATTERY:-BAT0}"
 have() { command -v "$1" >/dev/null 2>&1; }

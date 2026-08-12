@@ -1,4 +1,5 @@
 #!/bin/sh
+# requires X11
 
 case "$1" in
     off)    xrandr --output eDP-1 --off ;;

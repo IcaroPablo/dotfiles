@@ -1,4 +1,5 @@
 #!/bin/sh
+# requires X11 (via fzfmenu)
 
 IFS=':'
 prog="$(for dir in $PATH; do ls "$dir" 2>/dev/null; done | sort -u | fzfmenu)"
