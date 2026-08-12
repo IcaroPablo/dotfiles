@@ -1,4 +1,4 @@
 #!/bin/sh
+# simplegrep <pattern> — recursive, case-insensitive grep from the current dir.
 
-# rg -n --hidden "$1" ./* || grep -nRI "$1" ./*
-grep -nRIi "$1" ./*
+grep -nRIi -- "$1" .

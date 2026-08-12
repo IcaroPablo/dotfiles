@@ -1,20 +1,12 @@
 #!/bin/sh
+# create <name> — make a file, or a directory when <name> ends with '/'.
+# With no argument, prompt for the name via fzf.
 
-file="$1"
+name="$1"
+[ -z "$name" ] && name="$(fzf --print-query --prompt='name (dir ends with /): ' </dev/null)"
+[ -z "$name" ] && exit 0
 
-# if [ "$#" -eq 0 ]; do
-if [ -z "$file" ]; then
-    file="$(echo -e | fzf --prompt="Enter file name (directories end with an '/'): " --print-query)"
-fi
-
-# todo: verificar se já existe arquivo/pasta com aquele nome
-
-# Check if the input ends with a /
-# if [[ $1 == @(*/) ]] ; then
-# if [[ $file == @(*/) ]] ; then
-if echo "$file" | grep -q '/$'; then
-    mkdir -p "$file"
-else
-    # Input doesn't end with /, so create a file
-    touch "$file"
-fi
+case "$name" in
+    */) mkdir -p -- "$name" ;;
+    *)  touch -- "$name" ;;
+esac
