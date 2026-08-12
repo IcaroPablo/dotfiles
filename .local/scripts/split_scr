@@ -1,4 +1,4 @@
 #!/bin/sh
+# split_scr <cmd> — run <cmd> in a new terminal ($TERM_CMD), detached.
 
-eval "$TERM_CMD "$1" 2>/dev/null &"
-# eval "$TERM_CMD $1 &"
+eval "$TERM_CMD $1 >/dev/null 2>&1 &"
