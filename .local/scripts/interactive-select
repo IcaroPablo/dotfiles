@@ -2,30 +2,13 @@
 
 set -e
 
-# portable helpers (have); guard.sh is optional, fall back to an inline have()
 . "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" 2>/dev/null || true
 command -v have >/dev/null 2>&1 || have() { command -v "$1" >/dev/null 2>&1; }
-
-COMMAND_FILE="$(mktemp)"
+: "${CLIPFILE:=${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/nav-clipboard}"
 
 show_hidden=false
-cmd="cat"
+[ "$1" = "--show-hidden" ] && show_hidden=true
 
-while [ "$#" -gt 0 ]; do
-    case "$1" in
-        --show-hidden)
-            show_hidden=true
-            shift
-            break;;
-        *)
-            break;;
-    esac
-done
-
-# List entries. eza (with icons) when present, else plain ls. The icon prefix
-# is 2 chars ("<icon> "), so STRIP removes it; without eza there is no prefix,
-# so STRIP is a no-op (cat). Both the preview and the selection parser use it,
-# keeping filenames intact either way.
 if have eza; then
     STRIP='sed s/^..//'
     if [ "$show_hidden" = true ]; then
@@ -55,8 +38,6 @@ echo "$items" | fzf \
     --bind 'alt-j:jump,jump:toggle' \
     --bind 'alt-g:first' \
     --bind 'alt-G:last' \
-    --bind 'ctrl-h:print(....)+accept' \
-    --bind 'alt-enter:execute(printf "command: "; read -r new_cmd; echo "$new_cmd" > '"$COMMAND_FILE"')+accept' \
     --bind 'ctrl-l:accept' \
     --height 100% \
     --color=bg+:-1 \
@@ -65,38 +46,18 @@ echo "$items" | fzf \
     --reverse \
     --preview="echo {} | $STRIP | sed s/^/\'/ | sed s/$/\'/ | sed s/\ [^\']*//g | xargs preview" >> "$raw_selection"
 
-if [ "$(cat $raw_selection)" != "" ]; then
+if [ -s "$raw_selection" ]; then
     cat "$raw_selection" | $STRIP \
                          | sed s/^/\'/ \
                          | sed s/$/\'/ \
                          | xargs abspath >> "$selection"
 fi
+rm -f "$raw_selection"
 
-rm "$raw_selection"
-
-new_command="$(cat $COMMAND_FILE)"
-
-rm -f "$COMMAND_FILE"
-
-if [ "$new_command" != "" ]; then
-    cmd="$new_command"
-elif [ "$1" != "" ]; then
-    cmd="$@"
-fi
-
-# clean args
-while [ "$#" -gt 0 ]; do
-    shift
-done
-
-while IFS= read -r line; do
-    set -- "$@" "$line"
-done < "$selection"
-
-if [ "$cmd" != "cat" ]; then
-    $cmd "$@"
+if [ -s "$selection" ]; then
+    tr '\n' '\0' < "$selection" > "$CLIPFILE"
+    rm -f "$selection"
 else
-    cat "$selection"
+    rm -f "$selection"
+    exit 1
 fi
-
-rm "$selection"
