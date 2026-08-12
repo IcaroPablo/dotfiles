@@ -53,16 +53,6 @@ if ! command -v os_open >/dev/null 2>&1; then
     }
 fi
 
-dir_path=""
-
-if [ "$1" = "--dir-path" ]; then
-    shift
-    dir_path="$1"
-    shift
-fi
-
-[ "$1" = "" ] && interactive-select openfile
-
 # for current in "$@"; do
 #     escaped_term="$(echo "$current" | sed 's/ /\\ /g')"
 #     escaped_terms="$escaped_terms $escaped_term"
@@ -74,13 +64,8 @@ handlenoextension() {
         #     batorcat "$1"
         #     break ;;
         inode/directory)
-            [ "$dir_path" = "" ] && echo "$1" || echo "$1" > "$dir_path"
+            echo "$1"
             break ;;
-        # inode/symlink)
-        #     echo "$1"
-        #     linked_path="$(ls -l \"$1\" | sed 's/.*> //')"
-        #     [ "$dir_path" = "" ] && echo "$linked_path" || echo "$linked_path" > "$dir_path"
-        #     break ;;
         *) os_open "$@" ;;
     esac
 }
