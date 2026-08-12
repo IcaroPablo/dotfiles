@@ -1,4 +1,3 @@
 #!/bin/sh
-# simplegrep <pattern> — recursive, case-insensitive grep from the current dir.
 
 grep -nRIi -- "$1" .

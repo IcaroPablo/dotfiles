@@ -1,5 +1,4 @@
 #!/bin/sh
-# findfile <pattern> — search files by name; prefers fd, falls back to find.
 
 if command -v fd >/dev/null 2>&1; then
     fd "$1"

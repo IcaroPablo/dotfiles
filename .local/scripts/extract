@@ -1,5 +1,4 @@
 #!/bin/sh
-# extract <archive> — unpack by extension (https://xkcd.com/1168/).
 
 set -f
 

@@ -1,48 +1,5 @@
 #!/bin/sh
 
-# define a custom 'open' command
-# This command is called when current file is not a directory. You may want to
-# use either file extensions and/or mime types here. Below uses an editor for
-# text files and a file opener for the rest.
-
-# lf specific
-# check if there are selected files
-# if [ -z "$fs" ]; then
-
-# if [ $# -lt 1 ]; then
-#     echo "Usage: $0 <file_path>"
-#     exit 1
-# fi
-
-# # Get the file path from the first command-line argument
-# file_path="$1"
-# 
-# # Check if the file exists
-# if [ ! -e "$file_path" ]; then
-#     echo "File does not exist: $file_path"
-#     exit 1
-# fi
-# 
-# # Check if the file is a symbolic link and resolve it
-# if [ -L "$file_path" ]; then
-#     file_path=$(readlink -f "$file_path")
-# fi
-
-#open() {
-#    test -L $f && f=$(readlink -f $f)
-#    case $(file --mime-type $f -b) in
-#        #text/*) $EDITOR $fx;;
-#        text/*) nvim $fx;;
-#        *pdf) zathura $fx;;
-#        *) for f in $fx; do setsid $OPENER $f > /dev/null 2> /dev/null & done;;
-#    esac
-#}}
-
-# todo criar função de wrapping para não exibir erros na tela
-# image/vnd.djvu|application/pdf|application/octet-stream|application/postscript) setsid -f zathura $fx >/dev/null 2>&1 ;;
-# setsid não funciona
-
-# portable helpers (have/os_open/mimetype); fall back to an inline opener if absent
 . "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" 2>/dev/null || true
 if ! command -v os_open >/dev/null 2>&1; then
     os_open() {
@@ -53,16 +10,8 @@ if ! command -v os_open >/dev/null 2>&1; then
     }
 fi
 
-# for current in "$@"; do
-#     escaped_term="$(echo "$current" | sed 's/ /\\ /g')"
-#     escaped_terms="$escaped_terms $escaped_term"
-# done
-
 handlenoextension() {
     case "$(mimetype "$1")" in
-        # text/*)
-        #     batorcat "$1"
-        #     break ;;
         inode/directory)
             echo "$1"
             break ;;
@@ -81,6 +30,4 @@ case "$(mimetype "$first")" in
     video/*) have mpv && mpv "$@" >/dev/null 2>&1 || os_open "$@" ;;
     image/*) have nsxiv && nsxiv -a --thumbnail "$@" || os_open "$@" ;;
 	*) handlenoextension "$@" ;;
-    # *) for f in $@ ; do setsid xdg-open "$f" > /dev/null 2> /dev/null & done ;;
-    # *) for f in $fx; do setsid -f $OPENER $f >/dev/null 2>&1; done;;
 esac

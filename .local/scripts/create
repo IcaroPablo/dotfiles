@@ -1,6 +1,4 @@
 #!/bin/sh
-# create <name> — make a file, or a directory when <name> ends with '/'.
-# With no argument, prompt for the name via fzf.
 
 name="$1"
 [ -z "$name" ] && name="$(fzf --print-query --prompt='name (dir ends with /): ' </dev/null)"
