@@ -137,6 +137,12 @@ case "$(uname)" in
             done
         }
         req_by() { pkg_info -f "$1" | grep '^@depend' | cut -f 3 -d :; }
+        get_orphans() {
+            for _p in $(pkg_info -mz); do
+                _p="${_p%--}"
+                [ -z "$(req "$_p")" ] && printf '%s\n' "$_p"
+            done
+        }
         del() { doas pkg_delete "$1" && doas pkg_delete -a; }
         alias add="doas pkg_add -Dsnap"
         have ntpctl && alias chkclock="ntpctl -s all"
