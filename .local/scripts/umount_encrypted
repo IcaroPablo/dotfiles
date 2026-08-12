@@ -1,19 +1,12 @@
 #!/bin/sh
+[ "$(id -u)" -eq 0 ] || exec doas "$0" "$@"
 
-# Modify to your needs
 DUID_CRYPT=539d3e3e2a3023e4
-
-# Mountpoints to unmount
-set -A MP -- /mnt/secretstuff
+MOUNTPOINT=/mnt/secretstuff
 
 sync
+logger "Unmount $MOUNTPOINT"
+umount -f "$MOUNTPOINT" && printf 'unmounted %s\n' "$MOUNTPOINT"
+sync
 
-for part in ${MP[@]}; do
-    echo -n "Unmount $part "
-    logger "Unmount $part"
-    umount -f $part
-    echo "done."
-    sync
-done
-
-bioctl -d ${DUID_CRYPT}
+bioctl -d "$DUID_CRYPT"
