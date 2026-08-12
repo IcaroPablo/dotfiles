@@ -8,10 +8,9 @@
 # it is the file that runs per session.
 
 : "${XDG_CONFIG_HOME:="$HOME/.config"}"
-DOT_SH="$XDG_CONFIG_HOME/sh"
 
 # helpers (have/abspath/os_open/mimetype/batorcat)
-[ -f "$DOT_SH/lib/guard.sh" ] && . "$DOT_SH/lib/guard.sh"
+[ -f "$XDG_CONFIG_HOME/sh/lib/guard.sh" ] && . "$XDG_CONFIG_HOME/sh/lib/guard.sh"
 command -v have >/dev/null 2>&1 || have() { command -v "$1" >/dev/null 2>&1; }
 
 # --- privilege helper: prefer doas, fall back to sudo ---
@@ -24,10 +23,8 @@ ulimit -c 0 2>/dev/null || true
 # start in a given folder when asked (e.g. spawned terminals)
 [ -n "${INITIAL_FOLDER:-}" ] && cd "$INITIAL_FOLDER"
 
-# --- zoxide / z.lua (guarded) ---
-if have lua && [ -f "$HOME/.local/bin/z.lua" ]; then
-    eval "$(lua "$HOME/.local/bin/z.lua" --init posix legacy)"
-elif have zoxide; then
+# --- zoxide (guarded) ---
+if have zoxide; then
     eval "$(zoxide init posix --cmd z 2>/dev/null)" 2>/dev/null || true
 fi
 
@@ -106,28 +103,12 @@ hist() {
 # see: tee to the terminal (pass a pipeline's output through to the tty).
 see() { tee /dev/tty; }
 
-# fuck: rerun the previous command prefixed with doas/sudo (or retry it if it
-# was already privileged). Portable across zsh/bash/ksh via `fc -ln` + eval.
-fuck() {
-    _last="$(fc -ln -1 2>/dev/null | sed 's/^[[:space:]]*//')"
-    case "$_last" in
-        fuck*|"") _last="$(fc -ln -2 2>/dev/null | sed 's/^[[:space:]]*//')" ;;
-    esac
-    [ -n "$_last" ] || return 0
-    case "$_last" in
-        "$DOAS"*) eval "$_last" ;;
-        *) eval "$DOAS $_last" ;;
-    esac
-    unset _last
-}
-
 p() { [ -s "$CLIPFILE" ] && xargs -0 -I{} cp -Rv -- {} . < "$CLIPFILE"; }
 m() { [ -s "$CLIPFILE" ] && xargs -0 -I{} mv -v -- {} . < "$CLIPFILE" && : > "$CLIPFILE"; }
 
 # -------------------------------------------------------- portable aliases
 
 alias a="create"
-alias ci="c -i"
 alias doas="${DOAS} "
 alias ea="e -a"
 alias f="findfile"
@@ -141,10 +122,20 @@ alias ss="split_scr"
 alias t="trash"
 alias u="cd .. && e"
 
-# Git
-alias gcm="git checkout master"
-alias gpom="git pull origin master"
-alias newb="git checkout master && git pull origin master && git checkout -b "
+# Git — act on the repo's default branch (origin/HEAD), not a fixed name
+_gbranch() {
+    _b="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)"
+    _b="${_b#origin/}"
+    if [ -z "$_b" ]; then
+        for _c in main master; do
+            git show-ref --verify --quiet "refs/remotes/origin/$_c" && { _b="$_c"; break; }
+        done
+    fi
+    printf '%s\n' "${_b:-main}"
+}
+gcm() { git checkout "$(_gbranch)"; }
+gpom() { _b="$(_gbranch)"; git pull origin "$_b"; unset _b; }
+newb() { _b="$(_gbranch)"; git checkout "$_b" && git pull origin "$_b" && git checkout -b "$1"; unset _b; }
 
 # ------------------------------------------- per-OS interactive bits (funcs)
 case "$(uname)" in
