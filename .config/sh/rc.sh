@@ -1,36 +1,19 @@
-# rc.sh — portable interactive shell config + per-OS interactive bits. POSIX sh;
-# loads cleanly under zsh, bash and ksh. Sourced by every interactive shell via
-# the wizard's block.
-#
-# Environment variables come from env.sh at login and are INHERITED by every
-# descendant shell, so rc.sh does NOT source env.sh — it only sources guard.sh
-# for its helpers. rc.sh holds the functions and aliases (not inheritable), so
-# it is the file that runs per session.
-
 : "${XDG_CONFIG_HOME:="$HOME/.config"}"
 
-# helpers (have/abspath/os_open/mimetype/batorcat)
 [ -f "$XDG_CONFIG_HOME/sh/lib/guard.sh" ] && . "$XDG_CONFIG_HOME/sh/lib/guard.sh"
 command -v have >/dev/null 2>&1 || have() { command -v "$1" >/dev/null 2>&1; }
 
-# --- privilege helper: prefer doas, fall back to sudo ---
 if have doas; then DOAS='doas'; else DOAS='sudo'; fi
 
-# --- shell options (best-effort; not every shell supports every option) ---
 set -o vi 2>/dev/null || true
 ulimit -c 0 2>/dev/null || true
 
-# start in a given folder when asked (e.g. spawned terminals)
 [ -n "${INITIAL_FOLDER:-}" ] && cd "$INITIAL_FOLDER"
 
-# --- zoxide (guarded) ---
 if have zoxide; then
     eval "$(zoxide init posix --cmd z 2>/dev/null)" 2>/dev/null || true
 fi
 
-# ------------------------------------------------------ portable functions
-
-# e [args]: list the current (or given) directory. eza when present, else ls.
 e() {
     clear 2>/dev/null || true
     if have eza; then
@@ -77,9 +60,6 @@ c() {
     unset _c_start _c_n _c_entry
 }
 
-# hist [arg] / hist - [arg]: list history matching arg; with '-', number the
-# matches and rerun a chosen one (prefix the number with 'e' to edit first).
-# Uses `fc -ln` + eval so it works the same in zsh, bash and ksh.
 hist() {
     case "$1" in
         -)
@@ -100,13 +80,10 @@ hist() {
     esac
 }
 
-# see: tee to the terminal (pass a pipeline's output through to the tty).
 see() { tee /dev/tty; }
 
 p() { [ -s "$CLIPFILE" ] && xargs -0 -I{} cp -Rv -- {} . < "$CLIPFILE"; }
 m() { [ -s "$CLIPFILE" ] && xargs -0 -I{} mv -v -- {} . < "$CLIPFILE" && : > "$CLIPFILE"; }
-
-# -------------------------------------------------------- portable aliases
 
 alias a="create"
 alias doas="${DOAS} "
@@ -122,7 +99,6 @@ alias ss="split_scr"
 alias t="trash"
 alias u="cd .. && e"
 
-# Git — act on the repo's default branch (origin/HEAD), not a fixed name
 _gbranch() {
     _b="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)"
     _b="${_b#origin/}"
@@ -137,13 +113,10 @@ gcm() { git checkout "$(_gbranch)"; }
 gpom() { _b="$(_gbranch)"; git pull origin "$_b"; unset _b; }
 newb() { _b="$(_gbranch)"; git checkout "$_b" && git pull origin "$_b" && git checkout -b "$1"; unset _b; }
 
-# ------------------------------------------- per-OS interactive bits (funcs)
 case "$(uname)" in
     OpenBSD)
-        # global ksh rc — interactive setup, ksh only
         [ -n "${KSH_VERSION:-}" ] && [ -f /etc/ksh.kshrc ] && . /etc/ksh.kshrc
 
-        # req <pkg>: list packages that require <pkg> (the "Required by:" block)
         req() {
             _in=0
             printf "%s" "$(pkg_info "$1")" | while IFS= read -r _line; do
@@ -158,7 +131,6 @@ case "$(uname)" in
         have ntpctl && alias chkclock="ntpctl -s all"
         have systat && alias sensors="systat -s 1 sensors"
 
-        # ksh programmable completions (`complete` is a bash/zsh builtin — ksh only)
         if [ -n "${KSH_VERSION:-}" ]; then
             complete() {
                 if have "$1"; then
@@ -175,8 +147,6 @@ case "$(uname)" in
         ;;
 esac
 
-# X11 / dwm desktop aliases (Linux + OpenBSD), keyed on capability — a single
-# block serves both graphical worlds without per-OS duplication. macOS skips it.
 have nsxiv && alias img="nsxiv --thumbnail"
 have mpv && alias play="mpv --shuffle ."
 if [ -n "${DISPLAY:-}" ] && have xrandr; then
@@ -186,14 +156,9 @@ if [ -n "${DISPLAY:-}" ] && have xrandr; then
     alias same="xrandr --output HDMI-1 --same-as eDP-1"
 fi
 
-# --------------------------------------------------------------------- prompt
-
-# Dynamic, generic, POSIX prompt: user@host fixed once, ${PWD} re-expanded each
-# time the prompt is drawn (single-quoted). zsh needs PROMPT_SUBST for that.
 [ -n "${ZSH_VERSION:-}" ] && setopt PROMPT_SUBST 2>/dev/null
 __prompt_id="${USER:-$(id -un)}@$(hostname 2>/dev/null | cut -d. -f1)"
 PS1='['"$__prompt_id"'] [${PWD}] $ '
 export PS1
 
-# List the directory on startup, but only when eza is present.
 if have eza; then e; fi
