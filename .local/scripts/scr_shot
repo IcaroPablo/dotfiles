@@ -1,4 +1,5 @@
 #!/bin/sh
+# requires X11 (macOS uses screencapture)
 
 case "$(uname)" in
     Darwin)

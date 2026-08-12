@@ -1,4 +1,5 @@
 #!/bin/sh
+# requires X11
 
 in="$(mktemp)"; out="$(mktemp)"
 trap 'rm -f "$in" "$out"' EXIT

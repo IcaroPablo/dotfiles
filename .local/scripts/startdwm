@@ -1,4 +1,5 @@
 #!/bin/sh
+# requires X11
 
 while true; do
     dwm

@@ -1,4 +1,5 @@
 #!/bin/sh
+# requires X11
 
 FPS=15
 PIDFILE="${TMPDIR:-/tmp}/rec_gif.pid"
