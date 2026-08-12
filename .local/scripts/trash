@@ -1,5 +1,4 @@
 #!/bin/sh
-# trash <path...> — move paths into ~/.trash.
 
 [ "$#" -gt 0 ] || exit 0
 

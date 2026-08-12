@@ -1,5 +1,4 @@
 #!/bin/sh
-# shredtrash — empty the trash folder (~/.trash) after confirmation.
 
 clear 2>/dev/null
 
