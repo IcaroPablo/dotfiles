@@ -1,5 +1,4 @@
 #!/bin/sh
-# dwm status bar, system-agnostic. Refresh on demand: kill -30 "$(cat ~/.cache/barpid)"
 
 battery="${BATTERY:-BAT0}"
 have() { command -v "$1" >/dev/null 2>&1; }

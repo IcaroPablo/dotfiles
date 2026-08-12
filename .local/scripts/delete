@@ -1,5 +1,4 @@
 #!/bin/sh
-# delete <path...> — confirm, then rm -rf the given paths.
 
 set -f
 clear 2>/dev/null
