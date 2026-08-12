@@ -51,6 +51,13 @@ $HOME/.fehbg &
 # setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.\+=\([0-9]\+\).\+/\1/'` br &
 setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.*=//' | awk '{print $1}'` br &
 setxkbmap br &
+
+if [ "$(uname)" = OpenBSD ]; then
+    mid=$(xinput list | grep /dev/wsmouse | awk '{print $4}' | sed 's/id=//')
+    mad=$(xinput list-props "$mid" | grep 'Device Accel Constant Deceleration' | awk '{print $5}' | sed 's/[():]//g')
+    [ -n "$mid" ] && [ -n "$mad" ] && xinput set-prop "$mid" "$mad" 2
+fi
+
 bar &
 
 # run the WM in the foreground (no exec) so the ssh-agent teardown below runs on logout
