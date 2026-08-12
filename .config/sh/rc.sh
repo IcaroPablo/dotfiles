@@ -130,16 +130,6 @@ case "$(uname)" in
         alias add="doas pkg_add -Dsnap"
         have ntpctl && alias chkclock="ntpctl -s all"
         have systat && alias sensors="systat -s 1 sensors"
-
-        if [ -n "${KSH_VERSION:-}" ]; then
-            complete() {
-                if have "$1"; then
-                    typeset _cmd="$1" _num="$2"
-                    shift 2
-                    set -A "complete_${_cmd}${_num:+"_$_num"}" -- "$@"
-                fi
-            }
-        fi
         ;;
     Linux)
         have flatpak && alias fr='flatpak run "$(flatpak list --columns=application | fzf)"'
