@@ -9,8 +9,6 @@ require("ibl").setup({
         filetypes = {
             "dashboard",
             "help",
-            "lsp-installer",
-            "mason",
             "TelescopePrompt",
             "man",
         },

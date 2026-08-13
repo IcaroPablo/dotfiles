@@ -269,17 +269,6 @@ require("lazy").setup({
         },
     },
     {
-        "williamboman/mason.nvim",
-        dependencies = {
-            "williamboman/mason-lspconfig.nvim",
-            "neovim/nvim-lspconfig",
-        },
-        config = function()
-            require("mason").setup()
-            require("mason-lspconfig").setup()
-        end,
-    },
-    {
         "hrsh7th/nvim-cmp",
         dependencies = {
             "hrsh7th/cmp-buffer",
