@@ -1,18 +1,15 @@
 require("ibl").setup({
-    -- indent = {
-    --     char = '▏'
-    -- },
+    indent = {
+        char = "▏",
+    },
     scope = {
         enabled = false,
     },
     exclude = {
         filetypes = {
-            "alpha",
             "dashboard",
             "help",
-            "neo-tree",
             "lsp-installer",
-            "neo-tree-popup",
             "mason",
             "TelescopePrompt",
             "man",
