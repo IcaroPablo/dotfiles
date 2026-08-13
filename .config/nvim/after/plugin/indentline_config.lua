@@ -7,16 +7,16 @@ require("ibl").setup({
     },
     exclude = {
         filetypes = {
-            'alpha',
-            'dashboard',
-            'help',
-            'neo-tree',
-            'lsp-installer',
-            'neo-tree-popup',
-            'mason',
-            'TelescopePrompt',
-            'man'
+            "alpha",
+            "dashboard",
+            "help",
+            "neo-tree",
+            "lsp-installer",
+            "neo-tree-popup",
+            "mason",
+            "TelescopePrompt",
+            "man",
         },
-        buftypes = {'terminal'}
-    }
+        buftypes = { "terminal" },
+    },
 })
