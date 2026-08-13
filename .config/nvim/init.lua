@@ -142,7 +142,6 @@ require("lazy").setup({
     "smoka7/hop.nvim",
     -- "mbbill/undotree",
     "lukas-reineke/indent-blankline.nvim",
-    "neovim/nvim-lspconfig",
     {
         "lewis6991/gitsigns.nvim",
         dependencies = { "nvim-lua/plenary.nvim" },
