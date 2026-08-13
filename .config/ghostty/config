@@ -1,1 +1,3 @@
 theme = Gruvbox Dark Hard
+font-family = "MonaspiceRn NFM"
+adjust-cell-width = -5%
