@@ -28,3 +28,6 @@ vim.api.nvim_create_autocmd({ "User" }, {
         vim.cmd("cd " .. (get_root() or vim.uv.cwd()))
     end,
 })
+
+vim.keymap.set("n", "<leader>Sl", ":SessionManager load_session<CR>", { noremap = true, silent = true }) -- Load session
+vim.keymap.set("n", "<leader>Sd", ":SessionManager delete_session<CR>", { noremap = true, silent = true }) -- Delete session
