@@ -1,4 +1,3 @@
-local lspconfig = require("lspconfig")
 local caps = vim.lsp.protocol.make_client_capabilities()
 -- capabilities = require("cmp_nvim_lsp").update_capabilities(capabilities)
 
@@ -31,6 +30,11 @@ end
 -- Capabilities
 caps.textDocument.completion.completionItem.snippetSupport = true
 
+vim.lsp.config('*', {
+    capabilities = caps,
+    on_attach = on_attach_config,
+})
+
 -- -- Python
 -- lspconfig.pyright.setup({
 --     capabilities = caps,
@@ -57,18 +61,7 @@ local servers = {
     -- "bashls"
 }
 
-for _, server in ipairs(servers) do
-	lspconfig[server].setup({
-		on_attach = on_attach_config,
-		capabilities = caps,
-		flags = {
-			debounce_text_changes = 150,
-		},
-	})
-end
-
-lspconfig.rust_analyzer.setup({
-    on_attach = on_attach_config,
+vim.lsp.config('rust_analyzer', {
     -- cmd = {"export OPENSSL_DIR=\"/bin\" && " .. os.getenv('HOME') .. "/.cargo/bin/rust-analyzer"},
     settings = {
         ["rust-analyzer"] = {
@@ -98,24 +91,14 @@ lspconfig.rust_analyzer.setup({
     }
 })
 
-require("lspconfig").bacon_ls.setup({
-    on_attach = on_attach_config,
-    capabilities = caps,
-    flags = {
-        debounce_text_changes = 150,
-    },
+vim.lsp.config('bacon_ls', {
     init_options = {
         updateOnSave = true,
         updateOnSaveWaitMillis = 1000
     }
 })
 
-lspconfig.texlab.setup({
-	on_attach = on_attach_config,
-	capabilities = caps,
-	flags = {
-		debounce_text_changes = 150,
-	},
+vim.lsp.config('texlab', {
 	cmd = { "texlab" },
 	filetypes = { "tex", "bib" },
 	settings = {
@@ -158,7 +141,7 @@ lspconfig.texlab.setup({
 --     on_attach = on_attach_config
 -- })
 
-lspconfig.lua_ls.setup({
+vim.lsp.config('lua_ls', {
     settings = {
         Lua = {
             runtime = {
@@ -184,8 +167,6 @@ lspconfig.lua_ls.setup({
     -- cmd = {'/usr/local/bin/lua-language-server'},
     -- cmd = {'/usr/local/lib/lua-language-server/bin/lua-language-server'},
     cmd = {'lua-language-server'},
-    capabilities = caps,
-    on_attach = on_attach_config
 })
 
 -- Emmet
@@ -201,6 +182,9 @@ lspconfig.lua_ls.setup({
 --         "typescriptreact"
 --     }
 -- })
+
+vim.lsp.enable(servers)
+vim.lsp.enable({ 'rust_analyzer', 'bacon_ls', 'texlab', 'lua_ls' })
 
 ---------------------------------
 -- Floating diagnostics message
