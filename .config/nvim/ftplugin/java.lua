@@ -1,10 +1,13 @@
 local on_attach = function(client, bufnr)
-
-    local nore_silent = { noremap = true, silent = true };
+    local nore_silent = { noremap = true, silent = true }
 
     vim.keymap.set("n", "<Leader>e", vim.diagnostic.open_float, nore_silent)
-    vim.keymap.set("n", "[d", function() vim.diagnostic.jump({count = -1}) end, nore_silent)
-    vim.keymap.set("n", "]d", function() vim.diagnostic.jump({count = 1}) end, nore_silent)
+    vim.keymap.set("n", "[d", function()
+        vim.diagnostic.jump({ count = -1 })
+    end, nore_silent)
+    vim.keymap.set("n", "]d", function()
+        vim.diagnostic.jump({ count = 1 })
+    end, nore_silent)
 
     local bufopts = { noremap = true, silent = true, buffer = bufnr }
 
@@ -17,10 +20,12 @@ local on_attach = function(client, bufnr)
     -- vim.keymap.set("n", "<Leader>wr", vim.lsp.buf.remove_workspace_folder, bufopts)
     -- vim.keymap.set("n", "<Leader>wl", function() print(vim.inspect(vim.lsp.buf.list_workspace_folders())) end, bufopts)
     vim.keymap.set("n", "<Leader>rn", vim.lsp.buf.rename, bufopts)
-    vim.keymap.set({"n", 'v'}, "<Leader>ca", vim.lsp.buf.code_action, bufopts)
+    vim.keymap.set({ "n", "v" }, "<Leader>ca", vim.lsp.buf.code_action, bufopts)
     vim.keymap.set("n", "gr", vim.lsp.buf.references, bufopts)
-    vim.keymap.set('n', 'gt', vim.lsp.buf.type_definition, bufopts)
-    vim.keymap.set("n", "<Leader>cf", function() vim.lsp.buf.format({async = true}) end, bufopts)
+    vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, bufopts)
+    vim.keymap.set("n", "<Leader>cf", function()
+        vim.lsp.buf.format({ async = true })
+    end, bufopts)
 
     -- vim.keymap.set("n", "<Leader>jtb", "<cmd>lua require'dap'.toggle_breakpoint()<cr>", bufopts)
     -- vim.keymap.set("n", "<Leader>jsb", "<cmd>lua require'dap'.set_breakpoint(vim.fn.input('Breakpoint condition: '))<cr>", bufopts)
@@ -50,17 +55,27 @@ local on_attach = function(client, bufnr)
     -- map("n", "<leader>ec", "<cmd>lua require'dap'.set_breakpoint(vim.fn.input('Breakpoint condition: '))<CR>", { silent = true, noremap = true })
     -- map("n", "<leader>ef", "<cmd>lua require'dap'.set_breakpoint(nil, nil, vim.fn.input('Log point message: '))<CR>", { silent = true, noremap = true })
 
-    vim.keymap.set("n", "<leader>jdi", require('jdtls').organize_imports, bufopts)
-    vim.keymap.set("n", "<leader>jev", require('jdtls').extract_variable, bufopts)
-    vim.keymap.set("v", "<leader>jev", function() require('jdtls').extract_variable({true, 'variable'}) end, bufopts)
-    vim.keymap.set('v', '<Leader>jec', function() require('jdtls').extract_constant({true, 'constant'}) end, bufopts)
-    vim.keymap.set("v", "<leader>jem", function() require('jdtls').extract_method({true, function() return 'extracted' end}) end, bufopts)
+    vim.keymap.set("n", "<leader>jdi", require("jdtls").organize_imports, bufopts)
+    vim.keymap.set("n", "<leader>jev", require("jdtls").extract_variable, bufopts)
+    vim.keymap.set("v", "<leader>jev", function()
+        require("jdtls").extract_variable({ true, "variable" })
+    end, bufopts)
+    vim.keymap.set("v", "<Leader>jec", function()
+        require("jdtls").extract_constant({ true, "constant" })
+    end, bufopts)
+    vim.keymap.set("v", "<leader>jem", function()
+        require("jdtls").extract_method({
+            true,
+            function()
+                return "extracted"
+            end,
+        })
+    end, bufopts)
 
-    vim.keymap.set("n", "<leader>jtc", require('jdtls').test_class, bufopts)
-    vim.keymap.set("n", "<leader>jtm", require('jdtls').test_nearest_method, bufopts)
-    vim.keymap.set("n", "<leader>jgt", require('jdtls.tests').generate, bufopts)
+    vim.keymap.set("n", "<leader>jtc", require("jdtls").test_class, bufopts)
+    vim.keymap.set("n", "<leader>jtm", require("jdtls").test_nearest_method, bufopts)
+    vim.keymap.set("n", "<leader>jgt", require("jdtls.tests").generate, bufopts)
     -- require("jdtls.tests").goto_subjects()
-
 end
 
 -----------------------------------------------------------------------------------------------------------------------
@@ -100,69 +115,74 @@ end
 
 -----------------------------------------------------------------------------------------------------------------------
 
-local home = os.getenv('HOME')
-local jdtls_folder = home .. '/.local/share/nvim/mason/packages/jdtls/' -- sensible (mason default)
-local config_folder = jdtls_folder .. 'config_linux/'
+local home = os.getenv("HOME")
+local jdtls_folder = home .. "/.local/share/nvim/mason/packages/jdtls/" -- sensible (mason default)
+local config_folder = jdtls_folder .. "config_linux/"
 -- local workspace_folder = lspconfig.util.root_pattern(".git", "pom.xml"),
 -- local workspace_folder = require('jdtls.setup').find_root({'.gradlew', 'pom.xml', '.git', 'mvnw'})
 -- local workspace_folder = home .. "/Workspace/" .. vim.fn.fnamemodify(root_dir, ":p:h:t")
 -- local workspace_folder = vim.fs.dirname(vim.fs.find({'.gradlew', 'pom.xml', '.git', 'mvnw'}, { upward = true })[1])
-local project_folder = vim.fs.root(0, {".git", "mvnw", "gradlew", "pom.xml"}) or ''
+local project_folder = vim.fs.root(0, { ".git", "mvnw", "gradlew", "pom.xml" }) or ""
 
 local bundles = {
-    vim.fn.glob(home .. '/.local/share/nvim/java-debug/com.microsoft.java.debug.plugin/target/com.microsoft.java.debug.plugin-*.jar') --sensible
-};
+    vim.fn.glob(home .. "/.local/share/nvim/java-debug/com.microsoft.java.debug.plugin/target/com.microsoft.java.debug.plugin-*.jar"), --sensible
+}
 
 vim.list_extend(bundles, vim.split(vim.fn.glob(home .. "/.local/share/nvim/vscode-java-test/server/*.jar", true), "\n")) -- sensible
 
 -- local caps = vim.lsp.protocol.make_client_capabilities()
-local capabilities = require('cmp_nvim_lsp').default_capabilities(vim.lsp.protocol.make_client_capabilities())
+local capabilities = require("cmp_nvim_lsp").default_capabilities(vim.lsp.protocol.make_client_capabilities())
 
 capabilities.workspace = {
     configuration = true,
-    ['didChangeWatchedFiles.dynamicRegistration'] = true,
-    ['didChangeConfiguration.dynamicRegistration'] = true,
-    ['textDocument.completion.completionItem.snippetSupport'] = true
+    ["didChangeWatchedFiles.dynamicRegistration"] = true,
+    ["didChangeConfiguration.dynamicRegistration"] = true,
+    ["textDocument.completion.completionItem.snippetSupport"] = true,
 }
 
 local jdtls_config = {
     cmd = {
-        os.getenv('JAVA_HOME') .. '/bin/java',
-        '-Declipse.application=org.eclipse.jdt.ls.core.id1',
-        '-Dosgi.bundles.defaultStartLevel=4',
-        '-Declipse.product=org.eclipse.jdt.ls.core.product',
+        os.getenv("JAVA_HOME") .. "/bin/java",
+        "-Declipse.application=org.eclipse.jdt.ls.core.id1",
+        "-Dosgi.bundles.defaultStartLevel=4",
+        "-Declipse.product=org.eclipse.jdt.ls.core.product",
         -- '-Dosgi.checkConfiguration=true',
-        '-Dlog.protocol=true',
-        '-Dosgi.sharedConfiguration.area=' .. config_folder,
+        "-Dlog.protocol=true",
+        "-Dosgi.sharedConfiguration.area=" .. config_folder,
         -- '-Dosgi.sharedConfiguration.area.readOnly=true',
         -- '-Dosgi.configuration.cascaded=true',
-        '-Dlog.level=ALL',
+        "-Dlog.level=ALL",
         -- '-Dorg.osgi.framework.os.name=my_os_name',
-        '-javaagent:' .. jdtls_folder .. '/lombok.jar',
-        '-Xms1g',
-        '--add-modules=ALL-SYSTEM',
-        '--add-opens', 'java.base/java.util=ALL-UNNAMED',
-        '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
-        '-jar', vim.fn.glob(jdtls_folder .. 'plugins/org.eclipse.equinox.launcher_*.jar'),
-        '-configuration', config_folder,
+        "-javaagent:" .. jdtls_folder .. "/lombok.jar",
+        "-Xms1g",
+        "--add-modules=ALL-SYSTEM",
+        "--add-opens",
+        "java.base/java.util=ALL-UNNAMED",
+        "--add-opens",
+        "java.base/java.lang=ALL-UNNAMED",
+        "-jar",
+        vim.fn.glob(jdtls_folder .. "plugins/org.eclipse.equinox.launcher_*.jar"),
+        "-configuration",
+        config_folder,
         -- If you started neovim within `~/dev/xy/project-1` this would resolve to `project-1`
         -- local project_name = vim.fn.fnamemodify(vim.fn.getcwd(), ':p:h:t')
-        '-data', home .. '/.local/share/jdtls/' .. vim.fn.fnamemodify(project_folder, ':p:h:t')
+        "-data",
+        home .. "/.local/share/jdtls/" .. vim.fn.fnamemodify(project_folder, ":p:h:t"),
     },
     flags = {
         allow_incremental_sync = true,
-        debounce_text_changes = 80
+        debounce_text_changes = 80,
     },
     init_options = {
         -- extendedClientCapabilities = require'jdtls'.extendedClientCapabilities({
         --     resolveAdditionalTextEditsSupport = true
         -- })
-        bundles = bundles
+        bundles = bundles,
     },
     settings = {
         java = {
-            ['signatureHelp.enabled'] = true,
-            ['contentProvider.preferred'] = 'fernflower',
+            ["signatureHelp.enabled"] = true,
+            ["contentProvider.preferred"] = "fernflower",
             format = {
                 settings = {
                     -- Use Google Java style guidelines for formatting
@@ -180,7 +200,7 @@ local jdtls_config = {
                     "java.util.Objects.requireNonNull",
                     "java.util.Objects.requireNonNullElse",
                     "java.util.Collections",
-                    "org.mockito.Mockito.*"
+                    "org.mockito.Mockito.*",
                 },
                 filteredTypes = {
                     "com.sun.*",
@@ -201,28 +221,28 @@ local jdtls_config = {
                     --     path = home .. '/.sdkman/candidates/java/11.0.12-open/'
                     -- },
                     {
-                        name = 'JavaSE-17',
+                        name = "JavaSE-17",
                         -- path = '/usr/local/jdk-17/' -- sensible
-                        path = home .. '/.sdkman/candidates/java/17.0.8-tem/'
-                    }
-                }
+                        path = home .. "/.sdkman/candidates/java/17.0.8-tem/",
+                    },
+                },
             },
             codeGeneration = {
-                ['toString.template'] = "${object.className}{${member.name()}=${member.value}, ${otherMembers}}",
-                ['hashCodeEquals.useJava7Objects'] = true,
-                useBlocks = true
+                ["toString.template"] = "${object.className}{${member.name()}=${member.value}, ${otherMembers}}",
+                ["hashCodeEquals.useJava7Objects"] = true,
+                useBlocks = true,
             },
             sources = {
                 organizeImports = {
                     starThreshold = 9999,
-                    staticStarThreshold = 9999
-                }
-            }
-        }
+                    staticStarThreshold = 9999,
+                },
+            },
+        },
     },
     capabilities = capabilities,
     on_attach = on_attach,
-    root_dir = project_folder
+    root_dir = project_folder,
 }
 
-require('jdtls').start_or_attach(jdtls_config)
+require("jdtls").start_or_attach(jdtls_config)
