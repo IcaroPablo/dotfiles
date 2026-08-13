@@ -136,13 +136,13 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
--- :lua =require("lazy").stats().count
+-- lua =require("lazy").stats().count
 
 require("lazy").setup({
-    {
-        "smoka7/hop.nvim",
-        tag = "*",
-    },
+    "smoka7/hop.nvim",
+    -- "mbbill/undotree",
+    "lukas-reineke/indent-blankline.nvim",
+    "neovim/nvim-lspconfig",
     {
         "lewis6991/gitsigns.nvim",
         dependencies = { "nvim-lua/plenary.nvim" },
@@ -178,7 +178,7 @@ require("lazy").setup({
                     map("n", "<leader>hr", require("gitsigns").reset_hunk)
                     map("n", "<leader>hR", require("gitsigns").reset_buffer)
                     map("n", "<leader>hp", require("gitsigns").preview_hunk)
-                    map("n", "<leader>td", require("gitsigns").toggle_deleted)
+                    map("n", "<leader>td", require("gitsigns").preview_hunk_inline)
 
                     map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>")
                 end,
@@ -196,14 +196,11 @@ require("lazy").setup({
     --     "sindrets/diffview.nvim",
     --     dependencies = { "kyazdani42/nvim-web-devicons" },
     -- },
-    -- "mbbill/undotree",
-    "lukas-reineke/indent-blankline.nvim",
     {
         "nvim-treesitter/nvim-treesitter",
         branch = "master",
         build = ":TSUpdate",
     },
-    "neovim/nvim-lspconfig",
     {
         "Shatur/neovim-session-manager",
         dependencies = {
