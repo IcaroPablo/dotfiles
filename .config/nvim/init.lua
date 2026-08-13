@@ -340,6 +340,20 @@ vim.keymap.set("n", "<leader>q", ":call EasyClose()<CR>", { noremap = true, sile
 vim.keymap.set("n", "<leader>Q", ":quit!<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>n", ":enew | startinsert<CR>", { noremap = true, silent = true }) -- New file
 vim.keymap.set("n", "<leader>C", ":e $HOME/.config/nvim/init.lua<CR>", { noremap = true, silent = true }) -- Configs
+-- Format the whole nvim config with StyLua
+vim.keymap.set("n", "<leader>F", function()
+    if vim.fn.executable("stylua") == 0 then
+        vim.notify("stylua não encontrado no PATH", vim.log.levels.WARN)
+        return
+    end
+    local out = vim.fn.system({ "stylua", vim.fn.stdpath("config") })
+    if vim.v.shell_error ~= 0 then
+        vim.notify(out, vim.log.levels.ERROR)
+    else
+        vim.cmd("checktime") -- recarrega buffers reformatados no disco
+        vim.notify("StyLua: config formatada", vim.log.levels.INFO)
+    end
+end, { noremap = true, silent = true, desc = "Format nvim config with StyLua" })
 -- map("n", "<A-<>", "<cmd>BufferMovePrevious<CR>", { silent = true, noremap = true })
 -- map("n", "<A->>", "<cmd>BufferMoveNext<CR>", { silent = true, noremap = true })
 -- map("n", "<A-1>", "<cmd>BufferGoto 1<CR>", { silent = true, noremap = true })
