@@ -221,6 +221,37 @@ require('lazy').setup({
             vim.cmd([[ colorscheme gruvbox ]])
         end,
     },
+    -- alternativa (reescrita Lua, mantida): ellisonleao/gruvbox.nvim
+    -- {
+    --     'ellisonleao/gruvbox.nvim',
+    --     lazy = false,
+    --     priority = 1000,
+    --     config = function()
+    --         require('gruvbox').setup({
+    --             terminal_colors = true,
+    --             undercurl = false,
+    --             underline = false,
+    --             bold = false,
+    --             italic = {
+    --                 strings = false,
+    --                 emphasis = false,
+    --                 comments = false,
+    --                 operators = false,
+    --                 folds = false,
+    --             },
+    --             strikethrough = true,
+    --             invert_selection = true,
+    --             invert_signs = true,
+    --             invert_tabline = false,
+    --             invert_intend_guides = false,
+    --             inverse = false,
+    --             contrast = 'hard', -- "hard", "soft" ou ""
+    --             dim_inactive = false,
+    --             transparent_mode = false,
+    --         })
+    --         vim.cmd('colorscheme gruvbox')
+    --     end,
+    -- },
     {
         'nvim-lualine/lualine.nvim',
         dependencies = { 'nvim-tree/nvim-web-devicons' },
