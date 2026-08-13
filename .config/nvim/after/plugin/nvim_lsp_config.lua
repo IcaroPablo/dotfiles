@@ -3,6 +3,8 @@ local caps = vim.lsp.protocol.make_client_capabilities()
 
 local on_attach_config = function(client, bufnr)
     client.server_capabilities.document_formatting = false
+    -- desliga os semantic tokens do LSP para não sobrescrever as cores do treesitter
+    client.server_capabilities.semanticTokensProvider = nil
 
     local nore_silent = { noremap = true, silent = true }
 
