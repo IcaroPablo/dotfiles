@@ -4,11 +4,15 @@ local caps = vim.lsp.protocol.make_client_capabilities()
 local on_attach_config = function(client, bufnr)
     client.server_capabilities.document_formatting = false
 
-    local nore_silent = { noremap = true, silent = true };
+    local nore_silent = { noremap = true, silent = true }
 
     vim.keymap.set("n", "<Leader>e", vim.diagnostic.open_float, nore_silent)
-    vim.keymap.set("n", "[d", function() vim.diagnostic.jump({count = -1}) end, nore_silent)
-    vim.keymap.set("n", "]d", function() vim.diagnostic.jump({count = 1}) end, nore_silent)
+    vim.keymap.set("n", "[d", function()
+        vim.diagnostic.jump({ count = -1 })
+    end, nore_silent)
+    vim.keymap.set("n", "]d", function()
+        vim.diagnostic.jump({ count = 1 })
+    end, nore_silent)
 
     local bufopts = { noremap = true, silent = true, buffer = bufnr }
 
@@ -20,17 +24,18 @@ local on_attach_config = function(client, bufnr)
     -- vim.keymap.set("n", "<Leader>wr", vim.lsp.buf.remove_workspace_folder, bufopts)
     -- vim.keymap.set("n", "<Leader>wl", function() print(vim.inspect(vim.lsp.buf.list_workspace_folders())) end, bufopts)
     -- vim.keymap.set("n", "<Leader>rn", vim.lsp.buf.rename, bufopts)
-    vim.keymap.set({"n", 'v'}, "<Leader>ca", vim.lsp.buf.code_action, bufopts)
+    vim.keymap.set({ "n", "v" }, "<Leader>ca", vim.lsp.buf.code_action, bufopts)
     vim.keymap.set("n", "gr", vim.lsp.buf.references, bufopts)
-    vim.keymap.set('n', 'gt', vim.lsp.buf.type_definition, bufopts)
-    vim.keymap.set("n", "<Leader>cf", function() vim.lsp.buf.format({async = true}) end, bufopts)
-
+    vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, bufopts)
+    vim.keymap.set("n", "<Leader>cf", function()
+        vim.lsp.buf.format({ async = true })
+    end, bufopts)
 end
 
 -- Capabilities
 caps.textDocument.completion.completionItem.snippetSupport = true
 
-vim.lsp.config('*', {
+vim.lsp.config("*", {
     capabilities = caps,
     on_attach = on_attach_config,
 })
@@ -55,13 +60,13 @@ vim.lsp.config('*', {
 
 local servers = {
     "pyright",
-    'ts_ls',
+    "ts_ls",
     "clangd",
     -- "vimls",
     -- "bashls"
 }
 
-vim.lsp.config('rust_analyzer', {
+vim.lsp.config("rust_analyzer", {
     -- cmd = {"export OPENSSL_DIR=\"/bin\" && " .. os.getenv('HOME') .. "/.cargo/bin/rust-analyzer"},
     settings = {
         ["rust-analyzer"] = {
@@ -80,59 +85,59 @@ vim.lsp.config('rust_analyzer', {
             --     enable = true
             -- },
             checkOnSave = {
-                enable = false
+                enable = false,
                 -- enable = true
             },
             diagnostics = {
-                enable = false
+                enable = false,
                 -- enable = true
-            }
-        }
-    }
+            },
+        },
+    },
 })
 
-vim.lsp.config('bacon_ls', {
+vim.lsp.config("bacon_ls", {
     init_options = {
         updateOnSave = true,
-        updateOnSaveWaitMillis = 1000
-    }
+        updateOnSaveWaitMillis = 1000,
+    },
 })
 
-vim.lsp.config('texlab', {
-	cmd = { "texlab" },
-	filetypes = { "tex", "bib" },
-	settings = {
-		texlab = {
-			auxDirectory = ".",
-			bibtexFormatter = "texlab",
-			build = {
-				args = { "-pdf", "-interaction=nonstopmode", "-synctex=1", "%f", "-shell-escape" },
-				executable = "latexmk",
-				forwardSearchAfter = true,
-				onSave = true,
-			},
-			chktex = {
-				onEdit = true,
-				onOpenAndSave = true,
-			},
-			diagnosticsDelay = 300,
-			formatterLineLength = 80,
-			forwardSearch = {
-				executable = "zathura",
-				args = {
-					"--synctex-editor-command",
-					[[nvim --headless -c 'TexlabInverseSearch %{input} %{line}']],
-					"--synctex-forward",
-					"%l:1:%f",
-					"%p",
-				},
-			},
-			latexFormatter = "latexindent",
-			latexindent = {
-				modifyLineBreaks = false,
-			},
-		},
-	},
+vim.lsp.config("texlab", {
+    cmd = { "texlab" },
+    filetypes = { "tex", "bib" },
+    settings = {
+        texlab = {
+            auxDirectory = ".",
+            bibtexFormatter = "texlab",
+            build = {
+                args = { "-pdf", "-interaction=nonstopmode", "-synctex=1", "%f", "-shell-escape" },
+                executable = "latexmk",
+                forwardSearchAfter = true,
+                onSave = true,
+            },
+            chktex = {
+                onEdit = true,
+                onOpenAndSave = true,
+            },
+            diagnosticsDelay = 300,
+            formatterLineLength = 80,
+            forwardSearch = {
+                executable = "zathura",
+                args = {
+                    "--synctex-editor-command",
+                    [[nvim --headless -c 'TexlabInverseSearch %{input} %{line}']],
+                    "--synctex-forward",
+                    "%l:1:%f",
+                    "%p",
+                },
+            },
+            latexFormatter = "latexindent",
+            latexindent = {
+                modifyLineBreaks = false,
+            },
+        },
+    },
 })
 
 -- Rust
@@ -141,24 +146,24 @@ vim.lsp.config('texlab', {
 --     on_attach = on_attach_config
 -- })
 
-vim.lsp.config('lua_ls', {
+vim.lsp.config("lua_ls", {
     settings = {
         Lua = {
             runtime = {
                 -- Tell the language server which version of Lua you're using (most likely LuaJIT in the case of Neovim)
-                version = 'LuaJIT'
+                version = "LuaJIT",
             },
             diagnostics = {
                 -- Get the language server to recognize the `vim` global
-                globals = {'vim'}
+                globals = { "vim" },
             },
             workspace = {
                 -- Make the server aware of Neovim runtime files
-                library = vim.api.nvim_get_runtime_file("", true)
+                library = vim.api.nvim_get_runtime_file("", true),
             },
             -- Do not send telemetry data containing a randomized but unique identifier
             telemetry = {
-                enable = false
+                enable = false,
             },
             -- root_dir = root_pattern(".luarc.json", ".luarc.jsonc", ".luacheckrc", ".stylua.toml", "stylua.toml", "selene.toml", "selene.yml", ".git")
         },
@@ -166,7 +171,7 @@ vim.lsp.config('lua_ls', {
     -- cmd = {os.getenv('HOME') .. '/lua-language-server-rust/target/release/lua-language-server'},
     -- cmd = {'/usr/local/bin/lua-language-server'},
     -- cmd = {'/usr/local/lib/lua-language-server/bin/lua-language-server'},
-    cmd = {'lua-language-server'},
+    cmd = { "lua-language-server" },
 })
 
 -- Emmet
@@ -184,7 +189,7 @@ vim.lsp.config('lua_ls', {
 -- })
 
 vim.lsp.enable(servers)
-vim.lsp.enable({ 'rust_analyzer', 'bacon_ls', 'texlab', 'lua_ls' })
+vim.lsp.enable({ "rust_analyzer", "bacon_ls", "texlab", "lua_ls" })
 
 ---------------------------------
 -- Floating diagnostics message
@@ -194,18 +199,18 @@ vim.diagnostic.config({
         -- source = "always",
         -- source = "if_many",
         source = true,
-		-- show_header = false,
+        -- show_header = false,
         -- border = border
     },
-	underline = false,
+    underline = false,
     virtual_text = false,
     signs = true,
-	--[[ virtual_text = {
+    --[[ virtual_text = {
         show = false,
 		prefix = "",
 	}, ]]
-	-- update_in_insert = false,
-	-- severity_sort = true,
+    -- update_in_insert = false,
+    -- severity_sort = true,
 })
 
 -- vim.cmd([[ autocmd! CursorHold,CursorHoldI * lua vim.diagnostic.open_float(nil, {focus=false})]])

@@ -3,7 +3,7 @@ if not status_ok then
     return
 end
 
-local dashboard = require('alpha.themes.dashboard')
+local dashboard = require("alpha.themes.dashboard")
 
 -------------------------------------------------------------
 
@@ -11,20 +11,20 @@ local dashboard = require('alpha.themes.dashboard')
 local header = {
     type = "text",
     val = {
-"                                                     ",
-"  ███╗   ██╗███████╗ ██████╗ ██╗   ██╗██╗███╗   ███╗ ",
-"  ████╗  ██║██╔════╝██╔═══██╗██║   ██║██║████╗ ████║ ",
-"  ██╔██╗ ██║█████╗  ██║   ██║██║   ██║██║██╔████╔██║ ",
-"  ██║╚██╗██║██╔══╝  ██║   ██║╚██╗ ██╔╝██║██║╚██╔╝██║ ",
-"  ██║ ╚████║███████╗╚██████╔╝ ╚████╔╝ ██║██║ ╚═╝ ██║ ",
-"  ╚═╝  ╚═══╝╚══════╝ ╚═════╝   ╚═══╝  ╚═╝╚═╝     ╚═╝ ",
-"                                                     ",
+        "                                                     ",
+        "  ███╗   ██╗███████╗ ██████╗ ██╗   ██╗██╗███╗   ███╗ ",
+        "  ████╗  ██║██╔════╝██╔═══██╗██║   ██║██║████╗ ████║ ",
+        "  ██╔██╗ ██║█████╗  ██║   ██║██║   ██║██║██╔████╔██║ ",
+        "  ██║╚██╗██║██╔══╝  ██║   ██║╚██╗ ██╔╝██║██║╚██╔╝██║ ",
+        "  ██║ ╚████║███████╗╚██████╔╝ ╚████╔╝ ██║██║ ╚═╝ ██║ ",
+        "  ╚═╝  ╚═══╝╚══════╝ ╚═════╝   ╚═══╝  ╚═╝╚═╝     ╚═╝ ",
+        "                                                     ",
     },
     opts = {
         position = "center",
-        hl = "Type"
+        hl = "Type",
         -- wrap = "overflow";
-    }
+    },
 }
 
 local buttons = {
@@ -38,15 +38,15 @@ local buttons = {
         dashboard.button("c", "  Configs", ":e $HOME/.config/nvim/init.lua<CR>"),
         dashboard.button("l", "󰁯  Load session", ":SessionManager load_session<CR>"),
         dashboard.button("d", "  Delete session", ":SessionManager delete_session<CR>"),
-        dashboard.button("q", "  Quit", ":qa <CR>")
+        dashboard.button("q", "  Quit", ":qa <CR>"),
     },
     opts = {
         spacing = 1,
-        hl = "Integrated"
-    }
+        hl = "Integrated",
+    },
 }
 
-local plugins = require('lazy').stats().count
+local plugins = require("lazy").stats().count
 
 local plugins_text = "   " .. plugins .. " plugins" .. "   v" .. vim.version().major .. "." .. vim.version().minor .. "." .. vim.version().patch
 
@@ -55,12 +55,12 @@ local footer1 = {
     val = plugins_text,
     opts = {
         position = "center",
-        hl = "Include"
-    }
+        hl = "Include",
+    },
 }
 
 -- Quote
-local fortune = require "alpha.fortune"
+local fortune = require("alpha.fortune")
 local quote = table.concat(fortune(), "\n")
 
 local footer2 = {
@@ -68,8 +68,8 @@ local footer2 = {
     val = quote,
     opts = {
         position = "center",
-        hl = "Type"
-    }
+        hl = "Type",
+    },
 }
 
 local alpha_config = {
@@ -79,7 +79,7 @@ local alpha_config = {
         { type = "padding", val = 2 },
         buttons,
         footer1,
-        footer2
+        footer2,
     },
     -- opts = {
     --     margin = 5,

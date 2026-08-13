@@ -18,15 +18,15 @@ require("nvim-treesitter.configs").setup({
         "ron",
         "sql",
         "vim",
-        "yaml"
+        "yaml",
     },
     sync_install = false,
     auto_install = true,
     highlight = {
-        enable = true
+        enable = true,
     },
     modules = {},
-    ignore_install = {}
+    ignore_install = {},
     -- indent = { enable = true }
     -- autotag = {
     --         enable = true,
