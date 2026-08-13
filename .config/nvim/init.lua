@@ -65,24 +65,24 @@ vim.cmd([[
     augroup END
 ]])
 
--- Easily close windows and buffers
-vim.cmd([[
-    function! EasyClose()
-        if &modified
-            write
-        endif
-        if tabpagewinnr(tabpagenr(), '$') > 1 " more than 1 window open ?
-            if len(win_findbuf(bufnr('%'))) == 1 "current buffer is open in just one window ?
-                bd!
-                return
-            endif
-            close
-            return
-        endif
-            "bp | sp | bn | bd!
-            bd
-    endfunction
-]])
+-- Fecha janela/buffer de forma "inteligente": se o buffer está aberto em várias
+-- janelas, fecha só esta janela; senão remove o buffer. save=true salva antes
+-- (só arquivo normal nomeado); save=false descarta mudanças não-salvas.
+local function smart_close(save)
+    local buf = vim.api.nvim_get_current_buf()
+    local wins_in_tab = vim.fn.tabpagewinnr(vim.fn.tabpagenr(), "$")
+    local wins_with_buf = #vim.fn.win_findbuf(buf)
+    if wins_in_tab > 1 and wins_with_buf > 1 then
+        vim.cmd("close")
+    elseif save then
+        if vim.bo.modified and vim.bo.buftype == "" and vim.api.nvim_buf_get_name(buf) ~= "" then
+            vim.cmd("write")
+        end
+        vim.cmd("bdelete")
+    else
+        vim.cmd("bdelete!")
+    end
+end
 
 -- vim.cmd([[
 --     syntax on "some nice and fancy syntax highlight
@@ -323,8 +323,12 @@ end
 -- easily manage buffers
 vim.keymap.set("n", "<Tab>", ":bnext<CR>:redraw<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<S-Tab>", ":bprevious<CR>:redraw<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<leader>q", ":call EasyClose()<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<leader>Q", ":quit!<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>q", function()
+    smart_close(false)
+end, { noremap = true, silent = true }) -- fecha sem salvar
+vim.keymap.set("n", "<leader>Q", function()
+    smart_close(true)
+end, { noremap = true, silent = true }) -- fecha salvando
 vim.keymap.set("n", "<leader>n", ":enew | startinsert<CR>", { noremap = true, silent = true }) -- New file
 vim.keymap.set("n", "<leader>C", ":e $HOME/.config/nvim/init.lua<CR>", { noremap = true, silent = true }) -- Configs
 -- Format the whole nvim config with StyLua
