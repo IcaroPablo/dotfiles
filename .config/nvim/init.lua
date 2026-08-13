@@ -94,16 +94,16 @@ vim.cmd([[
     autocmd FileType man colorscheme gruvbox
 ]])
 
-vim.api.nvim_create_user_command("SetDotfilesGitVars", function()
-    vim.env.GIT_WORK_TREE = vim.fn.expand("~")
-    vim.env.GIT_DIR = vim.fn.expand("~/.config/dotfiles")
-end, {})
+-- vim.api.nvim_create_user_command("SetDotfilesGitVars", function()
+--     vim.env.GIT_WORK_TREE = vim.fn.expand("~")
+--     vim.env.GIT_DIR = vim.fn.expand("~/.config/dotfiles")
+-- end, {})
 
-vim.api.nvim_create_user_command("DisableLSPColors", function()
-    for _, group in ipairs(vim.fn.getcompletion("@lsp", "highlight")) do
-        vim.api.nvim_set_hl(0, group, {})
-    end
-end, {})
+-- vim.api.nvim_create_user_command("DisableLSPColors", function()
+--     for _, group in ipairs(vim.fn.getcompletion("@lsp", "highlight")) do
+--         vim.api.nvim_set_hl(0, group, {})
+--     end
+-- end, {})
 
 vim.api.nvim_create_user_command("Dig", function()
     local root_dir = get_root()
@@ -135,6 +135,8 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
     })
 end
 vim.opt.rtp:prepend(lazypath)
+
+-- :lua =require("lazy").stats().count
 
 require("lazy").setup({
     {
@@ -183,18 +185,18 @@ require("lazy").setup({
             })
         end,
     },
-    {
-        "folke/zen-mode.nvim",
-        dependencies = {
-            { "folke/twilight.nvim", config = true },
-        },
-        cmd = "ZenMode",
-    },
-    {
-        "sindrets/diffview.nvim",
-        dependencies = { "kyazdani42/nvim-web-devicons" },
-    },
-    "mbbill/undotree",
+    -- {
+    --     "folke/zen-mode.nvim",
+    --     dependencies = {
+    --         { "folke/twilight.nvim", config = true },
+    --     },
+    --     cmd = "ZenMode",
+    -- },
+    -- {
+    --     "sindrets/diffview.nvim",
+    --     dependencies = { "kyazdani42/nvim-web-devicons" },
+    -- },
+    -- "mbbill/undotree",
     "lukas-reineke/indent-blankline.nvim",
     {
         "nvim-treesitter/nvim-treesitter",
