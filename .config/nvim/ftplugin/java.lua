@@ -1,3 +1,66 @@
+-- Rodar testes via Maven num terminal buffer.
+-- Prefere `mvn`; se ausente, cai pro `./mvnw` do projeto; erro se nenhum.
+local function maven_bin()
+    if vim.fn.executable("mvn") == 1 then
+        return "mvn"
+    end
+    local wroot = vim.fs.root(0, { "mvnw" })
+    if wroot and vim.fn.executable(wroot .. "/mvnw") == 1 then
+        return wroot .. "/mvnw"
+    end
+    return nil
+end
+
+-- nome do método de teste sob o cursor (via treesitter)
+local function enclosing_method()
+    local ok, parser = pcall(vim.treesitter.get_parser, 0, "java")
+    if not ok or not parser then
+        return nil
+    end
+    parser:parse()
+    local node = vim.treesitter.get_node()
+    while node do
+        if node:type() == "method_declaration" then
+            local name = node:field("name")[1]
+            if name then
+                return vim.treesitter.get_node_text(name, 0)
+            end
+        end
+        node = node:parent()
+    end
+    return nil
+end
+
+-- roda `mvn test -Dtest=<spec>` da raiz do projeto num split de terminal
+local function run_maven_test(spec)
+    local root = vim.fs.root(0, { "pom.xml" })
+    if not root then
+        vim.notify("pom.xml não encontrado (raiz do projeto)", vim.log.levels.WARN)
+        return
+    end
+    local mvn = maven_bin()
+    if not mvn then
+        vim.notify("nem `mvn` nem `./mvnw` encontrados", vim.log.levels.ERROR)
+        return
+    end
+    vim.cmd("botright new")
+    vim.cmd("resize 18")
+    vim.fn.termopen({ mvn, "test", "-Dtest=" .. spec }, { cwd = root })
+end
+
+local function maven_test_class()
+    run_maven_test(vim.fn.expand("%:t:r"))
+end
+
+local function maven_test_method()
+    local m = enclosing_method()
+    if not m then
+        vim.notify("nenhum método de teste sob o cursor", vim.log.levels.WARN)
+        return
+    end
+    run_maven_test(vim.fn.expand("%:t:r") .. "#" .. m)
+end
+
 local on_attach = function(client, bufnr)
     local nore_silent = { noremap = true, silent = true }
 
@@ -72,10 +135,8 @@ local on_attach = function(client, bufnr)
         })
     end, bufopts)
 
-    vim.keymap.set("n", "<leader>jtc", require("jdtls").test_class, bufopts)
-    vim.keymap.set("n", "<leader>jtm", require("jdtls").test_nearest_method, bufopts)
-    vim.keymap.set("n", "<leader>jgt", require("jdtls.tests").generate, bufopts)
-    -- require("jdtls.tests").goto_subjects()
+    vim.keymap.set("n", "<leader>jtc", maven_test_class, bufopts)
+    vim.keymap.set("n", "<leader>jtm", maven_test_method, bufopts)
 end
 
 -----------------------------------------------------------------------------------------------------------------------
@@ -128,12 +189,6 @@ end
 -- local workspace_folder = home .. "/Workspace/" .. vim.fn.fnamemodify(root_dir, ":p:h:t")
 -- local workspace_folder = vim.fs.dirname(vim.fs.find({'.gradlew', 'pom.xml', '.git', 'mvnw'}, { upward = true })[1])
 local project_folder = vim.fs.root(0, { ".git", "mvnw", "gradlew", "pom.xml" }) or ""
-
-local bundles = {
-    vim.fn.glob(home .. "/.local/share/nvim/java-debug/com.microsoft.java.debug.plugin/target/com.microsoft.java.debug.plugin-*.jar"), --sensible
-}
-
-vim.list_extend(bundles, vim.split(vim.fn.glob(home .. "/.local/share/nvim/vscode-java-test/server/*.jar", true), "\n")) -- sensible
 
 -- local caps = vim.lsp.protocol.make_client_capabilities()
 local capabilities = require("cmp_nvim_lsp").default_capabilities(vim.lsp.protocol.make_client_capabilities())
@@ -227,7 +282,6 @@ local jdtls_config = {
         -- extendedClientCapabilities = require'jdtls'.extendedClientCapabilities({
         --     resolveAdditionalTextEditsSupport = true
         -- })
-        bundles = bundles,
     },
     settings = {
         java = {
