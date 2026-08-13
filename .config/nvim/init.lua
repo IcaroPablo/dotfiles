@@ -276,10 +276,7 @@ require("lazy").setup({
             "hrsh7th/cmp-path",
         },
     },
-    {
-        "mfussenegger/nvim-jdtls",
-        dependencies = { "mfussenegger/nvim-dap" },
-    },
+    "mfussenegger/nvim-jdtls",
 }, {
     change_detection = { notify = false },
 })
