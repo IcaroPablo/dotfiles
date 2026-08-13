@@ -189,24 +189,6 @@ require('lazy').setup({
     },
     'mbbill/undotree',
     'lukas-reineke/indent-blankline.nvim',
-    'l3mon4d3/luasnip',
-    --use({
-        --"quangnguyen30192/cmp-nvim-ultisnips",
-        --after = "nvim-cmp",
-    --})
-    --use({
-        --"sirver/ultisnips",
-        --event = "InsertEnter",
-        --setup = function()
-            --vim.g.UltiSnipsExpandTrigger = "<nop>"
-            --vim.g.UltiSnipsJumpForwardTrigger = "<tab>"
-            --vim.g.UltiSnipsJumpBackwardTrigger = "<s-tab>"
-            --vim.g.UltiSnipsRemoveSelectModeMappings = 0
-        --end,
-        --config = function()
-            --vim.cmd('let g:UltiSnipsSnippetDirectories=[$HOME."/.config/nvim/ultisnips"]')
-        --end,
-    --})
     {
         'nvim-treesitter/nvim-treesitter',
         branch = 'master',
@@ -273,9 +255,6 @@ require('lazy').setup({
             'hrsh7th/cmp-cmdline',
             'hrsh7th/cmp-nvim-lsp',
             'hrsh7th/cmp-path',
-            'hrsh7th/cmp-vsnip',
-            'saadparwaiz1/cmp_luasnip',
-            'hrsh7th/vim-vsnip',
         },
     },
     {
