@@ -46,9 +46,7 @@ local buttons = {
     }
 }
 
-local plugins_gen = io.popen('ls $HOME"/.local/share/nvim/site/pack/packer/start" | wc -l | tr -d "\n" ')
-local plugins = plugins_gen:read("*a")
-plugins_gen:close()
+local plugins = require('lazy').stats().count
 
 local plugins_text = "   " .. plugins .. " plugins" .. "   v" .. vim.version().major .. "." .. vim.version().minor .. "." .. vim.version().patch
 
