@@ -146,7 +146,7 @@ vim.lsp.config("lua_ls", {
 -- })
 
 vim.lsp.enable(servers)
-vim.lsp.enable({ "texlab", "lua_ls" })
+vim.lsp.enable({ "texlab", "lua_ls", "jdtls" })
 
 ---------------------------------
 -- Floating diagnostics message

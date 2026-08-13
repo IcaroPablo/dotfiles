@@ -276,7 +276,6 @@ require("lazy").setup({
             "hrsh7th/cmp-path",
         },
     },
-    "mfussenegger/nvim-jdtls",
 }, {
     change_detection = { notify = false },
 })
