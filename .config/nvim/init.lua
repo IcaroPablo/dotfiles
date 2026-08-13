@@ -56,14 +56,13 @@ if not vim.loader.enabled then
     vim.loader.enable()
 end
 
--- Displays cursorline ONLY in active window.
-vim.cmd([[
-    augroup cursor_off
-        autocmd!
-        autocmd WinLeave * set nocursorline
-        autocmd WinEnter * set cursorline
-    augroup END
-]])
+-- Mostra a cursorline só na janela ativa
+vim.api.nvim_create_autocmd({ "WinEnter", "WinLeave" }, {
+    group = vim.api.nvim_create_augroup("cursor_active_window", { clear = true }),
+    callback = function(args)
+        vim.wo.cursorline = args.event == "WinEnter"
+    end,
+})
 
 -- Fecha janela/buffer de forma "inteligente": se o buffer está aberto em várias
 -- janelas, fecha só esta janela; senão remove o buffer. save=true salva antes
