@@ -199,13 +199,6 @@ require("lazy").setup({
     },
     "neovim/nvim-lspconfig",
     {
-        "goolord/alpha-nvim",
-        dependencies = {
-            "nvim-telescope/telescope.nvim",
-            "Shatur/neovim-session-manager",
-        },
-    },
-    {
         "Shatur/neovim-session-manager",
         dependencies = {
             "nvim-telescope/telescope-ui-select.nvim",
@@ -345,6 +338,8 @@ vim.keymap.set("n", "<Tab>", ":bnext<CR>:redraw<CR>", { noremap = true, silent =
 vim.keymap.set("n", "<S-Tab>", ":bprevious<CR>:redraw<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>q", ":call EasyClose()<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<leader>Q", ":quit!<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>n", ":enew | startinsert<CR>", { noremap = true, silent = true }) -- New file
+vim.keymap.set("n", "<leader>C", ":e $HOME/.config/nvim/init.lua<CR>", { noremap = true, silent = true }) -- Configs
 -- map("n", "<A-<>", "<cmd>BufferMovePrevious<CR>", { silent = true, noremap = true })
 -- map("n", "<A->>", "<cmd>BufferMoveNext<CR>", { silent = true, noremap = true })
 -- map("n", "<A-1>", "<cmd>BufferGoto 1<CR>", { silent = true, noremap = true })
