@@ -116,8 +116,13 @@ end
 -----------------------------------------------------------------------------------------------------------------------
 
 local home = os.getenv("HOME")
-local jdtls_folder = home .. "/.local/share/nvim/mason/packages/jdtls/" -- sensible (mason default)
-local config_folder = jdtls_folder .. "config_linux/"
+
+-- bootstrap do lombok: download único, anexado como javaagent do jdtls
+local lombok = vim.fn.stdpath("data") .. "/lombok.jar"
+if vim.fn.filereadable(lombok) == 0 and vim.fn.executable("curl") == 1 then
+    vim.notify("baixando lombok.jar…", vim.log.levels.INFO)
+    vim.fn.system({ "curl", "-fsSL", "-o", lombok, "https://projectlombok.org/downloads/lombok.jar" })
+end
 -- local workspace_folder = lspconfig.util.root_pattern(".git", "pom.xml"),
 -- local workspace_folder = require('jdtls.setup').find_root({'.gradlew', 'pom.xml', '.git', 'mvnw'})
 -- local workspace_folder = home .. "/Workspace/" .. vim.fn.fnamemodify(root_dir, ":p:h:t")
@@ -140,35 +145,80 @@ capabilities.workspace = {
     ["textDocument.completion.completionItem.snippetSupport"] = true,
 }
 
+local workspace = home .. "/.local/share/jdtls/" .. vim.fn.fnamemodify(project_folder, ":p:h:t")
+
+-- eclipse.jdt.ls: usa $JDTLS_HOME, senão instala em ~/.local/share/jdtls-install (bootstrap).
+local jdtls_url = "https://download.eclipse.org/jdtls/snapshots/jdt-language-server-latest.tar.gz"
+local jdtls_home = os.getenv("JDTLS_HOME") or (home .. "/.local/share/jdtls-install")
+local function jdtls_launcher()
+    return vim.fn.glob(jdtls_home .. "/plugins/org.eclipse.equinox.launcher_*.jar")
+end
+
+-- bootstrap: baixa e extrai o eclipse.jdt.ls uma vez, se ainda não houver launcher
+if jdtls_launcher() == "" and vim.fn.executable("curl") == 1 and vim.fn.executable("tar") == 1 then
+    vim.notify("baixando eclipse.jdt.ls (~50MB)…", vim.log.levels.INFO)
+    local tarball = vim.fn.tempname() .. ".tar.gz"
+    vim.fn.system({ "curl", "-fsSL", "-o", tarball, jdtls_url })
+    if vim.v.shell_error == 0 then
+        vim.fn.mkdir(jdtls_home, "p")
+        vim.fn.system({ "tar", "-xzf", tarball, "-C", jdtls_home })
+    end
+    vim.fn.delete(tarball)
+end
+
+local launcher = jdtls_launcher()
+if launcher == "" then
+    vim.notify("eclipse.jdt.ls indisponível (checar curl/tar/rede) — ou defina $JDTLS_HOME", vim.log.levels.WARN)
+    return
+end
+
+-- Flags copiadas do launcher oficial (jdtls.py) — sem depender do wrapper Python.
+-- config_linux é OS-agnóstico (jdtls é Java puro) e entra como shared config read-only,
+-- então roda igual nos 3 SOs sem condicional; a config gravável vai pro -data.
+local java = os.getenv("JAVA_HOME") and (os.getenv("JAVA_HOME") .. "/bin/java") or "java"
+local cmd = {
+    java,
+    "-Djdk.xml.maxGeneralEntitySizeLimit=0", -- exigido no Java 24+, inócuo antes
+    "-Djdk.xml.totalEntitySizeLimit=0",
+    "-Declipse.application=org.eclipse.jdt.ls.core.id1",
+    "-Dosgi.bundles.defaultStartLevel=4",
+    "-Declipse.product=org.eclipse.jdt.ls.core.product",
+    "-Dosgi.checkConfiguration=true",
+    "-Dosgi.sharedConfiguration.area=" .. jdtls_home .. "/config_linux",
+    "-Dosgi.sharedConfiguration.area.readOnly=true",
+    "-Dosgi.configuration.cascaded=true",
+    "-Xms1G",
+    "--add-modules=ALL-SYSTEM",
+    "--add-opens",
+    "java.base/java.util=ALL-UNNAMED",
+    "--add-opens",
+    "java.base/java.lang=ALL-UNNAMED",
+}
+if vim.fn.filereadable(lombok) == 1 then
+    table.insert(cmd, "-javaagent:" .. lombok)
+end
+vim.list_extend(cmd, { "-jar", launcher, "-data", workspace })
+
+-- runtimes de projeto: descobre os JDKs do sdkman (à prova de bump de patch)
+local function sdkman_runtimes()
+    local dir = home .. "/.sdkman/candidates/java"
+    local out, seen = {}, {}
+    if vim.fn.isdirectory(dir) == 0 then
+        return out
+    end
+    for name in vim.fs.dir(dir) do
+        local major = name:match("^(%d+)%.")
+        if major and not seen[major] then
+            seen[major] = true
+            local env = (major == "8") and "JavaSE-1.8" or ("JavaSE-" .. major)
+            table.insert(out, { name = env, path = dir .. "/" .. name })
+        end
+    end
+    return out
+end
+
 local jdtls_config = {
-    cmd = {
-        os.getenv("JAVA_HOME") .. "/bin/java",
-        "-Declipse.application=org.eclipse.jdt.ls.core.id1",
-        "-Dosgi.bundles.defaultStartLevel=4",
-        "-Declipse.product=org.eclipse.jdt.ls.core.product",
-        -- '-Dosgi.checkConfiguration=true',
-        "-Dlog.protocol=true",
-        "-Dosgi.sharedConfiguration.area=" .. config_folder,
-        -- '-Dosgi.sharedConfiguration.area.readOnly=true',
-        -- '-Dosgi.configuration.cascaded=true',
-        "-Dlog.level=ALL",
-        -- '-Dorg.osgi.framework.os.name=my_os_name',
-        "-javaagent:" .. jdtls_folder .. "/lombok.jar",
-        "-Xms1g",
-        "--add-modules=ALL-SYSTEM",
-        "--add-opens",
-        "java.base/java.util=ALL-UNNAMED",
-        "--add-opens",
-        "java.base/java.lang=ALL-UNNAMED",
-        "-jar",
-        vim.fn.glob(jdtls_folder .. "plugins/org.eclipse.equinox.launcher_*.jar"),
-        "-configuration",
-        config_folder,
-        -- If you started neovim within `~/dev/xy/project-1` this would resolve to `project-1`
-        -- local project_name = vim.fn.fnamemodify(vim.fn.getcwd(), ':p:h:t')
-        "-data",
-        home .. "/.local/share/jdtls/" .. vim.fn.fnamemodify(project_folder, ":p:h:t"),
-    },
+    cmd = cmd,
     flags = {
         allow_incremental_sync = true,
         debounce_text_changes = 80,
@@ -183,14 +233,6 @@ local jdtls_config = {
         java = {
             ["signatureHelp.enabled"] = true,
             ["contentProvider.preferred"] = "fernflower",
-            format = {
-                settings = {
-                    -- Use Google Java style guidelines for formatting
-                    -- To use, make sure to download the file from https://github.com/google/styleguide/blob/gh-pages/eclipse-java-google-style.xml
-                    url = "/.local/share/eclipse/eclipse-java-google-style.xml", --sensible
-                    profile = "GoogleStyle",
-                },
-            },
             completion = {
                 favoriteStaticMembers = {
                     "org.hamcrest.MatcherAssert.assertThat",
@@ -211,21 +253,7 @@ local jdtls_config = {
                 },
             },
             configuration = {
-                runtimes = {
-                    -- {
-                    --     name = "JavaSE-1.8",
-                    --     path = home .. '/.sdkman/candidates/java/8.0.302-open/'
-                    -- },
-                    -- {
-                    --     name = "JavaSE-11",
-                    --     path = home .. '/.sdkman/candidates/java/11.0.12-open/'
-                    -- },
-                    {
-                        name = "JavaSE-17",
-                        -- path = '/usr/local/jdk-17/' -- sensible
-                        path = home .. "/.sdkman/candidates/java/17.0.8-tem/",
-                    },
-                },
+                runtimes = sdkman_runtimes(),
             },
             codeGeneration = {
                 ["toString.template"] = "${object.className}{${member.name()}=${member.value}, ${otherMembers}}",
