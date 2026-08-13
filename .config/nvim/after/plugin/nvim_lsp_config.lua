@@ -85,6 +85,7 @@ vim.diagnostic.config({
 vim.lsp.config("texlab", {
     cmd = { "texlab" },
     filetypes = { "tex", "bib" },
+    root_markers = { ".latexmkrc", "latexmkrc", ".texlabroot", "texlabroot", "Tectonic.toml", ".git" },
     settings = {
         texlab = {
             auxDirectory = ".",
@@ -124,6 +125,8 @@ vim.lsp.config("lua_ls", {
     -- cmd = {'/usr/local/bin/lua-language-server'},
     -- cmd = {'/usr/local/lib/lua-language-server/bin/lua-language-server'},
     cmd = { "lua-language-server" },
+    filetypes = { "lua" },
+    root_markers = { ".luarc.json", ".luarc.jsonc", ".luacheckrc", ".stylua.toml", "stylua.toml", ".git" },
     settings = {
         Lua = {
             runtime = {
@@ -148,12 +151,13 @@ vim.lsp.config("lua_ls", {
 })
 
 -- ── Servers habilitados ──────────────────────────────────────────────────────
--- pyright/ts_ls/clangd usam os defaults do lspconfig; texlab/lua_ls têm config
--- acima; jdtls tem a sua em jdtls_config.lua.
+-- Sem nvim-lspconfig: cada server é self-contained (cmd/filetypes/root_markers
+-- definidos aqui; jdtls em jdtls_config.lua). Pra religar os comentados abaixo,
+-- defina cmd/filetypes/root_markers deles (ou readicione o nvim-lspconfig).
 vim.lsp.enable({
-    "pyright",
-    "ts_ls",
-    "clangd",
+    -- "pyright",
+    -- "ts_ls",
+    -- "clangd",
     -- "vimls",
     -- "bashls",
     "texlab",
