@@ -1,45 +1,43 @@
-local caps = vim.lsp.protocol.make_client_capabilities()
--- capabilities = require("cmp_nvim_lsp").update_capabilities(capabilities)
-
-local on_attach_config = function(client, bufnr)
-    client.server_capabilities.document_formatting = false
-    -- desliga os semantic tokens do LSP para não sobrescrever as cores do treesitter
-    client.server_capabilities.semanticTokensProvider = nil
-
-    local nore_silent = { noremap = true, silent = true }
-
-    vim.keymap.set("n", "<Leader>e", vim.diagnostic.open_float, nore_silent)
-    vim.keymap.set("n", "[d", function()
-        vim.diagnostic.jump({ count = -1 })
-    end, nore_silent)
-    vim.keymap.set("n", "]d", function()
-        vim.diagnostic.jump({ count = 1 })
-    end, nore_silent)
-
-    local bufopts = { noremap = true, silent = true, buffer = bufnr }
-
-    vim.keymap.set("n", "gD", vim.lsp.buf.declaration, bufopts)
-    vim.keymap.set("n", "gd", vim.lsp.buf.definition, bufopts)
-    vim.keymap.set("n", "gi", vim.lsp.buf.implementation, bufopts)
-    vim.keymap.set("n", "K", vim.lsp.buf.hover, bufopts)
-    -- vim.keymap.set("n", "<Leader>wa", vim.lsp.buf.add_workspace_folder, bufopts)
-    -- vim.keymap.set("n", "<Leader>wr", vim.lsp.buf.remove_workspace_folder, bufopts)
-    -- vim.keymap.set("n", "<Leader>wl", function() print(vim.inspect(vim.lsp.buf.list_workspace_folders())) end, bufopts)
-    -- vim.keymap.set("n", "<Leader>rn", vim.lsp.buf.rename, bufopts)
-    vim.keymap.set({ "n", "v" }, "<Leader>ca", vim.lsp.buf.code_action, bufopts)
-    vim.keymap.set("n", "gr", vim.lsp.buf.references, bufopts)
-    vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, bufopts)
-    vim.keymap.set("n", "<Leader>cf", function()
-        vim.lsp.buf.format({ async = true })
-    end, bufopts)
-end
-
--- Capabilities
+local caps = require("cmp_nvim_lsp").default_capabilities()
 caps.textDocument.completion.completionItem.snippetSupport = true
 
+-- Config global aplicada a todos os servers (modelo nativo vim.lsp)
 vim.lsp.config("*", {
     capabilities = caps,
-    on_attach = on_attach_config,
+    on_init = function(client)
+        -- desliga os semantic tokens do LSP para não sobrescrever as cores do treesitter
+        client.server_capabilities.semanticTokensProvider = nil
+    end,
+})
+
+-- Keymaps por buffer quando um LSP anexa (:h lsp-attach)
+vim.api.nvim_create_autocmd("LspAttach", {
+    callback = function(args)
+        local bufopts = { noremap = true, silent = true, buffer = args.buf }
+
+        vim.keymap.set("n", "<Leader>e", vim.diagnostic.open_float, bufopts)
+        vim.keymap.set("n", "[d", function()
+            vim.diagnostic.jump({ count = -1 })
+        end, bufopts)
+        vim.keymap.set("n", "]d", function()
+            vim.diagnostic.jump({ count = 1 })
+        end, bufopts)
+
+        vim.keymap.set("n", "gD", vim.lsp.buf.declaration, bufopts)
+        vim.keymap.set("n", "gd", vim.lsp.buf.definition, bufopts)
+        vim.keymap.set("n", "gi", vim.lsp.buf.implementation, bufopts)
+        vim.keymap.set("n", "K", vim.lsp.buf.hover, bufopts)
+        -- vim.keymap.set("n", "<Leader>wa", vim.lsp.buf.add_workspace_folder, bufopts)
+        -- vim.keymap.set("n", "<Leader>wr", vim.lsp.buf.remove_workspace_folder, bufopts)
+        -- vim.keymap.set("n", "<Leader>wl", function() print(vim.inspect(vim.lsp.buf.list_workspace_folders())) end, bufopts)
+        -- vim.keymap.set("n", "<Leader>rn", vim.lsp.buf.rename, bufopts)
+        vim.keymap.set({ "n", "v" }, "<Leader>ca", vim.lsp.buf.code_action, bufopts)
+        vim.keymap.set("n", "gr", vim.lsp.buf.references, bufopts)
+        vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, bufopts)
+        vim.keymap.set("n", "<Leader>cf", function()
+            vim.lsp.buf.format({ async = true })
+        end, bufopts)
+    end,
 })
 
 -- -- Python
@@ -67,43 +65,6 @@ local servers = {
     -- "vimls",
     -- "bashls"
 }
-
-vim.lsp.config("rust_analyzer", {
-    -- cmd = {"export OPENSSL_DIR=\"/bin\" && " .. os.getenv('HOME') .. "/.cargo/bin/rust-analyzer"},
-    settings = {
-        ["rust-analyzer"] = {
-            -- imports = {
-            --     granularity = {
-            --         group = "module",
-            --     },
-            --     prefix = "self",
-            -- },
-            -- cargo = {
-            --     buildScripts = {
-            --         enable = true,
-            --     },
-            -- },
-            -- procMacro = {
-            --     enable = true
-            -- },
-            checkOnSave = {
-                enable = false,
-                -- enable = true
-            },
-            diagnostics = {
-                enable = false,
-                -- enable = true
-            },
-        },
-    },
-})
-
-vim.lsp.config("bacon_ls", {
-    init_options = {
-        updateOnSave = true,
-        updateOnSaveWaitMillis = 1000,
-    },
-})
 
 vim.lsp.config("texlab", {
     cmd = { "texlab" },
@@ -141,12 +102,6 @@ vim.lsp.config("texlab", {
         },
     },
 })
-
--- Rust
--- lspconfig.rust_analyzer.setup({
---     capabilities = snip_caps,
---     on_attach = on_attach_config
--- })
 
 vim.lsp.config("lua_ls", {
     settings = {
@@ -191,7 +146,7 @@ vim.lsp.config("lua_ls", {
 -- })
 
 vim.lsp.enable(servers)
-vim.lsp.enable({ "rust_analyzer", "bacon_ls", "texlab", "lua_ls" })
+vim.lsp.enable({ "texlab", "lua_ls" })
 
 ---------------------------------
 -- Floating diagnostics message
