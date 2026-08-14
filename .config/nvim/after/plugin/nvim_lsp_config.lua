@@ -42,7 +42,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         -- vim.keymap.set("n", "<Leader>wa", vim.lsp.buf.add_workspace_folder, bufopts)
         -- vim.keymap.set("n", "<Leader>wr", vim.lsp.buf.remove_workspace_folder, bufopts)
         -- vim.keymap.set("n", "<Leader>wl", function() print(vim.inspect(vim.lsp.buf.list_workspace_folders())) end, bufopts)
-        -- vim.keymap.set("n", "<Leader>rn", vim.lsp.buf.rename, bufopts)
+        vim.keymap.set("n", "<Leader>rn", vim.lsp.buf.rename, bufopts)
     end,
 })
 
