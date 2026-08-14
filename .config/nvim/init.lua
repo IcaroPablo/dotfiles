@@ -85,6 +85,10 @@ end
 --     end
 -- end, {})
 
+function get_root()
+    return vim.fs.root(0, { ".git", ".gitignore", "mvnw", "gradlew", "pom.xml" })
+end
+
 vim.api.nvim_create_user_command("Dig", function()
     local root_dir = get_root()
 
@@ -129,10 +133,6 @@ require("lazy").setup({ { import = "plugins" } }, {
 -- ██║ ╚═╝ ██║██║  ██║██║     ██║     ██║██║ ╚████║╚██████╔╝███████║
 -- ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝     ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
 
-function get_root()
-    return vim.fs.root(0, { ".git", ".gitignore", "mvnw", "gradlew", "pom.xml" })
-end
-
 function open_terminal_in(project_folder)
     local nvim_socket = "export NVIM='" .. vim.v.servername .. "'"
     local initial_folder_command = "export INITIAL_FOLDER=" .. project_folder
@@ -159,9 +159,12 @@ function PipeToCommand()
     -- print(output)
 end
 
-function log_messages()
-    vim.cmd("redir! > ~/nvim_msgs.txt")
-end
+-- Salva a saída de :messages num arquivo (útil pra depurar)
+vim.api.nvim_create_user_command("LogMessages", function()
+    local path = vim.fn.expand("~/nvim_msgs.txt")
+    vim.fn.writefile(vim.split(vim.fn.execute("messages"), "\n"), path)
+    vim.notify("mensagens salvas em " .. path)
+end, {})
 
 -- Fecha janela/buffer de forma "inteligente": se o buffer está aberto em várias
 -- janelas, fecha só esta janela; senão remove o buffer. save=true salva antes
@@ -193,8 +196,8 @@ vim.keymap.set("n", "<leader>Q", function()
 end, { noremap = true, silent = true }) -- fecha salvando
 vim.keymap.set("n", "<leader>n", ":enew | startinsert<CR>", { noremap = true, silent = true }) -- New file
 vim.keymap.set("n", "<leader>C", ":e $HOME/.config/nvim/init.lua<CR>", { noremap = true, silent = true }) -- Configs
--- Format the whole nvim config with StyLua
-vim.keymap.set("n", "<leader>F", function()
+-- Formata a config inteira com StyLua
+vim.api.nvim_create_user_command("StyluaConfig", function()
     if vim.fn.executable("stylua") == 0 then
         vim.notify("stylua não encontrado no PATH", vim.log.levels.WARN)
         return
@@ -206,7 +209,7 @@ vim.keymap.set("n", "<leader>F", function()
         vim.cmd("checktime") -- recarrega buffers reformatados no disco
         vim.notify("StyLua: config formatada", vim.log.levels.INFO)
     end
-end, { noremap = true, silent = true, desc = "Format nvim config with StyLua" })
+end, {})
 -- map("n", "<A-<>", "<cmd>BufferMovePrevious<CR>", { silent = true, noremap = true })
 -- map("n", "<A->>", "<cmd>BufferMoveNext<CR>", { silent = true, noremap = true })
 -- map("n", "<A-1>", "<cmd>BufferGoto 1<CR>", { silent = true, noremap = true })
@@ -245,6 +248,7 @@ vim.keymap.set("v", "<A-k>", ":m '<-2<CR>gv=gv", { noremap = true, silent = true
 vim.keymap.set("n", "tt", function()
     open_terminal_in(vim.fn.expand("%:p:h"))
 end, { noremap = true, silent = true })
+
 vim.keymap.set("n", "TT", function()
     local project_folder = get_root() or vim.fn.expand("%:p:h")
 
@@ -279,15 +283,15 @@ vim.keymap.set("n", "<C-i>", "<C-i>zz")
 -- vim.keymap.set("n", "g#", "g#zz", { silent = true, noremap = true })
 vim.keymap.set("n", "<leader>w", "*N", { silent = true, noremap = true })
 vim.keymap.set("x", "<leader>p", [["_dP]])
-vim.keymap.set("n", "<leader>ra", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
+-- vim.keymap.set("n", "<leader>ra", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 
 -- deactivate space because of annoying behaviour since its my leader key :)
 vim.keymap.set("n", "<Space>", "<Nop>", { noremap = true, silent = true })
 
 -- word substitution
 -- vim.keymap.set("n", "<C-j>", "ciw<C-r>0<ESC>", {silent = true})
-vim.keymap.set("n", "<C-s>", '"1yiwciw<C-r>0<ESC>/<C-r>1<CR>', { silent = true })
-vim.keymap.set("n", "<Leader>jq", ":%!jq '.'<CR>", { silent = true })
+-- vim.keymap.set("n", "<C-s>", '"1yiwciw<C-r>0<ESC>/<C-r>1<CR>', { silent = true })
+-- vim.keymap.set("n", "<Leader>jq", ":%!jq '.'<CR>", { silent = true })
 
 -- other niceties
 vim.keymap.set("v", "<", "<gv", { silent = true, noremap = true })
