@@ -24,7 +24,7 @@ vim.opt.incsearch = true -- search results are showed in real time
 
 vim.opt.number = true -- numbered lines
 vim.opt.relativenumber = true -- numbered lines are now relative to the current line
-vim.opt.cursorline = true -- display the current line
+-- vim.opt.cursorline = true -- display the current line
 
 vim.opt.expandtab = true -- uses tabs instead of spaces
 vim.opt.tabstop = 4
@@ -57,31 +57,12 @@ if not vim.loader.enabled then
 end
 
 -- Mostra a cursorline só na janela ativa
-vim.api.nvim_create_autocmd({ "WinEnter", "WinLeave" }, {
-    group = vim.api.nvim_create_augroup("cursor_active_window", { clear = true }),
-    callback = function(args)
-        vim.wo.cursorline = args.event == "WinEnter"
-    end,
-})
-
--- Fecha janela/buffer de forma "inteligente": se o buffer está aberto em várias
--- janelas, fecha só esta janela; senão remove o buffer. save=true salva antes
--- (só arquivo normal nomeado); save=false descarta mudanças não-salvas.
-local function smart_close(save)
-    local buf = vim.api.nvim_get_current_buf()
-    local wins_in_tab = vim.fn.tabpagewinnr(vim.fn.tabpagenr(), "$")
-    local wins_with_buf = #vim.fn.win_findbuf(buf)
-    if wins_in_tab > 1 and wins_with_buf > 1 then
-        vim.cmd("close")
-    elseif save then
-        if vim.bo.modified and vim.bo.buftype == "" and vim.api.nvim_buf_get_name(buf) ~= "" then
-            vim.cmd("write")
-        end
-        vim.cmd("bdelete")
-    else
-        vim.cmd("bdelete!")
-    end
-end
+-- vim.api.nvim_create_autocmd({ "WinEnter", "WinLeave" }, {
+--     group = vim.api.nvim_create_augroup("cursor_active_window", { clear = true }),
+--     callback = function(args)
+--         vim.wo.cursorline = args.event == "WinEnter"
+--     end,
+-- })
 
 -- vim.cmd([[
 --     syntax on "some nice and fancy syntax highlight
@@ -89,9 +70,9 @@ end
 -- ]])
 
 -- setting gruvbox as colorscheme in manpages also disable italics :)
-vim.cmd([[
-    autocmd FileType man colorscheme gruvbox
-]])
+-- vim.cmd([[
+--     autocmd FileType man colorscheme gruvbox
+-- ]])
 
 -- vim.api.nvim_create_user_command("SetDotfilesGitVars", function()
 --     vim.env.GIT_WORK_TREE = vim.fn.expand("~")
@@ -137,144 +118,7 @@ vim.opt.rtp:prepend(lazypath)
 
 -- lua =require("lazy").stats().count
 
-require("lazy").setup({
-    "smoka7/hop.nvim",
-    -- "mbbill/undotree",
-    "lukas-reineke/indent-blankline.nvim",
-    {
-        "lewis6991/gitsigns.nvim",
-        dependencies = { "nvim-lua/plenary.nvim" },
-        config = function()
-            require("gitsigns").setup({
-                -- dotfiles em bare repo: o gitsigns não descobre o repo sozinho
-                worktrees = {
-                    { toplevel = vim.env.HOME, gitdir = vim.env.HOME .. "/.config/dotfiles" },
-                },
-                on_attach = function(bufnr)
-                    local function map(mode, l, r, opts)
-                        opts = opts or {}
-                        opts.buffer = bufnr
-                        vim.keymap.set(mode, l, r, opts)
-                    end
-
-                    map("n", "]c", function()
-                        if vim.wo.diff then
-                            vim.cmd.normal({ "]c", bang = true })
-                        else
-                            require("gitsigns").nav_hunk("next")
-                        end
-                    end)
-
-                    map("n", "[c", function()
-                        if vim.wo.diff then
-                            vim.cmd.normal({ "[c", bang = true })
-                        else
-                            require("gitsigns").nav_hunk("prev")
-                        end
-                    end)
-
-                    map("n", "<leader>hr", require("gitsigns").reset_hunk)
-                    map("n", "<leader>hR", require("gitsigns").reset_buffer)
-                    map("n", "<leader>hp", require("gitsigns").preview_hunk)
-                    map("n", "<leader>td", require("gitsigns").preview_hunk_inline)
-
-                    map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>")
-                end,
-            })
-        end,
-    },
-    -- {
-    --     "folke/zen-mode.nvim",
-    --     dependencies = {
-    --         { "folke/twilight.nvim", config = true },
-    --     },
-    --     cmd = "ZenMode",
-    -- },
-    -- {
-    --     "sindrets/diffview.nvim",
-    --     dependencies = { "kyazdani42/nvim-web-devicons" },
-    -- },
-    {
-        "nvim-treesitter/nvim-treesitter",
-        branch = "master",
-        build = ":TSUpdate",
-    },
-    {
-        "Shatur/neovim-session-manager",
-        dependencies = {
-            "nvim-telescope/telescope-ui-select.nvim",
-            "nvim-lua/plenary.nvim",
-        },
-    },
-    {
-        "gruvbox-community/gruvbox",
-        lazy = false,
-        priority = 1000,
-        init = function()
-            vim.g.gruvbox_bold = "0"
-            vim.g.gruvbox_contrast_dark = "hard"
-        end,
-        config = function()
-            vim.cmd([[ colorscheme gruvbox ]])
-        end,
-    },
-    -- alternativa (reescrita Lua, mantida): ellisonleao/gruvbox.nvim
-    -- {
-    --     'ellisonleao/gruvbox.nvim',
-    --     lazy = false,
-    --     priority = 1000,
-    --     config = function()
-    --         require('gruvbox').setup({
-    --             terminal_colors = true,
-    --             undercurl = false,
-    --             underline = false,
-    --             bold = false,
-    --             italic = {
-    --                 strings = false,
-    --                 emphasis = false,
-    --                 comments = false,
-    --                 operators = false,
-    --                 folds = false,
-    --             },
-    --             strikethrough = true,
-    --             invert_selection = true,
-    --             invert_signs = true,
-    --             invert_tabline = false,
-    --             invert_intend_guides = false,
-    --             inverse = false,
-    --             contrast = 'hard', -- "hard", "soft" ou ""
-    --             dim_inactive = false,
-    --             transparent_mode = false,
-    --         })
-    --         vim.cmd('colorscheme gruvbox')
-    --     end,
-    -- },
-    {
-        "nvim-lualine/lualine.nvim",
-        dependencies = { "nvim-tree/nvim-web-devicons" },
-    },
-    {
-        "nvim-telescope/telescope.nvim",
-        dependencies = {
-            "nvim-lua/plenary.nvim",
-            "nvim-telescope/telescope-ui-select.nvim",
-            -- nice to have: telescope-file-browser, telescope-frecency, telescope-zoxide, telescope-dict
-            {
-                "nvim-telescope/telescope-fzf-native.nvim",
-                build = "command -v gmake >/dev/null 2>&1 && gmake || make",
-            },
-        },
-    },
-    {
-        "hrsh7th/nvim-cmp",
-        dependencies = {
-            "hrsh7th/cmp-buffer",
-            "hrsh7th/cmp-cmdline",
-            "hrsh7th/cmp-nvim-lsp",
-            "hrsh7th/cmp-path",
-        },
-    },
-}, {
+require("lazy").setup({ { import = "plugins" } }, {
     change_detection = { notify = false },
 })
 
@@ -317,6 +161,25 @@ end
 
 function log_messages()
     vim.cmd("redir! > ~/nvim_msgs.txt")
+end
+
+-- Fecha janela/buffer de forma "inteligente": se o buffer está aberto em várias
+-- janelas, fecha só esta janela; senão remove o buffer. save=true salva antes
+-- (só arquivo normal nomeado); save=false descarta mudanças não-salvas.
+local function smart_close(save)
+    local buf = vim.api.nvim_get_current_buf()
+    local wins_in_tab = vim.fn.tabpagewinnr(vim.fn.tabpagenr(), "$")
+    local wins_with_buf = #vim.fn.win_findbuf(buf)
+    if wins_in_tab > 1 and wins_with_buf > 1 then
+        vim.cmd("close")
+    elseif save then
+        if vim.bo.modified and vim.bo.buftype == "" and vim.api.nvim_buf_get_name(buf) ~= "" then
+            vim.cmd("write")
+        end
+        vim.cmd("bdelete")
+    else
+        vim.cmd("bdelete!")
+    end
 end
 
 -- easily manage buffers
