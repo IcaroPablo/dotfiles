@@ -295,5 +295,5 @@ vim.keymap.set("v", ">", ">gv", { silent = true, noremap = true })
 vim.keymap.set("n", "<Leader><Leader>", ":write<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<c-[>", "<esc>:nohlsearch<CR>", { silent = true })
 -- vim.keymap.set('v', '<leader>p', function() PipeToCommand() end, { noremap = true, silent = true })
-vim.api.nvim_set_keymap("v", "<leader>p", ":lua PipeToCommand()<CR>", { noremap = true, silent = true })
-vim.api.nvim_set_keymap("n", "<leader>r", "vip:lua PipeToCommand()<CR>q<CR>", { noremap = true, silent = true })
+vim.keymap.set("x", "<leader>r", ":lua PipeToCommand()<CR>", { noremap = true, silent = true }) -- pipa a seleção
+vim.api.nvim_set_keymap("n", "<leader>r", "vip:lua PipeToCommand()<CR>q<CR>", { noremap = true, silent = true }) -- pipa o parágrafo
