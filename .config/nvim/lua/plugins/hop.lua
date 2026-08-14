@@ -26,9 +26,10 @@ return {
             hop.hint_vertical()
         end, { remap = true })
         -- vim.keymap.set('', '<leader>c', ':HopCamelCaseCurrentLine<CR>', {remap=true})
-        vim.keymap.set("", "<leader>w", function()
-            hop.hint_words({ current_line_only = true })
-        end, { remap = true })
+        -- <leader>w já está em uso no init.lua (*N, busca a palavra sob o cursor)
+        -- vim.keymap.set("", "<leader>w", function()
+        --     hop.hint_words({ current_line_only = true })
+        -- end, { remap = true })
         -- vim.keymap.set('', '<leader>W', function() hop.hint_words({ direction = directions.BEFORE_CURSOR, current_line_only = true}) end, {remap=true})
         -- hopnodes
     end,
