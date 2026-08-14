@@ -85,12 +85,12 @@ end
 --     end
 -- end, {})
 
-function get_root()
+function GetRoot()
     return vim.fs.root(0, { ".git", ".gitignore", "mvnw", "gradlew", "pom.xml" })
 end
 
 vim.api.nvim_create_user_command("Dig", function()
-    local root_dir = get_root()
+    local root_dir = GetRoot()
 
     if root_dir ~= nil then
         vim.cmd("cd " .. root_dir)
@@ -114,6 +114,13 @@ vim.api.nvim_create_user_command("StyluaConfig", function()
     end
 end, {})
 
+-- Salva a saída de :messages num arquivo (útil pra depurar)
+vim.api.nvim_create_user_command("LogMessages", function()
+    local path = vim.fn.expand("~/nvim_msgs.txt")
+    vim.fn.writefile(vim.split(vim.fn.execute("messages"), "\n"), path)
+    vim.notify("mensagens salvas em " .. path)
+end, {})
+
 -- ██████╗ ██╗     ██╗   ██╗ ██████╗ ██╗███╗   ██╗███████╗
 -- ██╔══██╗██║     ██║   ██║██╔════╝ ██║████╗  ██║██╔════╝
 -- ██████╔╝██║     ██║   ██║██║  ███╗██║██╔██╗ ██║███████╗
@@ -123,6 +130,8 @@ end, {})
 
 -- bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
+
+---@diagnostic disable-next-line: undefined-field
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
     vim.fn.system({
         "git",
@@ -133,6 +142,7 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
         lazypath,
     })
 end
+
 vim.opt.rtp:prepend(lazypath)
 
 -- lua =require("lazy").stats().count
@@ -148,42 +158,22 @@ require("lazy").setup({ { import = "plugins" } }, {
 -- ██║ ╚═╝ ██║██║  ██║██║     ██║     ██║██║ ╚████║╚██████╔╝███████║
 -- ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝     ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
 
--- Salva a saída de :messages num arquivo (útil pra depurar)
-vim.api.nvim_create_user_command("LogMessages", function()
-    local path = vim.fn.expand("~/nvim_msgs.txt")
-    vim.fn.writefile(vim.split(vim.fn.execute("messages"), "\n"), path)
-    vim.notify("mensagens salvas em " .. path)
-end, {})
+-- easily manage buffers
+vim.keymap.set("n", "<Tab>", ":bnext<CR>:redraw<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<S-Tab>", ":bprevious<CR>:redraw<CR>", { noremap = true, silent = true })
 
 -- Fecha janela/buffer de forma "inteligente": se o buffer está aberto em várias
--- janelas, fecha só esta janela; senão remove o buffer. save=true salva antes
--- (só arquivo normal nomeado); save=false descarta mudanças não-salvas.
-local function smart_close(save)
+-- janelas, fecha só esta janela; senão remove o buffer.
+vim.keymap.set("n", "<leader>q", function()
     local buf = vim.api.nvim_get_current_buf()
     local wins_in_tab = vim.fn.tabpagewinnr(vim.fn.tabpagenr(), "$")
     local wins_with_buf = #vim.fn.win_findbuf(buf)
     if wins_in_tab > 1 and wins_with_buf > 1 then
         vim.cmd("close")
-    elseif save then
-        if vim.bo.modified and vim.bo.buftype == "" and vim.api.nvim_buf_get_name(buf) ~= "" then
-            vim.cmd("write")
-        end
-        vim.cmd("bdelete")
     else
         vim.cmd("bdelete!")
     end
-end
-
--- easily manage buffers
-vim.keymap.set("n", "<Tab>", ":bnext<CR>:redraw<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<S-Tab>", ":bprevious<CR>:redraw<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<leader>q", function()
-    smart_close(false)
-end, { noremap = true, silent = true }) -- fecha sem salvar
-
-vim.keymap.set("n", "<leader>Q", function()
-    smart_close(true)
-end, { noremap = true, silent = true }) -- fecha salvando
+end, { noremap = true, silent = true })
 
 vim.keymap.set("n", "<leader>n", ":enew | startinsert<CR>", { noremap = true, silent = true }) -- New file
 vim.keymap.set("n", "<leader>C", ":e $HOME/.config/nvim/init.lua<CR>", { noremap = true, silent = true }) -- Configs
@@ -204,15 +194,20 @@ vim.keymap.set("n", "<leader>C", ":e $HOME/.config/nvim/init.lua<CR>", { noremap
 -- map("n", "<A-u>", "<cmd>BufferPick<CR>", { silent = true, noremap = true })
 
 -- easily manage windows
-vim.keymap.set("", "<c-j>", "<c-w>j", { noremap = true, silent = true })
-vim.keymap.set("", "<c-k>", "<c-w>k", { noremap = true, silent = true })
-vim.keymap.set("", "<c-h>", "<c-w>h", { noremap = true, silent = true })
-vim.keymap.set("", "<c-l>", "<c-w>l", { noremap = true, silent = true })
+-- vim.keymap.set("", "<c-j>", "<c-w>j", { noremap = true, silent = true })
+-- vim.keymap.set("", "<c-k>", "<c-w>k", { noremap = true, silent = true })
+-- vim.keymap.set("", "<c-h>", "<c-w>h", { noremap = true, silent = true })
+-- vim.keymap.set("", "<c-l>", "<c-w>l", { noremap = true, silent = true })
 
-vim.keymap.set("", "<c-up>", "<c-w>+", { noremap = true, silent = true })
-vim.keymap.set("", "<c-down>", "<c-w>-", { noremap = true, silent = true })
-vim.keymap.set("", "<c-left>", "<c-w>>", { noremap = true, silent = true })
-vim.keymap.set("", "<c-right>", "<c-w><", { noremap = true, silent = true })
+-- vim.keymap.set("", "<c-up>", "<c-w>+", { noremap = true, silent = true })
+-- vim.keymap.set("", "<c-down>", "<c-w>-", { noremap = true, silent = true })
+-- vim.keymap.set("", "<c-left>", "<c-w>>", { noremap = true, silent = true })
+-- vim.keymap.set("", "<c-right>", "<c-w><", { noremap = true, silent = true })
+
+vim.keymap.set("", "<c-h>", "<c-w>>", { noremap = true, silent = true })
+vim.keymap.set("", "<c-k>", "<c-w>+", { noremap = true, silent = true })
+vim.keymap.set("", "<c-j>", "<c-w>-", { noremap = true, silent = true })
+vim.keymap.set("", "<c-l>", "<c-w><", { noremap = true, silent = true })
 
 -- move lines up and down using alt key
 vim.keymap.set("n", "<A-j>", ":m .+1<CR>==", { noremap = true, silent = true })
@@ -302,6 +297,5 @@ function PipeToCommand()
     vim.api.nvim_buf_set_lines(0, 0, -1, false, output)
 end
 
--- vim.keymap.set('v', '<leader>p', function() PipeToCommand() end, { noremap = true, silent = true })
-vim.keymap.set("x", "<leader>r", ":lua PipeToCommand()<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<leader>r", "vip:lua PipeToCommand()<CR>", { noremap = true, silent = true })
+vim.keymap.set("x", "<leader>R", ":lua PipeToCommand()<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>R", "vip:lua PipeToCommand()<CR>", { noremap = true, silent = true })

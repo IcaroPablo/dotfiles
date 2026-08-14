@@ -45,7 +45,7 @@ c() {
     fi
 
     while :; do
-        interactive-select || break
+        # interactive-select || break
         [ -s "$CLIPFILE" ] || break
         _c_n="$(tr -cd '\0' < "$CLIPFILE" | wc -c | tr -d '[:space:]')"
         if [ "$_c_n" = 1 ]; then
