@@ -5,52 +5,61 @@
 -- ╚██████╗╚██████╔╝██║ ╚████║██║     ██║╚██████╔╝
 --  ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝     ╚═╝ ╚═════╝
 
-vim.opt.laststatus = 2 -- last window will always have a status line (?)
--- vim.opt.statusline=%F%m%r%h%w\ [FORMAT=%{&ff}]\ [TYPE=%Y]\ [POS=%l,%v][%p%%]\ [BUFFER=%n]\ %{strftime('%c')}
-vim.opt.showmode = false -- the status bar already shows the current mode
-vim.opt.showcmd = false -- don't really remember :)
+-- ── Statusline / mensagens ───────────────────────────────────────────────────
+-- vim.opt.laststatus = 2 -- redundante: já é o default (e o lualine cuida da statusline)
+-- vim.opt.statusline=%F%m%r%h%w\ [FORMAT=%{&ff}]\ [TYPE=%Y]\ [POS=%l,%v][%p%%]\ [BUFFER=%n]\ %{strftime('%c')} -- statusline manual antiga; hoje é o lualine
+vim.opt.showmode = false -- não mostra "-- INSERT --": o lualine já exibe o modo
+vim.opt.showcmd = false -- não mostra o comando parcial no canto inferior direito
 
-vim.opt.autoindent = true -- self-describing
-vim.opt.smartindent = true -- inserts an automatic indent after common C-like expressions or keywords
+-- ── Aparência ────────────────────────────────────────────────────────────────
+vim.opt.termguicolors = true -- cores 24-bit (true color)
+-- vim.opt.cursorline = true -- realça a linha do cursor (ver autocmd comentado abaixo)
 
-vim.opt.errorbells = false -- self-describing
-vim.opt.wrap = true -- wrap lines
+-- ── Números de linha ─────────────────────────────────────────────────────────
+vim.opt.number = true -- números de linha
+vim.opt.relativenumber = true -- números relativos à linha atual
 
-vim.opt.smartcase = true -- searches are case sensitive only if uppercase is used
-vim.opt.ignorecase = true -- has to be set for smartcase to work properly
+-- ── Busca ────────────────────────────────────────────────────────────────────
+vim.opt.ignorecase = true -- busca ignora maiúsculas/minúsculas...
+vim.opt.smartcase = true -- ...exceto quando você digita alguma maiúscula
+-- vim.opt.incsearch = true -- redundante: já é o default (mostra a busca em tempo real)
+-- vim.opt.hlsearch = false -- default é true (mantém o realce dos resultados de busca)
 
--- vim.opt.hlsearch = false            -- remove highlights from search
-vim.opt.incsearch = true -- search results are showed in real time
+-- ── Indentação ───────────────────────────────────────────────────────────────
+vim.opt.expandtab = true -- Tab insere espaços em vez de um caractere de tab
+vim.opt.tabstop = 4 -- largura visual de um tab
+vim.opt.softtabstop = 4 -- quantos espaços o Tab/Backspace contam na edição
+vim.opt.shiftwidth = 4 -- largura da indentação (>>, <<, autoindent)
+vim.opt.smartindent = true -- indent automático após blocos estilo C
+-- vim.opt.autoindent = true -- redundante: já é o default
 
-vim.opt.number = true -- numbered lines
-vim.opt.relativenumber = true -- numbered lines are now relative to the current line
--- vim.opt.cursorline = true -- display the current line
+-- ── Quebra de linha ──────────────────────────────────────────────────────────
+-- vim.opt.wrap = true -- redundante: já é o default (quebra visual de linhas longas)
 
-vim.opt.expandtab = true -- uses tabs instead of spaces
-vim.opt.tabstop = 4
-vim.opt.softtabstop = 4
-vim.opt.shiftwidth = 4
+-- ── Splits ───────────────────────────────────────────────────────────────────
+vim.opt.splitbelow = true -- split horizontal abre embaixo da janela atual
+vim.opt.splitright = true -- split vertical abre à direita da janela atual
 
-vim.opt.splitbelow = true -- horizontal split goes below the current window
-vim.opt.splitright = true -- vertical split goes right of the current window
+-- ── Rolagem ──────────────────────────────────────────────────────────────────
+vim.opt.scrolloff = 10 -- mantém 10 linhas de contexto acima/abaixo do cursor
 
-vim.opt.termguicolors = true -- uses true color
-vim.opt.swapfile = false -- self-describing
--- vim.opt.updatetime = 50
--- vim.opt.shadafile = "NONE"
-vim.opt.scrolloff = 10 -- offvim.opt.for scrolling
--- vim.opt.path += **                  -- useful for :find
+-- ── Arquivos / persistência ──────────────────────────────────────────────────
+vim.opt.swapfile = false -- sem arquivos de swap
+vim.opt.undofile = true -- undo persiste entre sessões...
+vim.opt.undodir = vim.fn.expand("~/.vim/backup") -- ...guardado neste diretório
+-- vim.opt.undoreload = 10000 -- redundante: já é o default
+-- vim.opt.history = 1000 -- comentado: o default do nvim (10000) é maior; sem motivo pra reduzir
+-- vim.opt.updatetime = 50 -- reduz o delay do CursorHold (afeta o gitsigns); default é 4000
+-- vim.opt.shadafile = "NONE" -- desliga a persistência do shada (marks/registers/etc)
+-- vim.opt.path:append("**") -- :find recursivo (a linha antiga era sintaxe vimscript, inválida em Lua)
 
-vim.opt.history = 1000
-vim.opt.undodir = vim.fn.expand("~/.vim/backup")
-vim.opt.undofile = true
-vim.opt.undoreload = 10000
-
-vim.opt.wildmenu = true -- useful for autocompletion
-vim.opt.clipboard = "unnamedplus" -- uses the + register (aka the system clipboard) as vim clipboard
+-- ── Entrada / clipboard ──────────────────────────────────────────────────────
+vim.opt.clipboard = "unnamedplus" -- usa o clipboard do sistema (registro +)
 vim.opt.mouse = "a" -- pretend you didn't see this shit here
+-- vim.opt.wildmenu = true -- redundante: já é o default (menu de autocompletar de :cmd)
+-- vim.opt.errorbells = false -- redundante: já é o default (sem beep de erro)
 
-vim.g.mapleader = " "
+vim.g.mapleader = " " -- tecla líder = espaço
 
 if not vim.loader.enabled then
     vim.loader.enable()
