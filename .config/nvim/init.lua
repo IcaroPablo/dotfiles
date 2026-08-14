@@ -99,6 +99,21 @@ vim.api.nvim_create_user_command("Dig", function()
     end
 end, {})
 
+-- Formata a config inteira com StyLua
+vim.api.nvim_create_user_command("StyluaConfig", function()
+    if vim.fn.executable("stylua") == 0 then
+        vim.notify("stylua não encontrado no PATH", vim.log.levels.WARN)
+        return
+    end
+    local out = vim.fn.system({ "stylua", vim.fn.stdpath("config") })
+    if vim.v.shell_error ~= 0 then
+        vim.notify(out, vim.log.levels.ERROR)
+    else
+        vim.cmd("checktime") -- recarrega buffers reformatados no disco
+        vim.notify("StyLua: config formatada", vim.log.levels.INFO)
+    end
+end, {})
+
 -- ██████╗ ██╗     ██╗   ██╗ ██████╗ ██╗███╗   ██╗███████╗
 -- ██╔══██╗██║     ██║   ██║██╔════╝ ██║████╗  ██║██╔════╝
 -- ██████╔╝██║     ██║   ██║██║  ███╗██║██╔██╗ ██║███████╗
@@ -133,32 +148,6 @@ require("lazy").setup({ { import = "plugins" } }, {
 -- ██║ ╚═╝ ██║██║  ██║██║     ██║     ██║██║ ╚████║╚██████╔╝███████║
 -- ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝     ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
 
-function open_terminal_in(project_folder)
-    local nvim_socket = "export NVIM='" .. vim.v.servername .. "'"
-    local initial_folder_command = "export INITIAL_FOLDER=" .. project_folder
-    local terminal_command = nvim_socket .. " ; " .. initial_folder_command .. " ; " .. os.getenv("NVIM_TERM_CMD")
-    local full_command = terminal_command .. " 2>/dev/null &"
-
-    os.execute(full_command)
-end
-
-function PipeToCommand()
-    local start_line, start_col = unpack(vim.api.nvim_buf_get_mark(0, "<"))
-    local end_line, end_col = unpack(vim.api.nvim_buf_get_mark(0, ">"))
-
-    local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
-    local selected_text = table.concat(lines, "\n")
-
-    local command = vim.fn.input("command: ")
-    local full_command = 'echo "' .. selected_text .. '" | ' .. command .. " 2>/dev/null 1>/dev/null &"
-    -- print(full_command)
-
-    local handle = os.execute(full_command)
-    -- handle:close()
-
-    -- print(output)
-end
-
 -- Salva a saída de :messages num arquivo (útil pra depurar)
 vim.api.nvim_create_user_command("LogMessages", function()
     local path = vim.fn.expand("~/nvim_msgs.txt")
@@ -191,25 +180,14 @@ vim.keymap.set("n", "<S-Tab>", ":bprevious<CR>:redraw<CR>", { noremap = true, si
 vim.keymap.set("n", "<leader>q", function()
     smart_close(false)
 end, { noremap = true, silent = true }) -- fecha sem salvar
+
 vim.keymap.set("n", "<leader>Q", function()
     smart_close(true)
 end, { noremap = true, silent = true }) -- fecha salvando
+
 vim.keymap.set("n", "<leader>n", ":enew | startinsert<CR>", { noremap = true, silent = true }) -- New file
 vim.keymap.set("n", "<leader>C", ":e $HOME/.config/nvim/init.lua<CR>", { noremap = true, silent = true }) -- Configs
--- Formata a config inteira com StyLua
-vim.api.nvim_create_user_command("StyluaConfig", function()
-    if vim.fn.executable("stylua") == 0 then
-        vim.notify("stylua não encontrado no PATH", vim.log.levels.WARN)
-        return
-    end
-    local out = vim.fn.system({ "stylua", vim.fn.stdpath("config") })
-    if vim.v.shell_error ~= 0 then
-        vim.notify(out, vim.log.levels.ERROR)
-    else
-        vim.cmd("checktime") -- recarrega buffers reformatados no disco
-        vim.notify("StyLua: config formatada", vim.log.levels.INFO)
-    end
-end, {})
+
 -- map("n", "<A-<>", "<cmd>BufferMovePrevious<CR>", { silent = true, noremap = true })
 -- map("n", "<A->>", "<cmd>BufferMoveNext<CR>", { silent = true, noremap = true })
 -- map("n", "<A-1>", "<cmd>BufferGoto 1<CR>", { silent = true, noremap = true })
@@ -245,27 +223,36 @@ vim.keymap.set("v", "<A-j>", ":m '>+1<CR>gv=gv", { noremap = true, silent = true
 vim.keymap.set("v", "<A-k>", ":m '<-2<CR>gv=gv", { noremap = true, silent = true })
 
 -- utils
-vim.keymap.set("n", "tt", function()
-    open_terminal_in(vim.fn.expand("%:p:h"))
-end, { noremap = true, silent = true })
+-- function open_terminal_in(project_folder)
+--     local nvim_socket = "export NVIM='" .. vim.v.servername .. "'"
+--     local initial_folder_command = "export INITIAL_FOLDER=" .. project_folder
+--     local terminal_command = nvim_socket .. " ; " .. initial_folder_command .. " ; " .. os.getenv("NVIM_TERM_CMD")
+--     local full_command = terminal_command .. " 2>/dev/null &"
+--
+--     os.execute(full_command)
+-- end
 
-vim.keymap.set("n", "TT", function()
-    local project_folder = get_root() or vim.fn.expand("%:p:h")
+-- vim.keymap.set("n", "tt", function()
+--     open_terminal_in(vim.fn.expand("%:p:h"))
+-- end, { noremap = true, silent = true })
 
-    open_terminal_in(project_folder)
-end, { noremap = true, silent = true })
+-- vim.keymap.set("n", "TT", function()
+--     local project_folder = get_root() or vim.fn.expand("%:p:h")
+--
+--     open_terminal_in(project_folder)
+-- end, { noremap = true, silent = true })
 
-vim.keymap.set("n", "<C-f>", function()
-    -- local current_dir = vim.fn.expand('%:p:h')
-    local current_file = vim.fn.expand("%:t")
-
-    local nvim_socket = "export NVIM='" .. vim.v.servername .. "' && "
-    local terminal_command = nvim_socket .. os.getenv("NVIM_TERM_CMD")
-    local command = "lf " .. (current_file:find("^.") ~= nil and "--command 'set hidden' " or "") .. vim.fn.expand("%:p")
-    local full_command = terminal_command .. " " .. command .. " 2>/dev/null 1>/dev/null &"
-
-    os.execute(full_command)
-end, { noremap = true, silent = true })
+-- vim.keymap.set("n", "<C-f>", function()
+--     -- local current_dir = vim.fn.expand('%:p:h')
+--     local current_file = vim.fn.expand("%:t")
+--
+--     local nvim_socket = "export NVIM='" .. vim.v.servername .. "' && "
+--     local terminal_command = nvim_socket .. os.getenv("NVIM_TERM_CMD")
+--     local command = "lf " .. (current_file:find("^.") ~= nil and "--command 'set hidden' " or "") .. vim.fn.expand("%:p")
+--     local full_command = terminal_command .. " " .. command .. " 2>/dev/null 1>/dev/null &"
+--
+--     os.execute(full_command)
+-- end, { noremap = true, silent = true })
 
 -- navigate quickfixes
 vim.keymap.set("n", "<c-p>", ":cprev<CR>zz", { noremap = true, silent = true })
@@ -298,6 +285,23 @@ vim.keymap.set("v", "<", "<gv", { silent = true, noremap = true })
 vim.keymap.set("v", ">", ">gv", { silent = true, noremap = true })
 vim.keymap.set("n", "<Leader><Leader>", ":write<CR>", { noremap = true, silent = true })
 vim.keymap.set("n", "<c-[>", "<esc>:nohlsearch<CR>", { silent = true })
+
+-- Avalia o texto selecionado como script no shell padrão e abre a saída num buffer.
+function PipeToCommand()
+    local first = vim.api.nvim_buf_get_mark(0, "<")[1]
+    local last = vim.api.nvim_buf_get_mark(0, ">")[1]
+    local script = table.concat(vim.api.nvim_buf_get_lines(0, first - 1, last, false), "\n")
+
+    local res = vim.system({ vim.o.shell }, { stdin = script, text = true }):wait()
+    local output = vim.split((res.stdout or "") .. (res.stderr or ""), "\n")
+
+    vim.cmd("vnew")
+    vim.bo.buftype = "nofile"
+    vim.bo.bufhidden = "wipe"
+    vim.bo.swapfile = false
+    vim.api.nvim_buf_set_lines(0, 0, -1, false, output)
+end
+
 -- vim.keymap.set('v', '<leader>p', function() PipeToCommand() end, { noremap = true, silent = true })
-vim.keymap.set("x", "<leader>r", ":lua PipeToCommand()<CR>", { noremap = true, silent = true }) -- pipa a seleção
-vim.api.nvim_set_keymap("n", "<leader>r", "vip:lua PipeToCommand()<CR>q<CR>", { noremap = true, silent = true }) -- pipa o parágrafo
+vim.keymap.set("x", "<leader>r", ":lua PipeToCommand()<CR>", { noremap = true, silent = true })
+vim.keymap.set("n", "<leader>r", "vip:lua PipeToCommand()<CR>", { noremap = true, silent = true })
