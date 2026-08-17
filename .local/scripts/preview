@@ -1,9 +1,9 @@
 #!/bin/sh
 #
-# preview <file> [geometry args] — best-effort preview of <file>, used by fzf
-# (interactive-select) and by lf. Every external tool is optional: when it is
-# missing the branch degrades to a one-line description instead of erroring, so
-# preview never depends on anything but a POSIX shell.
+# preview <file> — best-effort preview of <file>, used pelo fzf do
+# interactive-select. Toda ferramenta externa é opcional: faltando, o ramo cai
+# numa descrição de uma linha em vez de dar erro, então preview não depende de
+# nada além de um shell POSIX.
 
 # portable helpers (have/abspath/mimetype/batorcat) shared with openfile
 . "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" 2>/dev/null || true
@@ -13,11 +13,6 @@ command -v mimetype >/dev/null 2>&1 || mimetype() { file --mime-type -bL "$1" 2>
 
 # one-line human description — the universal fallback (no tool required)
 desc() { have file && file -Lb "$1" || mimetype "$1" || printf '%s\n' "$1"; }
-
-# show an image (or a pre-generated thumbnail) via lf's `image` helper. That
-# helper (and $CACHE) only exist under lf; in the fzf preview pane they do not,
-# so we fall back to a description and, crucially, never generate a stray file.
-show_image() { command -v image >/dev/null 2>&1 && image "$@" || desc "$1"; }
 
 handlenoextension() {
     case "$(mimetype "$1")" in
@@ -50,39 +45,6 @@ case "$(printf "%s\n" "$(abspath "$1")" | awk '{print tolower($0)}')" in
 		;;
 	*.wav|*.mp3|*.flac|*.m4a|*.wma|*.ape|*.ac3|*.og[agx]|*.spx|*.opus|*.as[fx]|*.mka)
 		have exiftool && exiftool "$1" || desc "$1"
-		;;
-	*.pdf)
-		if command -v image >/dev/null 2>&1 && have pdftoppm; then
-			[ ! -f "${CACHE}.jpg" ] && pdftoppm -jpeg -f 1 -singlefile "$1" "$CACHE"
-			image "${CACHE}.jpg" "$2" "$3" "$4" "$5"
-		else desc "$1"; fi
-		;;
-	*.epub)
-		if command -v image >/dev/null 2>&1 && have epub-thumbnailer; then
-			[ ! -f "$CACHE" ] && epub-thumbnailer "$1" "$CACHE" 1024
-			image "$CACHE" "$2" "$3" "$4" "$5"
-		else desc "$1"; fi
-		;;
-	*.cbz|*.cbr|*.cbt)
-		if command -v image >/dev/null 2>&1 && have comicthumb; then
-			[ ! -f "$CACHE" ] && comicthumb "$1" "$CACHE" 1024
-			image "$CACHE" "$2" "$3" "$4" "$5"
-		else desc "$1"; fi
-		;;
-	*.avi|*.mp4|*.wmv|*.dat|*.3gp|*.ogv|*.mkv|*.mpg|*.mpeg|*.vob|*.fl[icv]|*.m2v|*.mov|*.webm|*.ts|*.mts|*.m4v|*.r[am]|*.qt|*.divx)
-		if command -v image >/dev/null 2>&1 && have ffmpegthumbnailer; then
-			[ ! -f "${CACHE}.jpg" ] && ffmpegthumbnailer -i "$1" -o "${CACHE}.jpg" -s 0 -q 5
-			image "${CACHE}.jpg" "$2" "$3" "$4" "$5"
-		else desc "$1"; fi
-		;;
-	*.bmp|*.jpg|*.jpeg|*.png|*.xpm|*.webp|*.tiff|*.gif|*.jfif|*.ico)
-		show_image "$1" "$2" "$3" "$4" "$5"
-		;;
-	*.svg)
-		if command -v image >/dev/null 2>&1 && have convert; then
-			[ ! -f "${CACHE}.jpg" ] && convert "$1" "${CACHE}.jpg"
-			image "${CACHE}.jpg" "$2" "$3" "$4" "$5"
-		else desc "$1"; fi
 		;;
 	*.ino) batorcat --language=cpp "$1" ;;
 	*) handlenoextension "$1" ;;
