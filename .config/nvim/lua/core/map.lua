@@ -17,22 +17,10 @@ M.allow = {
     ["<leader>jev"] = "ftplugin/java.lua",
     ["<leader>jec"] = "ftplugin/java.lua",
     ["<leader>jem"] = "ftplugin/java.lua",
-    ["<C-k>"] = "ftplugin/java.lua vs init.lua — vale revisar",
-    ["<leader>rn"] = "ftplugin/java.lua vs nvim_lsp_config.lua — vale revisar",
 
     -- o LspAttach dispara por (cliente, buffer), então reexecuta num `:e!`
-    ["<Leader>e"] = "nvim_lsp_config.lua",
-    ["<Leader>ca"] = "nvim_lsp_config.lua",
-    ["<Leader>cf"] = "nvim_lsp_config.lua",
-    ["<Leader>rn"] = "nvim_lsp_config.lua",
-    ["K"] = "nvim_lsp_config.lua",
     ["gD"] = "nvim_lsp_config.lua",
     ["gd"] = "nvim_lsp_config.lua",
-    ["gi"] = "nvim_lsp_config.lua",
-    ["gr"] = "nvim_lsp_config.lua",
-    ["gt"] = "nvim_lsp_config.lua",
-    ["[d"] = "nvim_lsp_config.lua — cobre builtin que faz o mesmo",
-    ["]d"] = "nvim_lsp_config.lua — cobre builtin que faz o mesmo",
 
     -- o on_attach do gitsigns roda por buffer, e de novo num reload
     ["<leader>hr"] = "gitsigns.lua",
