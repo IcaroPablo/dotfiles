@@ -12,6 +12,7 @@ vim.opt.showcmd = false -- não mostra o comando parcial no canto inferior direi
 
 -- ── Aparência ────────────────────────────────────────────────────────────────
 vim.opt.termguicolors = true -- cores 24-bit (true color)
+vim.opt.winborder = "single" -- borda padrão das janelas flutuantes (hover, diagnóstico)
 -- vim.opt.cursorline = true -- realça a linha do cursor (ver autocmd comentado abaixo)
 
 -- ── Números de linha ─────────────────────────────────────────────────────────
@@ -48,7 +49,7 @@ vim.opt.undofile = true -- undo persiste entre sessões...
 vim.opt.undodir = vim.fn.expand("~/.vim/backup") -- ...guardado neste diretório
 -- vim.opt.undoreload = 10000 -- redundante: já é o default
 -- vim.opt.history = 1000 -- comentado: o default do nvim (10000) é maior; sem motivo pra reduzir
--- vim.opt.updatetime = 50 -- reduz o delay do CursorHold (afeta o gitsigns); default é 4000
+vim.opt.updatetime = 2000 -- de quanto em quanto o CursorHold dispara (default é 4000)
 -- vim.opt.shadafile = "NONE" -- desliga a persistência do shada (marks/registers/etc)
 -- vim.opt.path:append("**") -- :find recursivo (a linha antiga era sintaxe vimscript, inválida em Lua)
 
@@ -97,17 +98,20 @@ end
 --     end
 -- end, {})
 
-local root = require("core.root")
-
-vim.api.nvim_create_user_command("Dig", function()
-    local root_dir = root.project()
-
-    if root_dir ~= nil then
-        vim.cmd.cd(root_dir)
-    else
-        vim.notify("raiz do projeto não encontrada", vim.log.levels.WARN)
-    end
-end, {})
+-- cd global para a raiz do projeto. Comentado: o telescope passou a resolver a
+-- raiz por buffer e o session-manager faz o próprio cd, então sobrou só o cwd
+-- de :terminal, :! e caminhos relativos. Vira :tcd quando as abas virarem projeto.
+-- local root = require("core.root")
+--
+-- vim.api.nvim_create_user_command("Dig", function()
+--     local root_dir = root.project()
+--
+--     if root_dir ~= nil then
+--         vim.cmd.cd(root_dir)
+--     else
+--         vim.notify("raiz do projeto não encontrada", vim.log.levels.WARN)
+--     end
+-- end, {})
 
 -- Formata a config inteira com StyLua
 vim.api.nvim_create_user_command("StyluaConfig", function()

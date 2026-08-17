@@ -17,34 +17,24 @@ vim.lsp.config("*", {
 })
 
 -- ── Keymaps por buffer quando um LSP anexa (:h lsp-attach) ───────────────────
+-- O 0.11 já traz: grn rename, gra code action, grr references, gri
+-- implementation, grt type definition, gO document symbol, [d/]d salto de
+-- diagnóstico, <C-W>d float do diagnóstico, <C-S> signature help em insert.
+-- K hover (se keywordprg estiver vazio e ninguém mapear K antes). Também seta
+-- tagfunc, omnifunc e formatexpr, então <C-]>, <C-x><C-o> e gq passam pelo LSP
+-- sem mapeamento. Só fica aqui o que não tem default.
 vim.api.nvim_create_autocmd("LspAttach", {
     callback = function(args)
         local bufopts = { buffer = args.buf }
 
-        -- diagnósticos
-        map.set("n", "<Leader>e", vim.diagnostic.open_float, bufopts)
-        map.set("n", "[d", function()
-            vim.diagnostic.jump({ count = -1 })
-        end, bufopts)
-        map.set("n", "]d", function()
-            vim.diagnostic.jump({ count = 1 })
-        end, bufopts)
-
-        -- navegação e ações
         map.set("n", "gD", vim.lsp.buf.declaration, bufopts)
         map.set("n", "gd", vim.lsp.buf.definition, bufopts)
-        map.set("n", "gi", vim.lsp.buf.implementation, bufopts)
-        map.set("n", "gr", vim.lsp.buf.references, bufopts)
-        map.set("n", "gt", vim.lsp.buf.type_definition, bufopts)
-        map.set("n", "K", vim.lsp.buf.hover, bufopts)
-        map.set({ "n", "v" }, "<Leader>ca", vim.lsp.buf.code_action, bufopts)
-        map.set("n", "<Leader>cf", function()
-            vim.lsp.buf.format({ async = true })
-        end, bufopts)
-        -- vim.keymap.set("n", "<Leader>wa", vim.lsp.buf.add_workspace_folder, bufopts)
-        -- vim.keymap.set("n", "<Leader>wr", vim.lsp.buf.remove_workspace_folder, bufopts)
-        -- vim.keymap.set("n", "<Leader>wl", function() print(vim.inspect(vim.lsp.buf.list_workspace_folders())) end, bufopts)
-        map.set("n", "<Leader>rn", vim.lsp.buf.rename, bufopts)
+
+        -- formatação roda no build, pelo terminal. Se precisar pontualmente,
+        -- gq formata um range via formatexpr, sem mapeamento nenhum.
+        -- map.set("n", "<Leader>cf", function()
+        --     vim.lsp.buf.format({ async = true })
+        -- end, bufopts)
     end,
 })
 
@@ -68,20 +58,20 @@ vim.diagnostic.config({
     -- severity_sort = true,
 })
 
--- Diagnóstico flutuante no CursorHold (referência, desligado):
--- vim.cmd([[ autocmd! CursorHold,CursorHoldI * lua vim.diagnostic.open_float(nil, {focus=false})]])
--- vim.api.nvim_create_autocmd("CursorHold", {
---     buffer = bufnr,
---     callback = function()
---         vim.diagnostic.open_float(nil, {
---             focusable = false,
---             close_events = { "BufLeave", "CursorMoved", "InsertEnter", "FocusLost" },
---             border = "rounded",
---             source = "if_many",
---             scope = "cursor",
---         })
---     end,
--- })
+-- Com virtual_text desligado, a mensagem do diagnóstico só aparece sob demanda.
+-- Este autocmd abre o float sozinho quando o cursor para, no intervalo do
+-- 'updatetime'. Global de propósito: diagnóstico nem sempre vem de LSP, e
+-- open_float não faz nada em buffer sem diagnóstico. Sem `border` nem `source`
+-- aqui, para herdar o winborder e a vim.diagnostic.config acima.
+vim.api.nvim_create_autocmd("CursorHold", {
+    group = vim.api.nvim_create_augroup("diagnostic_float", { clear = true }),
+    callback = function()
+        vim.diagnostic.open_float(nil, {
+            focusable = false,
+            close_events = { "BufLeave", "CursorMoved", "InsertEnter", "FocusLost" },
+        })
+    end,
+})
 
 -- ── Config por server (jdtls tem a sua em jdtls_config.lua) ───────────────────
 vim.lsp.config("texlab", {

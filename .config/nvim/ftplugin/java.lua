@@ -82,5 +82,5 @@ map.set({ "n", "v" }, "<leader>jev", code_action("refactor.extract.variable"), o
 map.set("v", "<leader>jec", code_action("refactor.extract.constant"), opts)
 map.set("v", "<leader>jem", code_action("refactor.extract.method"), opts)
 
-map.set("n", "<leader>rn", vim.lsp.buf.rename, opts)
-map.set("n", "<C-k>", vim.lsp.buf.signature_help, opts)
+-- Saíram por terem nativo no 0.11: <leader>rn (grn) e <C-k> (<C-S>, em insert).
+-- O <C-k> ainda devolveu o <c-w>+ do init.lua, que ele encobria em buffer java.
