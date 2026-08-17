@@ -1,181 +1,56 @@
-.Xauthority
-.Xdefaults
-.android
-.anyconnect
-.anydesk
-.aws
-.bacon-locations
-.bash*
-.bash_history
-.cabal-packages
-.cache
-.cargo
-.clang-repl-history
-.cljs
-.clojure
-.clojure_history
-.config/*/zoom*
-.config/.gsd-keyboard.settings-ported
-.config/Code
-.config/Debauchee/Barrier.conf
-.config/GIMP
-.config/InputLeap
-.config/InputLeap/InputLeap.conf
-.config/JetBrains
-.config/QtProject.conf
-.config/Session
-.config/Thunar/accels.scm
-.config/Thunar/uca.xml
-.config/VirtualBox
-.config/balena*
-.config/cabal/config
-.config/cef*
-.config/chezmoi/chezmoistate.boltdb
-.config/chromium
-.config/configstore
-.config/dconf/user
-.config/dotfiles
-.config/enchant
-.config/eog
-.config/evolution
-.config/font-manager
-.config/fontconfig
-.config/fontconfig
-.config/gedit
-.config/ghc/ghci_history
-.config/github-copilot*
-.config/gnome*
-.config/go
-.config/google-chrome
-.config/gtk*
-.config/gtk-2.0/gtkfilechooser.ini
-.config/htop/htoprc
-.config/ibus
-.config/jgit
-.config/libreoffice
-.config/locale.conf
-.config/lutris
-.config/menus
-.config/mimeapps.list
-.config/monitors*
-.config/musicca
-.config/nautilus
-.config/neofetch/config.conf
-.config/next
-.config/nkso
+# ════════════════════════════════════════════════════════════════════════════
+#  Whitelist — ignora tudo por padrão, libera só o que é versionado.
+# ════════════════════════════════════════════════════════════════════════════
+#
+# $HOME é a work-tree deste bare repo, então TUDO que existe na home é
+# untracked por default. Um blacklist não acompanha: cada ferramenta nova
+# escreve aqui e você só descobre quando ela polui o `dot status`. A whitelist
+# inverte o default — o que não foi liberado explicitamente nunca aparece.
+#
+# Regra do git que estrutura este arquivo: não é possível re-incluir um path
+# se um diretório pai dele está ignorado. Por isso cada nível é liberado com
+# `!` antes de o conteúdo dele ser ignorado de novo.
+#
+# Pra versionar uma ferramenta nova: acrescente o `!` na seção certa e depois
+# `dot add <caminho>`. Sem o `!` o path fica ignorado e o `dot add` recusa —
+# de propósito, é o que mantém esta lista honesta.
+
+# ── ignora tudo na raiz ──────────────────────────────────────────────────────
+/*
+
+# ── arquivos de topo versionados ─────────────────────────────────────────────
+!/.gitconfig
+!/.gitignore
+!/.jjconfig.toml
+!/.xinitrc
+!/README.md
+
+# ── os dois diretórios curados (liberar o dir, não o conteúdo) ───────────────
+!/.config/
+!/.local/
+
+# ── .config: ignora tudo, libera os nossos ───────────────────────────────────
+/.config/*
+!/.config/bacon/
+!/.config/bat/
+!/.config/ghostty/
+!/.config/korn/
+!/.config/lf/
+!/.config/nvim/
+!/.config/sh/
+!/.config/vis/
+!/.config/zathura/
+
+# ── .local: idem ─────────────────────────────────────────────────────────────
+/.local/*
+!/.local/scripts/
+!/.local/wallpapers/
+
+# ── exceções dentro do que foi liberado ──────────────────────────────────────
+# gerados pelo lua_ls, nunca versionar
 .config/nvim/.luarc.json
 .config/nvim/lua/.luarc.json
-.config/nvim/plugin
-.config/nyxt
-.config/pavucontrol*
-.config/pavucontrol.ini
-.config/pdiary
-.config/pgcli
-.config/pulse
-.config/qBittorrent
-.config/qutebrowser
-.config/simple-scan
-.config/snes9x/snes9x.conf
-.config/systemd
-.config/totem
-.config/unity*
-.config/user-dirs.dirs
-.config/user-dirs.locale
-.config/vlc
-.config/warpd
-.config/xfce*
-.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml
-.config/xmonad
-.config/zoom*
-.cshrc
-.cvsrc
-.dbus
-.docker
-.dwm.log
-.eclipse
-.fehbg
-.fonts.conf
-.fonts/.uuid
-.fonts/JetBrains*
-.fzf
-.ghc
-.gnupg
-.hidden
-.idea
-.ideavimrc
-.java
-.klei
-.ksh_history
-.kube
-.lesshst
-.lldb
-.local/.local.iml
-.local/bin
-.local/curls
-.local/etc
-.local/lib
-.local/lua-language-server
-.local/pipx
-.local/queries
-.local/scripts/rec*
-.local/share
-.local/state
-.login
-.m2
-.mailrc
-.minikube
-.mozilla
-.netskope
-.node_repl_history
-.npm
-.oh-my-zsh
-.openjfx
-.pam_environment
-.parsec
-.pki
-.pspg_history
-.psql_history
-.pulse-cookie
-.purple
-.python_history
-.rustup
-.sdkman
-.serverauth*
-.sh_history
-.shell.pre-oh-my-zsh
-.sndio
-.sonarlint
-.ssh
-.stack
-.steam*
-.sudo_as_admin_successful
-.swt
-.synaptic
-.terminfo
-.terraform.d
-.testcontainers.properties
-.trash
-.var
-.vault-token
-.vim
-.vscode
-.wget-hsts
-.wine
-.workspace
-.xsessionrc
-.zcomp*
-.zcompdump
-.zlua
-.zoom
-.zsh*
-Documents
-Downloads
-Jasper*
-Pictures
-Scripts
-Workspace
-input-leap
-mbox
-snap
-steam*
-z
+
+# o próprio bare repo. Já cairia no `/.config/*`, mas a linha literal existe
+# porque o `dot start` faz grep por ela antes de apendar (ver .local/scripts/dot).
+.config/dotfiles
