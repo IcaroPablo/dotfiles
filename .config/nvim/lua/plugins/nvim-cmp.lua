@@ -12,7 +12,6 @@ return {
         cmp.setup({
             sources = cmp.config.sources({
                 { name = "nvim_lsp" },
-                { name = "nvim_lsp_signature_help" },
                 { name = "buffer" },
                 {
                     name = "path",
@@ -55,11 +54,6 @@ return {
                     end
                 end, { "i", "s" }),
             }),
-        })
-
-        -- File types specifics
-        cmp.setup.filetype("gitcommit", {
-            sources = cmp.config.sources({ { name = "cmp_git" } }, { { name = "buffer" } }),
         })
 
         -- Command line completion
