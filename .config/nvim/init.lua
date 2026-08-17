@@ -12,7 +12,6 @@ vim.opt.showcmd = false -- não mostra o comando parcial no canto inferior direi
 
 -- ── Aparência ────────────────────────────────────────────────────────────────
 vim.opt.termguicolors = true -- cores 24-bit (true color)
-vim.opt.winborder = "single" -- borda padrão das janelas flutuantes (hover, diagnóstico)
 -- vim.opt.cursorline = true -- realça a linha do cursor (ver autocmd comentado abaixo)
 
 -- ── Números de linha ─────────────────────────────────────────────────────────
@@ -45,8 +44,8 @@ vim.opt.scrolloff = 10 -- mantém 10 linhas de contexto acima/abaixo do cursor
 
 -- ── Arquivos / persistência ──────────────────────────────────────────────────
 vim.opt.swapfile = false -- sem arquivos de swap
-vim.opt.undofile = true -- undo persiste entre sessões...
-vim.opt.undodir = vim.fn.expand("~/.vim/backup") -- ...guardado neste diretório
+vim.opt.undofile = true -- undo persiste entre sessões; o undodir default já é
+-- o stdpath("state")/undo, então não precisa apontar à mão
 -- vim.opt.undoreload = 10000 -- redundante: já é o default
 -- vim.opt.history = 1000 -- comentado: o default do nvim (10000) é maior; sem motivo pra reduzir
 vim.opt.updatetime = 2000 -- de quanto em quanto o CursorHold dispara (default é 4000)
@@ -242,38 +241,6 @@ map.set("i", "<A-j>", "<Esc>:m .+1<CR>==gi")
 map.set("i", "<A-k>", "<Esc>:m .-2<CR>==gi")
 map.set("v", "<A-j>", ":m '>+1<CR>gv=gv")
 map.set("v", "<A-k>", ":m '<-2<CR>gv=gv")
-
--- utils
--- function open_terminal_in(project_folder)
---     local nvim_socket = "export NVIM='" .. vim.v.servername .. "'"
---     local initial_folder_command = "export INITIAL_FOLDER=" .. project_folder
---     local terminal_command = nvim_socket .. " ; " .. initial_folder_command .. " ; " .. os.getenv("NVIM_TERM_CMD")
---     local full_command = terminal_command .. " 2>/dev/null &"
---
---     os.execute(full_command)
--- end
-
--- vim.keymap.set("n", "tt", function()
---     open_terminal_in(vim.fn.expand("%:p:h"))
--- end, { noremap = true, silent = true })
-
--- vim.keymap.set("n", "TT", function()
---     local project_folder = get_root() or vim.fn.expand("%:p:h")
---
---     open_terminal_in(project_folder)
--- end, { noremap = true, silent = true })
-
--- vim.keymap.set("n", "<C-f>", function()
---     -- local current_dir = vim.fn.expand('%:p:h')
---     local current_file = vim.fn.expand("%:t")
---
---     local nvim_socket = "export NVIM='" .. vim.v.servername .. "' && "
---     local terminal_command = nvim_socket .. os.getenv("NVIM_TERM_CMD")
---     local command = "lf " .. (current_file:find("^.") ~= nil and "--command 'set hidden' " or "") .. vim.fn.expand("%:p")
---     local full_command = terminal_command .. " " .. command .. " 2>/dev/null 1>/dev/null &"
---
---     os.execute(full_command)
--- end, { noremap = true, silent = true })
 
 -- navigate quickfixes
 map.set("n", "<c-p>", ":cprev<CR>zz")
