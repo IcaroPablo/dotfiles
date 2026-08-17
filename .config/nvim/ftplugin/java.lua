@@ -53,7 +53,7 @@ local function run_maven_test(spec)
     end
     vim.cmd("botright new")
     vim.cmd("resize 18")
-    vim.fn.termopen({ mvn, "test", "-Dtest=" .. spec }, { cwd = pom_dir })
+    vim.fn.jobstart({ mvn, "test", "-Dtest=" .. spec }, { cwd = pom_dir, term = true })
 end
 
 -- refactor do jdtls via code action nativa (kind específico, aplica direto)
