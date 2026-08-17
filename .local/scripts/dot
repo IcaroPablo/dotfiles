@@ -186,7 +186,6 @@ pkg_hint() {
                 fd)       echo 'apt install fd-find' ;;
                 bat)      echo 'apt install bat  # binário: batcat' ;;
                 exiftool) echo 'apt install libimage-exiftool-perl' ;;
-                pdftoppm) echo 'apt install poppler-utils' ;;
                 doas)     echo 'apt install opendoas' ;;
                 xdg-open) echo 'apt install xdg-utils' ;;
                 mktemp)   echo '' ;;
@@ -196,7 +195,6 @@ pkg_hint() {
             case "$1" in
                 nvim)     echo 'pkg_add neovim' ;;
                 exiftool) echo 'pkg_add p5-Image-ExifTool' ;;
-                pdftoppm) echo 'pkg_add poppler-utils' ;;
                 mktemp|file|unzip|tar|doas) echo '' ;;
                 *)        echo "pkg_add $1" ;;
             esac ;;
@@ -247,7 +245,7 @@ doctor() {
     report_group "CORE" fzf eza nvim bat file mktemp || _core_ok=0
     report_group "NÚCLEO" fd zoxide readlink || :
     report_group "PREVIEW (opcional — recursos degradam sem)" \
-        pdftoppm ffmpegthumbnailer w3m exiftool unzip tar || :
+        w3m exiftool unzip tar || :
 
     case "$_os" in
         Darwin)  report_group "OS/desktop (Darwin)" open || : ;;

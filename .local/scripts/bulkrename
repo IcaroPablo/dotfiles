@@ -20,5 +20,3 @@ cp -- "$old" "$new"
 paste "$old" "$new" | while IFS="$(printf '\t')" read -r src dst; do
     [ "$src" = "$dst" ] || [ -e "$dst" ] || mv -- "$src" "$dst"
 done
-
-command -v lf >/dev/null 2>&1 && [ -n "${id:-}" ] && lf -remote "send $id unselect"
