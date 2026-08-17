@@ -3,16 +3,16 @@
 -- que o nvim-lspconfig ships, cujo cmd é o wrapper Python). cmd manual (java
 -- direto, flags do launcher oficial) + auto-bootstrap do eclipse.jdt.ls e do
 -- lombok; workspace por projeto via config.root_dir.
-local home = os.getenv("HOME")
-local lombok = vim.fn.stdpath("data") .. "/lombok.jar"
+local home = vim.env.HOME
+local lombok = vim.fs.joinpath(vim.fn.stdpath("data"), "lombok.jar")
 local jdtls_url = "https://download.eclipse.org/jdtls/snapshots/jdt-language-server-latest.tar.gz"
 
 local function jdtls_home()
-    return os.getenv("JDTLS_HOME") or (home .. "/.local/share/jdtls-install")
+    return vim.env.JDTLS_HOME or vim.fs.joinpath(home, ".local", "share", "jdtls-install")
 end
 
 local function launcher_jar()
-    return vim.fn.glob(jdtls_home() .. "/plugins/org.eclipse.equinox.launcher_*.jar")
+    return vim.fn.glob(vim.fs.joinpath(jdtls_home(), "plugins", "org.eclipse.equinox.launcher_*.jar"))
 end
 
 -- baixa o lombok.jar uma vez
@@ -40,7 +40,7 @@ end
 
 -- runtimes de projeto: descobre os JDKs do sdkman (à prova de bump de patch)
 local function sdkman_runtimes()
-    local dir = home .. "/.sdkman/candidates/java"
+    local dir = vim.fs.joinpath(home, ".sdkman", "candidates", "java")
     local out, seen = {}, {}
     if vim.fn.isdirectory(dir) == 0 then
         return out
@@ -50,7 +50,7 @@ local function sdkman_runtimes()
         if major and not seen[major] then
             seen[major] = true
             local env = (major == "8") and "JavaSE-1.8" or ("JavaSE-" .. major)
-            table.insert(out, { name = env, path = dir .. "/" .. name })
+            table.insert(out, { name = env, path = vim.fs.joinpath(dir, name) })
         end
     end
     return out
@@ -108,8 +108,8 @@ vim.lsp.config("jdtls", {
             error("jdtls: launcher não encontrado")
         end
         local project = config.root_dir and vim.fn.fnamemodify(config.root_dir, ":p:h:t") or "default"
-        local data_dir = home .. "/.local/share/jdtls/" .. project
-        local java = os.getenv("JAVA_HOME") and (os.getenv("JAVA_HOME") .. "/bin/java") or "java"
+        local data_dir = vim.fs.joinpath(home, ".local", "share", "jdtls", project)
+        local java = vim.env.JAVA_HOME and vim.fs.joinpath(vim.env.JAVA_HOME, "bin", "java") or "java"
         local argv = {
             java,
             "-Djdk.xml.maxGeneralEntitySizeLimit=0",
@@ -137,5 +137,107 @@ vim.lsp.config("jdtls", {
             env = config.cmd_env,
             detached = config.detached,
         })
+    end,
+})
+
+-- ── Keymaps de Java ──────────────────────────────────────────────────────────
+-- Presos ao LspAttach do jdtls e não ao FileType: os quatro de refactor são code
+-- action do servidor, e os dois de teste precisam de um pom.xml — nenhum faz
+-- sentido num .java solto sem projeto.
+
+local map = require("core.map")
+local root = require("core.root")
+
+-- prefere o `mvn` do PATH; se ausente, cai pro ./mvnw do projeto
+local function maven_bin()
+    if vim.fn.executable("mvn") == 1 then
+        return "mvn"
+    end
+    local wroot = root.nearest({ "mvnw" })
+    local mvnw = wroot and vim.fs.joinpath(wroot, "mvnw")
+    if mvnw and vim.fn.executable(mvnw) == 1 then
+        return mvnw
+    end
+    return nil
+end
+
+--- Nome do método sob o cursor, perguntado ao jdtls. Vem do compilador, então
+--- acerta genérico, sobrecarga e classe interna sem depender de o treesitter
+--- estar instalado nem de a query casar com a gramática.
+local METHOD, CONSTRUCTOR = 6, 9
+
+local function enclosing_method()
+    local res = vim.lsp.buf_request_sync(0, "textDocument/documentSymbol", { textDocument = vim.lsp.util.make_text_document_params() }, 2000)
+    local linha = vim.api.nvim_win_get_cursor(0)[1] - 1
+    local achado
+
+    -- o mais interno vence: a recursão desce e sobrescreve o de fora
+    local function procura(itens)
+        for _, s in ipairs(itens or {}) do
+            local r = s.range or (s.location or {}).range
+            if r and r.start.line <= linha and linha <= r["end"].line then
+                if s.kind == METHOD or s.kind == CONSTRUCTOR then
+                    achado = s.name:gsub("%(.*", "")
+                end
+                procura(s.children)
+            end
+        end
+    end
+
+    for _, r in pairs(res or {}) do
+        procura(r.result)
+    end
+    return achado
+end
+
+-- roda `mvn test -Dtest=<spec>` da raiz do projeto num split de terminal
+local function run_maven_test(spec)
+    local pom_dir = root.nearest({ "pom.xml" })
+    if not pom_dir then
+        vim.notify("pom.xml não encontrado (raiz do projeto)", vim.log.levels.WARN)
+        return
+    end
+    local mvn = maven_bin()
+    if not mvn then
+        vim.notify("nem `mvn` nem `./mvnw` encontrados", vim.log.levels.ERROR)
+        return
+    end
+    vim.cmd("botright new")
+    vim.cmd("resize 18")
+    vim.fn.jobstart({ mvn, "test", "-Dtest=" .. spec }, { cwd = pom_dir, term = true })
+end
+
+-- code action de kind específico, aplicada direto
+local function code_action(kind)
+    return function()
+        vim.lsp.buf.code_action({ context = { only = { kind } }, apply = true })
+    end
+end
+
+vim.api.nvim_create_autocmd("LspAttach", {
+    group = vim.api.nvim_create_augroup("jdtls_keymaps", { clear = true }),
+    callback = function(args)
+        local client = vim.lsp.get_client_by_id(args.data.client_id)
+        if not client or client.name ~= "jdtls" then
+            return
+        end
+        local opts = { buffer = args.buf }
+
+        map.set("n", "<leader>jtc", function()
+            run_maven_test(vim.fn.expand("%:t:r"))
+        end, opts)
+        map.set("n", "<leader>jtm", function()
+            local m = enclosing_method()
+            if not m then
+                vim.notify("nenhum método sob o cursor", vim.log.levels.WARN)
+                return
+            end
+            run_maven_test(vim.fn.expand("%:t:r") .. "#" .. m)
+        end, opts)
+
+        map.set("n", "<leader>jdi", code_action("source.organizeImports"), opts)
+        map.set({ "n", "v" }, "<leader>jev", code_action("refactor.extract.variable"), opts)
+        map.set("v", "<leader>jec", code_action("refactor.extract.constant"), opts)
+        map.set("v", "<leader>jem", code_action("refactor.extract.method"), opts)
     end,
 })

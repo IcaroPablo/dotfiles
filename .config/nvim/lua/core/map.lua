@@ -10,13 +10,13 @@ local MODES = { "n", "x", "s", "o", "i", "c", "t" }
 M.allow = {
     ["<c-l>"] = "resize de janela no lugar do <C-L> nativo; o nohlsearch está no <c-[>",
 
-    -- o ftplugin roda de novo a cada FileType (`:e`, `:set ft=java`)
-    ["<leader>jtc"] = "ftplugin/java.lua",
-    ["<leader>jtm"] = "ftplugin/java.lua",
-    ["<leader>jdi"] = "ftplugin/java.lua",
-    ["<leader>jev"] = "ftplugin/java.lua",
-    ["<leader>jec"] = "ftplugin/java.lua",
-    ["<leader>jem"] = "ftplugin/java.lua",
+    -- o LspAttach do jdtls dispara por (cliente, buffer)
+    ["<leader>jtc"] = "jdtls_config.lua",
+    ["<leader>jtm"] = "jdtls_config.lua",
+    ["<leader>jdi"] = "jdtls_config.lua",
+    ["<leader>jev"] = "jdtls_config.lua",
+    ["<leader>jec"] = "jdtls_config.lua",
+    ["<leader>jem"] = "jdtls_config.lua",
 
     -- o LspAttach dispara por (cliente, buffer), então reexecuta num `:e!`
     ["gD"] = "nvim_lsp_config.lua",
