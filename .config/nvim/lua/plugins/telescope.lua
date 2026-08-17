@@ -5,6 +5,7 @@ return {
     dependencies = {
         "nvim-lua/plenary.nvim",
         "nvim-telescope/telescope-ui-select.nvim",
+        "nvim-tree/nvim-web-devicons",
         -- nice to have: telescope-file-browser, telescope-frecency, telescope-zoxide, telescope-dict
         {
             "nvim-telescope/telescope-fzf-native.nvim",
