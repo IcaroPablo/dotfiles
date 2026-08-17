@@ -1,3 +1,5 @@
+local map = require("core.map")
+
 return {
     "lewis6991/gitsigns.nvim",
     dependencies = { "nvim-lua/plenary.nvim" },
@@ -8,34 +10,31 @@ return {
                 { toplevel = vim.env.HOME, gitdir = vim.env.HOME .. "/.config/dotfiles" },
             },
             on_attach = function(bufnr)
-                local function map(mode, l, r, opts)
-                    opts = opts or {}
-                    opts.buffer = bufnr
-                    vim.keymap.set(mode, l, r, opts)
-                end
+                local gs = require("gitsigns")
+                local opts = { buffer = bufnr }
 
-                map("n", "]c", function()
+                map.set("n", "]c", function()
                     if vim.wo.diff then
                         vim.cmd.normal({ "]c", bang = true })
                     else
-                        require("gitsigns").nav_hunk("next")
+                        gs.nav_hunk("next")
                     end
-                end)
+                end, opts)
 
-                map("n", "[c", function()
+                map.set("n", "[c", function()
                     if vim.wo.diff then
                         vim.cmd.normal({ "[c", bang = true })
                     else
-                        require("gitsigns").nav_hunk("prev")
+                        gs.nav_hunk("prev")
                     end
-                end)
+                end, opts)
 
-                map("n", "<leader>hr", require("gitsigns").reset_hunk)
-                map("n", "<leader>hR", require("gitsigns").reset_buffer)
-                map("n", "<leader>hp", require("gitsigns").preview_hunk)
-                map("n", "<leader>td", require("gitsigns").preview_hunk_inline)
+                map.set("n", "<leader>hr", gs.reset_hunk, opts)
+                map.set("n", "<leader>hR", gs.reset_buffer, opts)
+                map.set("n", "<leader>hp", gs.preview_hunk, opts)
+                map.set("n", "<leader>td", gs.preview_hunk_inline, opts)
 
-                map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>")
+                map.set({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", opts)
             end,
         })
     end,

@@ -1,3 +1,5 @@
+local map = require("core.map")
+
 return {
     "nvim-telescope/telescope.nvim",
     dependencies = {
@@ -10,6 +12,8 @@ return {
         },
     },
     config = function()
+        local root = require("core.root")
+
         require("telescope").setup({
             defaults = {
                 path_display = {
@@ -56,20 +60,20 @@ return {
         -- map("n", "<leader>gs", "<cmd>Telescope git_status<CR>", { silent = true, noremap = true })
         -- map("n", "<leader>gb", "<cmd>Telescope git_bcommits<CR>", { silent = true, noremap = true })
         -- map("n", "<leader>gc", "<cmd>Telescope git_commits<CR>", { silent = true, noremap = true })
-        vim.keymap.set("n", "<leader><Tab>", require("telescope.builtin").buffers, { noremap = true, silent = true })
-        vim.keymap.set("n", "<leader>o", require("telescope.builtin").oldfiles, { noremap = true, silent = true })
-        vim.keymap.set("n", "<leader>f", function()
-            require("telescope.builtin").find_files({ hidden = true, cwd = vim.fs.root(0, { ".git", "mvnw", "gradlew", "pom.xml", "lazy-lock.json" }) })
-        end, { noremap = true, silent = true })
-        vim.keymap.set("n", "<leader>s", function()
-            require("telescope.builtin").git_files({ hidden = true, cwd = vim.fs.root(0, { ".git", "mvnw", "gradlew", "pom.xml", "lazy-lock.json" }) })
-        end, { noremap = true, silent = true })
-        vim.keymap.set("n", "<leader>g", function()
-            require("telescope.builtin").live_grep({ hidden = true, cwd = vim.fs.root(0, { ".git", "mvnw", "gradlew", "pom.xml", "lazy-lock.json" }) })
-        end, { noremap = true, silent = true })
-        vim.keymap.set("n", "<leader>d", function()
+        map.set("n", "<leader><Tab>", require("telescope.builtin").buffers)
+        map.set("n", "<leader>o", require("telescope.builtin").oldfiles)
+        map.set("n", "<leader>f", function()
+            require("telescope.builtin").find_files({ hidden = true, cwd = root.dir() })
+        end)
+        map.set("n", "<leader>s", function()
+            require("telescope.builtin").git_files({ hidden = true, cwd = root.dir() })
+        end)
+        map.set("n", "<leader>g", function()
+            require("telescope.builtin").live_grep({ hidden = true, cwd = root.dir() })
+        end)
+        map.set("n", "<leader>d", function()
             require("telescope.builtin").diagnostics({ severity_bound = 0 })
-        end, { noremap = true, silent = true })
+        end)
         -- nnoremap("<leader>fm", "<cmd>Telescope marks<cr>", "Find mark")
         -- nnoremap("<leader>fr", "<cmd>Telescope lsp_references<cr>", "Find references (LSP)")
         -- nnoremap("<leader>fs", "<cmd>Telescope lsp_document_symbols<cr>", "Find symbols (LSP)")
