@@ -6,9 +6,8 @@
 --  ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝     ╚═╝ ╚═════╝
 
 -- ── Statusline / mensagens ───────────────────────────────────────────────────
--- vim.opt.laststatus = 2 -- redundante: já é o default (e o lualine cuida da statusline)
--- vim.opt.statusline=%F%m%r%h%w\ [FORMAT=%{&ff}]\ [TYPE=%Y]\ [POS=%l,%v][%p%%]\ [BUFFER=%n]\ %{strftime('%c')} -- statusline manual antiga; hoje é o lualine
-vim.opt.showmode = false -- não mostra "-- INSERT --": o lualine já exibe o modo
+vim.opt.statusline = "%!v:lua.require'core.statusline'.render()"
+vim.opt.showmode = false -- não mostra "-- INSERT --": a statusline já exibe o modo
 vim.opt.showcmd = false -- não mostra o comando parcial no canto inferior direito
 
 -- ── Aparência ────────────────────────────────────────────────────────────────
