@@ -60,7 +60,9 @@ start() {
         else
             dotgit init --bare "$DOTFILES_BARE_REPO"
             dotgit branch -m main
-            dotgit config --local status.showUntrackedFiles no
+            # sem showUntrackedFiles=no: o ~/.gitignore é uma whitelist
+            # (ignora tudo, libera o versionado), então o status já vem limpo
+            # e arquivo novo dentro do que é versionado continua aparecendo.
             grep -q "$dotfiles_repo" "$HOME/.gitignore" 2>/dev/null \
                 || printf '%s\n' "$dotfiles_repo" >> "$HOME/.gitignore"
         fi
