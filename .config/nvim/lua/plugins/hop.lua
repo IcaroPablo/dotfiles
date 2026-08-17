@@ -1,3 +1,5 @@
+local map = require("core.map")
+
 return {
     "smoka7/hop.nvim",
     config = function()
@@ -10,19 +12,19 @@ return {
 
         local directions = require("hop.hint").HintDirection
 
-        vim.keymap.set("", "f", function()
+        map.set("", "f", function()
             hop.hint_char1({ direction = directions.AFTER_CURSOR, current_line_only = true })
         end, { remap = true })
-        vim.keymap.set("", "F", function()
+        map.set("", "F", function()
             hop.hint_char1({ direction = directions.BEFORE_CURSOR, current_line_only = true })
         end, { remap = true })
-        vim.keymap.set("", "t", function()
+        map.set("", "t", function()
             hop.hint_char1({ direction = directions.AFTER_CURSOR, current_line_only = true, hint_offset = -1 })
         end, { remap = true })
-        vim.keymap.set("", "T", function()
+        map.set("", "T", function()
             hop.hint_char1({ direction = directions.BEFORE_CURSOR, current_line_only = true, hint_offset = 1 })
         end, { remap = true })
-        vim.keymap.set("", "<leader>l", function()
+        map.set("", "<leader>l", function()
             hop.hint_vertical()
         end, { remap = true })
         -- vim.keymap.set('', '<leader>c', ':HopCamelCaseCurrentLine<CR>', {remap=true})

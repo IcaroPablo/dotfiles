@@ -2,13 +2,17 @@
 -- keymaps comuns de LSP (gd, K, gr, <leader>ca/cf, diagnósticos…) vêm do
 -- autocmd LspAttach global em after/plugin/nvim_lsp_config.lua.
 
+local map = require("core.map")
+
+local root = require("core.root")
+
 -- Rodar testes via Maven num terminal buffer.
 -- Prefere `mvn`; se ausente, cai pro `./mvnw` do projeto; erro se nenhum.
 local function maven_bin()
     if vim.fn.executable("mvn") == 1 then
         return "mvn"
     end
-    local wroot = vim.fs.root(0, { "mvnw" })
+    local wroot = root.nearest({ "mvnw" })
     if wroot and vim.fn.executable(wroot .. "/mvnw") == 1 then
         return wroot .. "/mvnw"
     end
@@ -37,8 +41,8 @@ end
 
 -- roda `mvn test -Dtest=<spec>` da raiz do projeto num split de terminal
 local function run_maven_test(spec)
-    local root = vim.fs.root(0, { "pom.xml" })
-    if not root then
+    local pom_dir = root.nearest({ "pom.xml" })
+    if not pom_dir then
         vim.notify("pom.xml não encontrado (raiz do projeto)", vim.log.levels.WARN)
         return
     end
@@ -49,7 +53,7 @@ local function run_maven_test(spec)
     end
     vim.cmd("botright new")
     vim.cmd("resize 18")
-    vim.fn.termopen({ mvn, "test", "-Dtest=" .. spec }, { cwd = root })
+    vim.fn.termopen({ mvn, "test", "-Dtest=" .. spec }, { cwd = pom_dir })
 end
 
 -- refactor do jdtls via code action nativa (kind específico, aplica direto)
@@ -59,12 +63,12 @@ local function code_action(kind)
     end
 end
 
-local opts = { buffer = true, noremap = true, silent = true }
+local opts = { buffer = true }
 
-vim.keymap.set("n", "<leader>jtc", function()
+map.set("n", "<leader>jtc", function()
     run_maven_test(vim.fn.expand("%:t:r"))
 end, opts)
-vim.keymap.set("n", "<leader>jtm", function()
+map.set("n", "<leader>jtm", function()
     local m = enclosing_method()
     if not m then
         vim.notify("nenhum método de teste sob o cursor", vim.log.levels.WARN)
@@ -73,10 +77,10 @@ vim.keymap.set("n", "<leader>jtm", function()
     run_maven_test(vim.fn.expand("%:t:r") .. "#" .. m)
 end, opts)
 
-vim.keymap.set("n", "<leader>jdi", code_action("source.organizeImports"), opts)
-vim.keymap.set({ "n", "v" }, "<leader>jev", code_action("refactor.extract.variable"), opts)
-vim.keymap.set("v", "<leader>jec", code_action("refactor.extract.constant"), opts)
-vim.keymap.set("v", "<leader>jem", code_action("refactor.extract.method"), opts)
+map.set("n", "<leader>jdi", code_action("source.organizeImports"), opts)
+map.set({ "n", "v" }, "<leader>jev", code_action("refactor.extract.variable"), opts)
+map.set("v", "<leader>jec", code_action("refactor.extract.constant"), opts)
+map.set("v", "<leader>jem", code_action("refactor.extract.method"), opts)
 
-vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, opts)
-vim.keymap.set("n", "<C-k>", vim.lsp.buf.signature_help, opts)
+map.set("n", "<leader>rn", vim.lsp.buf.rename, opts)
+map.set("n", "<C-k>", vim.lsp.buf.signature_help, opts)

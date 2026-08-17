@@ -1,3 +1,5 @@
+local map = require("core.map")
+
 return {
     "Shatur/neovim-session-manager",
     dependencies = {
@@ -6,13 +8,14 @@ return {
     },
     config = function()
         local Path = require("plenary.path")
+        local root = require("core.root")
 
         local config = require("session_manager.config").defaults
 
         config.dir_to_session_filename = function()
             local path_replacer = "__"
             local colon_replacer = "++"
-            local root_folder = get_root() or vim.uv.cwd()
+            local root_folder = root.dir()
 
             local filename = root_folder:gsub(":", colon_replacer)
 
@@ -32,11 +35,11 @@ return {
             pattern = "SessionLoadPost",
             group = config_group,
             callback = function()
-                vim.cmd("cd " .. (get_root() or vim.uv.cwd()))
+                vim.cmd.cd(root.dir())
             end,
         })
 
-        vim.keymap.set("n", "<leader>Sl", ":SessionManager load_session<CR>", { noremap = true, silent = true }) -- Load session
-        vim.keymap.set("n", "<leader>Sd", ":SessionManager delete_session<CR>", { noremap = true, silent = true }) -- Delete session
+        map.set("n", "<leader>Sl", ":SessionManager load_session<CR>") -- Load session
+        map.set("n", "<leader>Sd", ":SessionManager delete_session<CR>") -- Delete session
     end,
 }
