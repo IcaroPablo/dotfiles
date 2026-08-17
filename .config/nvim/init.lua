@@ -61,6 +61,10 @@ vim.opt.mouse = "a" -- pretend you didn't see this shit here
 
 vim.g.mapleader = " " -- tecla líder = espaço
 
+-- Todo mapeamento da config passa pelo map.set. Vem depois do mapleader, pra
+-- `<leader>` já resolver certo.
+local map = require("core.map")
+
 if not vim.loader.enabled then
     vim.loader.enable()
 end
@@ -94,17 +98,15 @@ end
 --     end
 -- end, {})
 
-function GetRoot()
-    return vim.fs.root(0, { ".git", ".gitignore", "mvnw", "gradlew", "pom.xml" })
-end
+local root = require("core.root")
 
 vim.api.nvim_create_user_command("Dig", function()
-    local root_dir = GetRoot()
+    local root_dir = root.project()
 
     if root_dir ~= nil then
-        vim.cmd("cd " .. root_dir)
+        vim.cmd.cd(root_dir)
     else
-        print("root not found")
+        vim.notify("raiz do projeto não encontrada", vim.log.levels.WARN)
     end
 end, {})
 
@@ -122,6 +124,18 @@ vim.api.nvim_create_user_command("StyluaConfig", function()
         vim.notify("StyLua: config formatada", vim.log.levels.INFO)
     end
 end, {})
+
+vim.api.nvim_create_user_command("MapCheck", function()
+    local out = map.check()
+    vim.notify(#out > 0 and table.concat(out, "\n") or "keymaps: sem choque")
+end, {})
+
+vim.api.nvim_create_autocmd("VimEnter", {
+    group = vim.api.nvim_create_augroup("map_check", { clear = true }),
+    callback = function()
+        vim.schedule(map.notify)
+    end,
+})
 
 -- Salva a saída de :messages num arquivo (útil pra depurar)
 vim.api.nvim_create_user_command("LogMessages", function()
@@ -168,12 +182,12 @@ require("lazy").setup({ { import = "plugins" } }, {
 -- ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝     ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝
 
 -- easily manage buffers
-vim.keymap.set("n", "<Tab>", ":bnext<CR>:redraw<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<S-Tab>", ":bprevious<CR>:redraw<CR>", { noremap = true, silent = true })
+map.set("n", "<Tab>", ":bnext<CR>:redraw<CR>")
+map.set("n", "<S-Tab>", ":bprevious<CR>:redraw<CR>")
 
 -- Fecha janela/buffer de forma "inteligente": se o buffer está aberto em várias
 -- janelas, fecha só esta janela; senão remove o buffer.
-vim.keymap.set("n", "<leader>q", function()
+map.set("n", "<leader>q", function()
     local buf = vim.api.nvim_get_current_buf()
     local wins_in_tab = vim.fn.tabpagewinnr(vim.fn.tabpagenr(), "$")
     local wins_with_buf = #vim.fn.win_findbuf(buf)
@@ -182,10 +196,10 @@ vim.keymap.set("n", "<leader>q", function()
     else
         vim.cmd("bdelete!")
     end
-end, { noremap = true, silent = true })
+end)
 
-vim.keymap.set("n", "<leader>n", ":enew | startinsert<CR>", { noremap = true, silent = true }) -- New file
-vim.keymap.set("n", "<leader>C", ":e $HOME/.config/nvim/init.lua<CR>", { noremap = true, silent = true }) -- Configs
+map.set("n", "<leader>n", ":enew | startinsert<CR>") -- New file
+map.set("n", "<leader>C", ":e $HOME/.config/nvim/init.lua<CR>") -- Configs
 
 -- map("n", "<A-<>", "<cmd>BufferMovePrevious<CR>", { silent = true, noremap = true })
 -- map("n", "<A->>", "<cmd>BufferMoveNext<CR>", { silent = true, noremap = true })
@@ -213,18 +227,18 @@ vim.keymap.set("n", "<leader>C", ":e $HOME/.config/nvim/init.lua<CR>", { noremap
 -- vim.keymap.set("", "<c-left>", "<c-w>>", { noremap = true, silent = true })
 -- vim.keymap.set("", "<c-right>", "<c-w><", { noremap = true, silent = true })
 
-vim.keymap.set("", "<c-h>", "<c-w>>", { noremap = true, silent = true })
-vim.keymap.set("", "<c-k>", "<c-w>+", { noremap = true, silent = true })
-vim.keymap.set("", "<c-j>", "<c-w>-", { noremap = true, silent = true })
-vim.keymap.set("", "<c-l>", "<c-w><", { noremap = true, silent = true })
+map.set("", "<c-h>", "<c-w>>")
+map.set("", "<c-k>", "<c-w>+")
+map.set("", "<c-j>", "<c-w>-")
+map.set("", "<c-l>", "<c-w><")
 
 -- move lines up and down using alt key
-vim.keymap.set("n", "<A-j>", ":m .+1<CR>==", { noremap = true, silent = true })
-vim.keymap.set("n", "<A-k>", ":m .-2<CR>==", { noremap = true, silent = true })
-vim.keymap.set("i", "<A-j>", "<Esc>:m .+1<CR>==gi", { noremap = true, silent = true })
-vim.keymap.set("i", "<A-k>", "<Esc>:m .-2<CR>==gi", { noremap = true, silent = true })
-vim.keymap.set("v", "<A-j>", ":m '>+1<CR>gv=gv", { noremap = true, silent = true })
-vim.keymap.set("v", "<A-k>", ":m '<-2<CR>gv=gv", { noremap = true, silent = true })
+map.set("n", "<A-j>", ":m .+1<CR>==")
+map.set("n", "<A-k>", ":m .-2<CR>==")
+map.set("i", "<A-j>", "<Esc>:m .+1<CR>==gi")
+map.set("i", "<A-k>", "<Esc>:m .-2<CR>==gi")
+map.set("v", "<A-j>", ":m '>+1<CR>gv=gv")
+map.set("v", "<A-k>", ":m '<-2<CR>gv=gv")
 
 -- utils
 -- function open_terminal_in(project_folder)
@@ -259,25 +273,25 @@ vim.keymap.set("v", "<A-k>", ":m '<-2<CR>gv=gv", { noremap = true, silent = true
 -- end, { noremap = true, silent = true })
 
 -- navigate quickfixes
-vim.keymap.set("n", "<c-p>", ":cprev<CR>zz", { noremap = true, silent = true })
-vim.keymap.set("n", "<c-n>", ":cnext<CR>zz", { noremap = true, silent = true })
+map.set("n", "<c-p>", ":cprev<CR>zz")
+map.set("n", "<c-n>", ":cnext<CR>zz")
 
 -- center search results
 -- vim.keymap.set("n", "n", "nzz", {noremap = true, silent = true})
 -- vim.keymap.set("n", "N", "Nzz", {noremap = true, silent = true})
-vim.keymap.set("n", "<C-d>", "<C-d>zz")
-vim.keymap.set("n", "<C-u>", "<C-u>zz")
-vim.keymap.set("n", "<C-o>", "<C-o>zz")
-vim.keymap.set("n", "<C-i>", "<C-i>zz")
+map.set("n", "<C-d>", "<C-d>zz")
+map.set("n", "<C-u>", "<C-u>zz")
+map.set("n", "<C-o>", "<C-o>zz")
+map.set("n", "<C-i>", "<C-i>zz")
 -- vim.keymap.set("n", "#", "#zz", { silent = true, noremap = true })
 -- vim.keymap.set("n", "g*", "g*zz", { silent = true, noremap = true })
 -- vim.keymap.set("n", "g#", "g#zz", { silent = true, noremap = true })
-vim.keymap.set("n", "<leader>w", "*N", { silent = true, noremap = true })
-vim.keymap.set("x", "<leader>p", [["_dP]])
+map.set("n", "<leader>w", "*N")
+map.set("x", "<leader>p", [["_dP]])
 -- vim.keymap.set("n", "<leader>ra", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 
 -- deactivate space because of annoying behaviour since its my leader key :)
-vim.keymap.set("n", "<Space>", "<Nop>", { noremap = true, silent = true })
+map.set("n", "<Space>", "<Nop>")
 
 -- word substitution
 -- vim.keymap.set("n", "<C-j>", "ciw<C-r>0<ESC>", {silent = true})
@@ -285,10 +299,10 @@ vim.keymap.set("n", "<Space>", "<Nop>", { noremap = true, silent = true })
 -- vim.keymap.set("n", "<Leader>jq", ":%!jq '.'<CR>", { silent = true })
 
 -- other niceties
-vim.keymap.set("v", "<", "<gv", { silent = true, noremap = true })
-vim.keymap.set("v", ">", ">gv", { silent = true, noremap = true })
-vim.keymap.set("n", "<Leader><Leader>", ":write<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<c-[>", "<esc>:nohlsearch<CR>", { silent = true })
+map.set("v", "<", "<gv")
+map.set("v", ">", ">gv")
+map.set("n", "<Leader><Leader>", ":write<CR>")
+map.set("n", "<c-[>", "<esc>:nohlsearch<CR>")
 
 -- Avalia o texto selecionado como script no shell padrão e abre a saída num buffer.
 function PipeToCommand()
@@ -306,5 +320,5 @@ function PipeToCommand()
     vim.api.nvim_buf_set_lines(0, 0, -1, false, output)
 end
 
-vim.keymap.set("x", "<leader>R", ":lua PipeToCommand()<CR>", { noremap = true, silent = true })
-vim.keymap.set("n", "<leader>R", "vip:lua PipeToCommand()<CR>", { noremap = true, silent = true })
+map.set("x", "<leader>R", ":lua PipeToCommand()<CR>")
+map.set("n", "<leader>R", "vip:lua PipeToCommand()<CR>")

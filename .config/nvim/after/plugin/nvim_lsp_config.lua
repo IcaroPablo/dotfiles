@@ -3,6 +3,8 @@
 -- ════════════════════════════════════════════════════════════════════════════
 
 -- ── Capabilities + config global (aplicada a todos os servers) ───────────────
+local map = require("core.map")
+
 local caps = require("cmp_nvim_lsp").default_capabilities()
 caps.textDocument.completion.completionItem.snippetSupport = true
 
@@ -17,32 +19,32 @@ vim.lsp.config("*", {
 -- ── Keymaps por buffer quando um LSP anexa (:h lsp-attach) ───────────────────
 vim.api.nvim_create_autocmd("LspAttach", {
     callback = function(args)
-        local bufopts = { noremap = true, silent = true, buffer = args.buf }
+        local bufopts = { buffer = args.buf }
 
         -- diagnósticos
-        vim.keymap.set("n", "<Leader>e", vim.diagnostic.open_float, bufopts)
-        vim.keymap.set("n", "[d", function()
+        map.set("n", "<Leader>e", vim.diagnostic.open_float, bufopts)
+        map.set("n", "[d", function()
             vim.diagnostic.jump({ count = -1 })
         end, bufopts)
-        vim.keymap.set("n", "]d", function()
+        map.set("n", "]d", function()
             vim.diagnostic.jump({ count = 1 })
         end, bufopts)
 
         -- navegação e ações
-        vim.keymap.set("n", "gD", vim.lsp.buf.declaration, bufopts)
-        vim.keymap.set("n", "gd", vim.lsp.buf.definition, bufopts)
-        vim.keymap.set("n", "gi", vim.lsp.buf.implementation, bufopts)
-        vim.keymap.set("n", "gr", vim.lsp.buf.references, bufopts)
-        vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, bufopts)
-        vim.keymap.set("n", "K", vim.lsp.buf.hover, bufopts)
-        vim.keymap.set({ "n", "v" }, "<Leader>ca", vim.lsp.buf.code_action, bufopts)
-        vim.keymap.set("n", "<Leader>cf", function()
+        map.set("n", "gD", vim.lsp.buf.declaration, bufopts)
+        map.set("n", "gd", vim.lsp.buf.definition, bufopts)
+        map.set("n", "gi", vim.lsp.buf.implementation, bufopts)
+        map.set("n", "gr", vim.lsp.buf.references, bufopts)
+        map.set("n", "gt", vim.lsp.buf.type_definition, bufopts)
+        map.set("n", "K", vim.lsp.buf.hover, bufopts)
+        map.set({ "n", "v" }, "<Leader>ca", vim.lsp.buf.code_action, bufopts)
+        map.set("n", "<Leader>cf", function()
             vim.lsp.buf.format({ async = true })
         end, bufopts)
         -- vim.keymap.set("n", "<Leader>wa", vim.lsp.buf.add_workspace_folder, bufopts)
         -- vim.keymap.set("n", "<Leader>wr", vim.lsp.buf.remove_workspace_folder, bufopts)
         -- vim.keymap.set("n", "<Leader>wl", function() print(vim.inspect(vim.lsp.buf.list_workspace_folders())) end, bufopts)
-        vim.keymap.set("n", "<Leader>rn", vim.lsp.buf.rename, bufopts)
+        map.set("n", "<Leader>rn", vim.lsp.buf.rename, bufopts)
     end,
 })
 
@@ -60,8 +62,8 @@ vim.diagnostic.config({
     signs = true,
     --[[ virtual_text = {
         show = false,
-		prefix = "",
-	}, ]]
+        prefix = "",
+    }, ]]
     -- update_in_insert = false,
     -- severity_sort = true,
 })
