@@ -24,11 +24,11 @@ local M = {}
 --   mvnw/gradlew    raiz do build quando o repo não é git
 --   pom.xml         projeto Java solto
 --   build.gradle    idem, Gradle
---   lazy-lock.json  a própria config do nvim, que não tem .git (os dotfiles são
+--   nvim-pack-lock  a própria config do nvim, que não tem .git (os dotfiles são
 --                   um bare repo em ~/.config/dotfiles)
 --   .gitignore      último recurso: o $HOME, work-tree dos dotfiles. Só alcança
 --                   arquivos que não casaram com nada acima.
-M.markers = { ".git", "mvnw", "gradlew", "pom.xml", "build.gradle", "lazy-lock.json", ".gitignore" }
+M.markers = { ".git", "mvnw", "gradlew", "pom.xml", "build.gradle", "nvim-pack-lock.json", ".gitignore" }
 
 --- Raiz do projeto do buffer, ou nil se não houver nenhuma.
 ---@param bufnr integer|nil buffer (default: o atual)
