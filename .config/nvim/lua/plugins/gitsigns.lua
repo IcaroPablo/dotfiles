@@ -32,7 +32,7 @@ return {
                 map.set("n", "<leader>hr", gs.reset_hunk, opts)
                 map.set("n", "<leader>hR", gs.reset_buffer, opts)
                 map.set("n", "<leader>hp", gs.preview_hunk, opts)
-                map.set("n", "<leader>td", gs.preview_hunk_inline, opts)
+                map.set("n", "<leader>hi", gs.preview_hunk_inline, opts)
 
                 map.set({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", opts)
             end,
