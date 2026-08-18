@@ -3,3 +3,6 @@ font-family = "MonaspiceRn NFM"
 adjust-cell-width = -5%
 window-padding-x = 30
 window-padding-y = 30
+
+# fecha janela/split sem perguntar (dvtm sempre aparece como processo ativo)
+confirm-close-surface = false
