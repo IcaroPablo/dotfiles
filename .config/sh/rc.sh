@@ -10,10 +10,6 @@ ulimit -c 0 2>/dev/null || true
 
 [ -n "${INITIAL_FOLDER:-}" ] && cd "$INITIAL_FOLDER"
 
-if have zoxide; then
-    eval "$(zoxide init posix --cmd z 2>/dev/null)" 2>/dev/null || true
-fi
-
 e() {
     clear 2>/dev/null || true
     if have eza; then
@@ -23,23 +19,33 @@ e() {
     fi
 }
 
+# ponto único de navegação e abertura. todo diretório alcançado por aqui é
+# registrado no zoxide -- é o que substitui o hook do `zoxide init`:
+#   c            consome a seleção pendente (1 dir desce, arquivos -> openfile)
+#   c <dir>      cd
+#   c <arquivo>  openfile
+#   c <query>    salto no zoxide: match único vai direto, ambíguo abre o picker
 c() {
     _c_start="$(pwd)"
 
     if [ -n "$1" ]; then
-        if [ ! -e "$1" ] && have "$1"; then
-            interactive-select || { unset _c_start; return; }
-            [ -s "$CLIPFILE" ] && xargs -0 "$@" < "$CLIPFILE"
-            unset _c_start; return
-        fi
         if [ -f "$1" ]; then
             openfile "$@"
             unset _c_start; return
         fi
         if [ -d "$1" ]; then
             cd "$1" || { unset _c_start; return; }
-        elif have zi; then
-            zi "$1"
+        elif have zoxide; then
+            # query -l sai 0 com stdout vazio quando não há match
+            _c_hits="$(zoxide query -l -- "$1" 2>/dev/null)"
+            if [ -n "$_c_hits" ]; then
+                if [ "$(printf '%s\n' "$_c_hits" | wc -l | tr -d '[:space:]')" = 1 ]; then
+                    _c_hit="$_c_hits"
+                else
+                    _c_hit="$(zoxide query -i -- "$1" 2>/dev/null)"
+                fi
+                [ -n "$_c_hit" ] && cd "$_c_hit"
+            fi
         fi
         [ "$_c_start" = "$(pwd)" ] && { unset _c_start; return; }
     fi
@@ -56,8 +62,11 @@ c() {
         break
     done
 
-    [ "$_c_start" != "$(pwd)" ] && e
-    unset _c_start _c_n _c_entry
+    if [ "$_c_start" != "$(pwd)" ]; then
+        have zoxide && zoxide add -- "$(pwd)"
+        e
+    fi
+    unset _c_start _c_n _c_entry _c_hits _c_hit
 }
 
 hist() {
@@ -96,6 +105,11 @@ see() { tee /dev/tty; }
 p() { [ -s "$CLIPFILE" ] && xargs -0 -I{} cp -Rv -- {} . < "$CLIPFILE"; }
 m() { [ -s "$CLIPFILE" ] && xargs -0 -I{} mv -v -- {} . < "$CLIPFILE" && : > "$CLIPFILE"; }
 
+so() {
+    interactive-select || return
+    [ -s "$CLIPFILE" ] && xargs -0 openfile < "$CLIPFILE"
+}
+
 # o -c cria o fifo de comandos e exporta DVTM_CMD_FIFO aos painéis: é por ele que
 # o nvim pede um painel novo
 dvtm() { command dvtm -c "${TMPDIR:-/tmp}/dvtm.$$.cmd" "$@"; }
@@ -109,7 +123,6 @@ alias nvim="launch_nvim"
 alias rm="rm -i"
 alias s="interactive-select"
 alias sa="interactive-select --show-hidden"
-alias so="c openfile"
 alias ss="split_scr"
 alias t="trash"
 alias u="cd .. && e"
