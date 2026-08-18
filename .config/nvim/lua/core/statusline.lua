@@ -25,6 +25,15 @@ local function escape(s)
     return (s:gsub("%%", "%%%%"))
 end
 
+--- Largura de um trecho que JÁ contém marcações de statusline. O
+--- vim.diagnostic.status() devolve grupos de destaque embutidos
+--- (`%#DiagnosticSignError#E:1 …`), que ocupam zero coluna na tela mas contam
+--- no strdisplaywidth — medir cru roubaria dezenas de colunas do path.
+local function largura(s)
+    local ok, res = pcall(vim.api.nvim_eval_statusline, s, { winid = vim.g.statusline_winid })
+    return ok and res.width or vim.fn.strdisplaywidth(s)
+end
+
 --- Encurta os diretórios da frente, um por vez, até caber no orçamento.
 --- Preserva os dois últimos diretórios e o nome do arquivo por inteiro.
 local function fit(path, budget)
@@ -61,7 +70,9 @@ function M.render()
     -- terminal (com laststatus=2 cada janela tem a sua statusline)
     local win = vim.g.statusline_winid
     local active = win == vim.api.nvim_get_current_win()
-    local width = vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_get_width(win) or vim.o.columns
+    local valida = vim.api.nvim_win_is_valid(win)
+    local width = valida and vim.api.nvim_win_get_width(win) or vim.o.columns
+    local buf = valida and vim.api.nvim_win_get_buf(win) or vim.api.nvim_get_current_buf()
 
     local parts = {}
     if active then
@@ -72,17 +83,42 @@ function M.render()
     end
     local left = table.concat(parts, "  ")
 
-    local right = filetype()
+    -- progresso só na janela ativa, como faz a statusline default do 0.12:
+    -- a mensagem é global e apareceria repetida em cada split
+    local segmentos = {}
+    if active then
+        local progresso = vim.ui.progress_status()
+        if progresso ~= "" then
+            segmentos[#segmentos + 1] = progresso
+        end
+    end
+    -- next() antes de status(): sem diagnóstico a função devolveria "" e o
+    -- separador ficaria sobrando
+    if next(vim.diagnostic.count(buf)) then
+        segmentos[#segmentos + 1] = vim.diagnostic.status(buf)
+    end
+    local ft = filetype()
+    if ft ~= "" then
+        segmentos[#segmentos + 1] = ft
+    end
+
+    local right = table.concat(segmentos, "  ")
     local tail = "  %p%%  %l:%c "
 
     local path = vim.fn.expand("%:p")
     if path == "" then
         path = "[sem nome]"
     end
-    local used = vim.fn.strdisplaywidth(left .. right .. tail) + 8
+    -- right não passa pelo escape: diagnostic.status() e progress_status() já
+    -- vêm com marcações de statusline, e dobrar os % as destruiria
+    -- left é texto puro; right e tail carregam marcações, então vão por largura()
+    local used = vim.fn.strdisplaywidth(left) + largura(right) + largura(tail) + 8
     path = fit(path, math.max(20, width - used))
 
-    return " " .. escape(left) .. (left == "" and "" or "  ") .. escape(path) .. "%m%=" .. escape(right) .. tail
+    -- %< marca onde o vim corta se ainda não couber: o fit() tem piso (preserva
+    -- os dois últimos diretórios), então em janela estreita sobra excesso. Sem
+    -- isso o corte cai em lugar arbitrário e come o lado direito.
+    return " " .. escape(left) .. (left == "" and "" or "  ") .. "%<" .. escape(path) .. "%m %=" .. right .. tail
 end
 
 return M
