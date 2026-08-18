@@ -182,6 +182,29 @@ end)
 map.set("n", "<leader>n", ":enew | startinsert<CR>") -- New file
 map.set("n", "<leader>C", ":e $HOME/.config/nvim/init.lua<CR>") -- Configs
 
+-- Painel do dvtm carregando o socket desta sessão: o launch_nvim de lá roteia os
+-- arquivos de volta pra cá em vez de abrir um nvim aninhado.
+local function dvtm_pane(dir)
+    local fifo = vim.env.DVTM_CMD_FIFO
+    if not fifo then
+        return vim.notify("sem DVTM_CMD_FIFO: o dvtm precisa do -c", vim.log.levels.WARN)
+    end
+    local f = io.open(fifo, "a")
+    if not f then
+        return vim.notify("não abriu " .. fifo, vim.log.levels.ERROR)
+    end
+    f:write(('create "INITIAL_FOLDER=%s NVIM=%s exec $SHELL"\n'):format(dir, vim.v.servername))
+    f:close()
+end
+
+map.set("n", "<leader>t", function()
+    dvtm_pane(vim.fn.expand("%:p:h"))
+end)
+
+map.set("n", "<leader>T", function()
+    dvtm_pane(require("core.root").dir() or vim.fn.expand("%:p:h"))
+end)
+
 -- map("n", "<A-<>", "<cmd>BufferMovePrevious<CR>", { silent = true, noremap = true })
 -- map("n", "<A->>", "<cmd>BufferMoveNext<CR>", { silent = true, noremap = true })
 -- map("n", "<A-1>", "<cmd>BufferGoto 1<CR>", { silent = true, noremap = true })

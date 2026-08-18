@@ -96,6 +96,10 @@ see() { tee /dev/tty; }
 p() { [ -s "$CLIPFILE" ] && xargs -0 -I{} cp -Rv -- {} . < "$CLIPFILE"; }
 m() { [ -s "$CLIPFILE" ] && xargs -0 -I{} mv -v -- {} . < "$CLIPFILE" && : > "$CLIPFILE"; }
 
+# o -c cria o fifo de comandos e exporta DVTM_CMD_FIFO aos painéis: é por ele que
+# o nvim pede um painel novo
+dvtm() { command dvtm -c "${TMPDIR:-/tmp}/dvtm.$$.cmd" "$@"; }
+
 alias a="create"
 alias doas="${DOAS} "
 alias ea="e -a"
