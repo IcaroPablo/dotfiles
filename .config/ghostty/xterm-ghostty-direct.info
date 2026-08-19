@@ -1,0 +1,43 @@
+# Ghostty, declared the way ncurses actually listens.
+#
+# xterm-ghostty says Tc and keeps colors#256. Tc is a tmux convention that
+# ncurses ignores; ncurses enters direct-colour mode only on the RGB
+# capability. So an ncurses program under xterm-ghostty cannot be handed a
+# 24-bit colour and approximates to the 256 palette -- visibly close, and not
+# the same: gruvbox #1d2021 comes out as #1c1c1c.
+#
+# The first use= wins, so this takes the colour machinery -- RGB,
+# colors#0x1000000 and the direct setaf/setab -- from xterm-direct, and
+# everything else from xterm-ghostty.
+#
+# The name must keep the xterm prefix. Ghostty's own config comment says it
+# sets TERM to xterm-ghostty rather than ghostty precisely because vim looks
+# for that prefix to enable modifyOtherKeys.
+#
+# Compile with an ncurses 6.1+ tic, and say where it goes. The tic shipped in
+# macOS is 6.0 and cannot store colors#0x1000000: it clamps it to 32767
+# without complaining, and the result paints garbage like ESC[38;5;8154980m.
+# Without -o it installs into $TERMINFO, which here is inside the Ghostty app
+# bundle, where an update would wipe it.
+#
+#   /opt/homebrew/opt/ncurses/bin/tic -x -o ~/.terminfo \
+#       ~/.config/ghostty/xterm-ghostty-direct.info
+#
+# Do NOT make this the global TERM on a system that also has an older ncurses.
+# colors#0x1000000 only fits the extended terminfo format, which arrived in
+# ncurses 6.1, and 6.0 does not report a partial read -- it says "unknown
+# terminal" and the program falls back to nothing. macOS ships 6.0 and every
+# tool in /usr/bin links it: measured on 2026-08-18, `TERM=xterm-ghostty-direct
+# less` prints "WARNING: terminal is not fully functional" and vi degrades.
+#
+# So point only the programs that need it at this entry:
+#
+#   alias dvtm='TERM=xterm-ghostty-direct dvtm'
+#
+# On a system with one modern ncurses everywhere, setting it globally is fine
+# (Ghostty: `term = xterm-ghostty-direct`).
+#
+# To undo: remove the entry from ~/.terminfo.
+xterm-ghostty-direct|ghostty with ncurses direct color,
+	use=xterm-direct,
+	use=xterm-ghostty,
