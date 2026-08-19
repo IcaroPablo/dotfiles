@@ -142,6 +142,23 @@ vim.lsp.config("lua_ls", {
     },
 })
 
+vim.lsp.config("clangd", {
+    -- Um binário só, já no PATH (Apple clangd 21) — nada do bootstrap que o
+    -- jdtls precisa. Por isso mora aqui, junto dos outros, e não em arquivo
+    -- separado.
+    cmd = {
+        "clangd",
+        "--background-index",
+        "--clang-tidy",
+        -- o projeto é C; sem isso o clangd insere include ao completar símbolo
+        "--header-insertion=never",
+    },
+    filetypes = { "c", "cpp", "objc", "objcpp" },
+    -- .clangd primeiro: é o que carrega as flags quando não há
+    -- compile_commands.json (caso do dvtm, que usa um .clangd estático).
+    root_markers = { ".clangd", "compile_commands.json", "compile_flags.txt", "Makefile", ".git" },
+})
+
 -- ── Servers habilitados ──────────────────────────────────────────────────────
 -- Sem nvim-lspconfig: cada server é self-contained (cmd/filetypes/root_markers
 -- definidos aqui; jdtls em jdtls_config.lua). Pra religar os comentados abaixo,
@@ -149,7 +166,7 @@ vim.lsp.config("lua_ls", {
 vim.lsp.enable({
     -- "pyright",
     -- "ts_ls",
-    -- "clangd",
+    "clangd",
     -- "vimls",
     -- "bashls",
     "texlab",
