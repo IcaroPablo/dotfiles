@@ -109,7 +109,25 @@ so() {
 
 # o -c cria o fifo de comandos e exporta DVTM_CMD_FIFO aos painéis: é por ele que
 # o nvim pede um painel novo
-dvtm() { command dvtm -c "${TMPDIR:-/tmp}/dvtm.$$.cmd" "$@"; }
+#
+# DVTM_OUTER_TERM é o TERM que o dvtm usa para pintar no terminal de verdade --
+# só faz sentido por máquina, então mora no rc local (.zshrc, .kshrc), não aqui.
+# Serve para apontar o dvtm a uma descrição com RGB, que é a única coisa que faz
+# o ncurses mandar cor de 24 bits. Vazio, e nada muda.
+#
+# Não confundir com DVTM_TERM, que é do próprio dvtm e diz o TERM dos painéis.
+# Este é o de fora; aquele é o de dentro.
+#
+# env, e não "TERM=... dvtm": a segunda forma faz o próprio shell tentar carregar
+# a descrição, e um ncurses antigo pode não conseguir lê-la -- o da Apple não
+# consegue ler as de cor direta.
+dvtm() {
+    if [ -n "$DVTM_OUTER_TERM" ]; then
+        env TERM="$DVTM_OUTER_TERM" dvtm -c "${TMPDIR:-/tmp}/dvtm.$$.cmd" "$@"
+    else
+        command dvtm -c "${TMPDIR:-/tmp}/dvtm.$$.cmd" "$@"
+    fi
+}
 
 alias a="create"
 alias doas="${DOAS} "
