@@ -21,7 +21,8 @@ e() {
 
 # ponto único de navegação e abertura. todo diretório alcançado por aqui é
 # registrado no zoxide -- é o que substitui o hook do `zoxide init`:
-#   c            consome a seleção pendente (1 dir desce, arquivos -> openfile)
+#   c            consome a seleção pendente, limpando-a (1 dir desce,
+#                arquivos -> openfile)
 #   c <dir>      cd
 #   c <arquivo>  openfile
 #   c <query>    salto no zoxide: match único vai direto, ambíguo abre o picker
@@ -47,20 +48,16 @@ c() {
                 [ -n "$_c_hit" ] && cd "$_c_hit"
             fi
         fi
-        [ "$_c_start" = "$(pwd)" ] && { unset _c_start; return; }
-    fi
-
-    while :; do
-        # interactive-select || break
-        [ -s "$CLIPFILE" ] || break
+    elif [ -s "$CLIPFILE" ]; then
         _c_n="$(tr -cd '\0' < "$CLIPFILE" | wc -c | tr -d '[:space:]')"
-        if [ "$_c_n" = 1 ]; then
-            _c_entry="$(tr -d '\0' < "$CLIPFILE")"
-            [ -d "$_c_entry" ] && { cd "$_c_entry" && continue; }
+        _c_entry="$(tr -d '\0' < "$CLIPFILE")"
+        if [ "$_c_n" = 1 ] && [ -d "$_c_entry" ]; then
+            cd "$_c_entry"
+        else
+            xargs -0 openfile < "$CLIPFILE"
         fi
-        xargs -0 openfile < "$CLIPFILE"
-        break
-    done
+        : > "$CLIPFILE"
+    fi
 
     if [ "$_c_start" != "$(pwd)" ]; then
         have zoxide && zoxide add -- "$(pwd)"
