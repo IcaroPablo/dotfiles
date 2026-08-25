@@ -17,49 +17,34 @@ e() {
 
 # ponto único de navegação e abertura. todo diretório alcançado por aqui é
 # registrado no zoxide -- é o que substitui o hook do `zoxide init`:
-#   c            consome a seleção pendente, limpando-a (1 dir desce,
-#                arquivos -> openfile)
-#   c <dir>      cd
-#   c <arquivo>  openfile
-#   c <query>    salto no zoxide: match único vai direto, ambíguo abre o picker
+#   c <dir>        cd
+#   c <arquivo>…   openfile
+#   c <query>      salto no zoxide: match único vai direto, ambíguo abre o picker
 c() {
+    [ -n "$1" ] || return
     _c_start="$(pwd)"
 
-    if [ -n "$1" ]; then
-        if [ -f "$1" ]; then
-            openfile "$@"
-            unset _c_start; return
-        fi
-        if [ -d "$1" ]; then
-            cd "$1" || { unset _c_start; return; }
-        elif have zoxide; then
-            # query -l sai 0 com stdout vazio quando não há match
-            _c_hits="$(zoxide query -l -- "$1" 2>/dev/null)"
-            if [ -n "$_c_hits" ]; then
-                if [ "$(printf '%s\n' "$_c_hits" | wc -l | tr -d '[:space:]')" = 1 ]; then
-                    _c_hit="$_c_hits"
-                else
-                    _c_hit="$(zoxide query -i -- "$1" 2>/dev/null)"
-                fi
-                [ -n "$_c_hit" ] && cd "$_c_hit"
-            fi
-        fi
-    elif [ -s "$CLIPFILE" ]; then
-        _c_n="$(tr -cd '\0' < "$CLIPFILE" | wc -c | tr -d '[:space:]')"
-        _c_entry="$(tr -d '\0' < "$CLIPFILE")"
-        if [ "$_c_n" = 1 ] && [ -d "$_c_entry" ]; then
-            cd "$_c_entry"
+    if [ -f "$1" ]; then
+        openfile "$@"
+    elif [ -d "$1" ]; then
+        cd "$1" || { unset _c_start; return; }
+    # query -l sai 0 com stdout vazio quando não há match
+    elif have zoxide && _c_hits="$(zoxide query -l -- "$1" 2>/dev/null)" && [ -n "$_c_hits" ]; then
+        if [ "$(printf '%s\n' "$_c_hits" | wc -l | tr -d '[:space:]')" = 1 ]; then
+            _c_hit="$_c_hits"
         else
-            xargs -0 openfile < "$CLIPFILE"
+            _c_hit="$(zoxide query -i -- "$1" 2>/dev/null)"
         fi
-        : > "$CLIPFILE"
+        [ -n "$_c_hit" ] && cd "$_c_hit"
+    else
+        printf 'c: %s: sem match\n' "$1" >&2
     fi
 
     if [ "$_c_start" != "$(pwd)" ]; then
         have zoxide && zoxide add -- "$(pwd)"
         e
     fi
-    unset _c_start _c_n _c_entry _c_hits _c_hit
+    unset _c_start _c_hits _c_hit
 }
 
 hist() {
@@ -95,12 +80,46 @@ hist() {
 
 see() { tee /dev/tty; }
 
-p() { [ -s "$CLIPFILE" ] && xargs -0 -I{} cp -Rv -- {} . < "$CLIPFILE"; }
-m() { [ -s "$CLIPFILE" ] && xargs -0 -I{} mv -v -- {} . < "$CLIPFILE" && : > "$CLIPFILE"; }
+p() { [ -s "$CLIPFILE" ] || return; while IFS= read -r _e; do cp -Rv -- "$_e" .; done < "$CLIPFILE"; unset _e; }
+m() { [ -s "$CLIPFILE" ] || return; while IFS= read -r _e; do mv -v -- "$_e" .; done < "$CLIPFILE"; : > "$CLIPFILE"; unset _e; }
 
-so() {
-    interactive-select || return
-    [ -s "$CLIPFILE" ] && xargs -0 openfile < "$CLIPFILE"
+# único selecionador. sem argumento só enche o clipboard, para p e m; com
+# argumento, o primeiro é um comando e a seleção vira o final dos args dele
+sel() {
+    if [ -n "$1" ]; then _sel_cmd="$1"; shift; else _sel_cmd=""; fi
+    _sel_ls='eza -1 --group-directories-first --no-quotes --icons always --color always'
+
+    _sel_out="$(eza -1 --group-directories-first --no-quotes --icons always --color always | fzf \
+        --ansi \
+        --multi \
+        --prompt="$(pwd)/" \
+        --bind 'tab:toggle+clear-query+down' \
+        --bind 'shift-tab:toggle+clear-query+up' \
+        --bind 'ctrl-t:toggle-all' \
+        --bind 'ctrl-e:deselect-all' \
+        --bind 'alt-j:jump,jump:toggle' \
+        --bind 'alt-g:first' \
+        --bind 'alt-G:last' \
+        --bind "alt-h:reload($_sel_ls -a)" \
+        --bind "alt-H:reload($_sel_ls)" \
+        --bind 'ctrl-l:accept' \
+        --height 100% \
+        --color=bg+:-1 \
+        --border=sharp \
+        --info=inline \
+        --reverse \
+        --preview 'p={}; preview "${p#* }"')" || return
+    [ -n "$_sel_out" ] || return 1
+
+    # o ícone do eza é um glifo mais um espaço; ${x#* } corta por byte e não por
+    # caractere, então não depende do locale
+    while IFS= read -r _sel_l; do abspath "${_sel_l#* }"; done > "$CLIPFILE" <<EOF
+$_sel_out
+EOF
+
+    while IFS= read -r _sel_e; do set -- "$@" "$_sel_e"; done < "$CLIPFILE"
+    [ -n "$_sel_cmd" ] && "$_sel_cmd" "$@"
+    unset _sel_cmd _sel_ls _sel_out _sel_l _sel_e
 }
 
 # o -c cria o fifo de comandos e exporta DVTM_CMD_FIFO aos painéis: é por ele que
@@ -132,8 +151,8 @@ alias f="findfile"
 alias g="simplegrep"
 alias nvim="launch_nvim"
 alias rm="rm -i"
-alias s="interactive-select"
-alias sa="interactive-select --show-hidden"
+alias s="sel"
+alias sc="sel c"
 alias ss="split_scr"
 alias t="trash"
 alias u="cd .. && e"
