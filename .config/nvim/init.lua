@@ -292,21 +292,9 @@ map.set("v", ">", ">gv")
 map.set("n", "<Leader><Leader>", ":write<CR>")
 map.set("n", "<c-[>", "<esc>:nohlsearch<CR>")
 
--- Avalia o texto selecionado como script no shell padrão e abre a saída num buffer.
-function PipeToCommand()
-    local first = vim.api.nvim_buf_get_mark(0, "<")[1]
-    local last = vim.api.nvim_buf_get_mark(0, ">")[1]
-    local script = table.concat(vim.api.nvim_buf_get_lines(0, first - 1, last, false), "\n")
+-- shpad: manda o parágrafo pro pane do shell. O módulo mora junto do resto do
+-- shpad, em ~/.config/sh/shpad, e não na árvore do nvim.
+package.path = package.path .. ";" .. vim.fn.expand("~/.config/sh/shpad") .. "/?.lua"
 
-    local res = vim.system({ vim.o.shell }, { stdin = script, text = true }):wait()
-    local output = vim.split((res.stdout or "") .. (res.stderr or ""), "\n")
-
-    vim.cmd("vnew")
-    vim.bo.buftype = "nofile"
-    vim.bo.bufhidden = "wipe"
-    vim.bo.swapfile = false
-    vim.api.nvim_buf_set_lines(0, 0, -1, false, output)
-end
-
-map.set("x", "<leader>R", ":lua PipeToCommand()<CR>")
-map.set("n", "<leader>R", "vip:lua PipeToCommand()<CR>")
+map.set("x", "<leader>R", ":lua require('shpad').run()<CR>")
+map.set("n", "<leader>R", "vip:lua require('shpad').run()<CR>")
