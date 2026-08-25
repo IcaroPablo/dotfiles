@@ -1,0 +1,5 @@
+#!/bin/sh
+#
+# shpad-edit - the editor pane. Its own file so the window is titled for it.
+
+exec nvim "${SHPAD_HISTORY:-$HOME/.local/share/history.sh}"
