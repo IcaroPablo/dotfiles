@@ -12,11 +12,7 @@ ulimit -c 0 2>/dev/null || true
 
 e() {
     clear 2>/dev/null || true
-    if have eza; then
-        eza -lh "$@" --group-directories-first --no-quotes --icons always --color always
-    else
-        ls -lhA "$@"
-    fi
+    eza -lh "$@" --group-directories-first --no-quotes --icons always --color always
 }
 
 # ponto único de navegação e abertura. todo diretório alcançado por aqui é
@@ -212,4 +208,4 @@ fi
 export PS1
 unset _m1 _m2 _pid
 
-if have eza; then e; fi
+e
