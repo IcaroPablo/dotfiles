@@ -1,9 +1,8 @@
 #!/bin/sh
 #
-# preview <file> — best-effort preview of <file>, used pelo fzf do
-# interactive-select. Toda ferramenta externa é opcional: faltando, o ramo cai
-# numa descrição de uma linha em vez de dar erro, então preview não depende de
-# nada além de um shell POSIX.
+# preview <file> — best-effort preview of <file>, usado pelo fzf do `sel`. Fora
+# do eza, toda ferramenta externa é opcional: faltando, o ramo cai numa descrição
+# de uma linha em vez de dar erro.
 
 # portable helpers (have/abspath/mimetype/batorcat) shared with openfile
 . "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" 2>/dev/null || true
