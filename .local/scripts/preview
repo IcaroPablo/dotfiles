@@ -17,7 +17,7 @@ desc() { have file && file -Lb "$1" || mimetype "$1" || printf '%s\n' "$1"; }
 handlenoextension() {
     case "$(mimetype "$1")" in
         text/*) batorcat "$1" ;;
-        inode/directory) have eza && eza -1 --group-directories-first --no-quotes --icons always -a "$1" || ls -1A "$1" ;;
+        inode/directory) eza -1 --group-directories-first --no-quotes --icons always -a "$1" ;;
         *) desc "$1" ;;
     esac
 }
