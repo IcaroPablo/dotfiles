@@ -108,8 +108,12 @@ function source:get_keyword_pattern()
     return [[\S\+]]
 end
 
+-- O espaço entra porque o cmp só pergunta quando o caractere antes do cursor é
+-- gatilho ou quando há keyword (source.lua:300). Depois de `make ` não há nenhuma
+-- das duas, e a fonte nunca era consultada -- que é o momento em que ela mais tem
+-- o que dizer.
 function source:get_trigger_characters()
-    return { "-", "/" }
+    return { " ", "-", "/" }
 end
 
 function source:complete(params, callback)
