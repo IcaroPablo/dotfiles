@@ -1,9 +1,4 @@
 #!/bin/sh
-#
-# shpad - abre o editor num painel ao lado e passa a ler comandos dele.
-#
-# Script e não função: como função o exec trocava o SEU shell interativo pelo
-# broker. Assim ele é filho, e ao sair você volta pro shell de onde chamou.
 
 set -e
 
