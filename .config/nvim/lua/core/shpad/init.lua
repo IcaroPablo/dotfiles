@@ -91,4 +91,31 @@ function M.run_paragraph()
     send(paragraph())
 end
 
+local cwd_cache, cwd_pending
+
+-- O cwd do shell do painel, não o do nvim: é contra ele que o carapace resolve
+-- branch de git e alvo de Makefile. lsof, e não /proc, porque é um caminho só --
+-- o OpenBSD traz fstat no base e precisaria de pkg_add lsof.
+--
+-- Volta do cache e atualiza em segundo plano: fica no máximo uma tecla atrasado
+-- depois de um cd, e nunca bloqueia o editor.
+function M.cwd()
+    local pid = vim.env.SHPAD_PID
+
+    if pid and pid ~= "" and not cwd_pending then
+        cwd_pending = true
+        local find = 'p=$(pgrep -P "$1" | head -1) && [ -n "$p" ] && lsof -a -p "$p" -d cwd -Fn'
+        vim.system({ "sh", "-c", find, "sh", pid }, { text = true }, function(res)
+            cwd_pending = false
+            for line in (res.stdout or ""):gmatch("[^\n]+") do
+                if line:sub(1, 2) == "n/" then
+                    cwd_cache = line:sub(2)
+                end
+            end
+        end)
+    end
+
+    return cwd_cache or vim.fn.getcwd()
+end
+
 return M

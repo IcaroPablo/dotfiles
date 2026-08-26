@@ -9,8 +9,7 @@ set -o vi 2>/dev/null || true
 ulimit -c 0 2>/dev/null || true
 
 # Painel do shpad guarda histórico à parte: comando que veio do editor não se
-# mistura ao do shell de sempre. Também tira o painel do HISTFILE vazio que o
-# .zshrc deixa, que faz o zsh reclamar ao sair.
+# mistura ao do shell de sempre.
 [ -n "${SHPAD_FIFO:-}" ] && export HISTFILE="$HOME/.shpad_history"
 
 [ -n "${INITIAL_FOLDER:-}" ] && cd "$INITIAL_FOLDER"

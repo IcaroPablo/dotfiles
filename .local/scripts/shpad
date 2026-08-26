@@ -5,10 +5,11 @@ set -e
 SHPAD_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/sh/shpad"
 SHPAD_HISTORY="${SHPAD_HISTORY:-$HOME/.local/share/history.sh}"
 SHPAD_FIFO="${TMPDIR:-/tmp}/shpad.$$.fifo"
+SHPAD_PID=$$
 
 # Exportado para que o rc do painel saiba que é um: é assim que ele ganha
 # HISTFILE próprio, e é por aqui que o painel pode se dirigir sozinho.
-export SHPAD_FIFO
+export SHPAD_FIFO SHPAD_PID
 
 if [ -z "$DVTM_CMD_FIFO" ]; then
     printf 'shpad: só funciona dentro do dvtm (DVTM_CMD_FIFO vazio)\n' >&2
@@ -25,8 +26,8 @@ mkdir -p "${SHPAD_HISTORY%/*}"
 
 # `env` inline porque o painel que o dvtm cria herda o ambiente DELE. O segundo
 # argumento é o título, senão a janela leva o basename do comando inteiro.
-printf 'create "env SHPAD_FIFO=%s %s %s" shpad\n' \
-    "$SHPAD_FIFO" "${EDITOR:-nvim}" "$SHPAD_HISTORY" > "$DVTM_CMD_FIFO"
+printf 'create "env SHPAD_FIFO=%s SHPAD_PID=%s %s %s" shpad\n' \
+    "$SHPAD_FIFO" "$SHPAD_PID" "${EDITOR:-nvim}" "$SHPAD_HISTORY" > "$DVTM_CMD_FIFO"
 
 # O shpad-run cria o fifo e o remove ao sair; o editor só o procura ao mandar.
 exec "$SHPAD_HOME/shpad-run" "$SHPAD_FIFO"

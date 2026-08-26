@@ -140,7 +140,8 @@ function source:complete(params, callback)
         argv[#argv + 1] = w[i]
     end
 
-    self.job = vim.system(argv, { text = true }, function(res)
+    local opts = { text = true, cwd = require("core.shpad").cwd() }
+    self.job = vim.system(argv, opts, function(res)
         self.job = nil
         local items = res.code == 0 and parse(res.stdout) or {}
         vim.schedule(function()

@@ -33,7 +33,6 @@ export PAGER
 
 # --- locale / history / misc app env ---
 export LANG="en_US.UTF-8" LC_MESSAGES="en_US.UTF-8" LC_TIME="pt_PT.UTF-8"
-export HISTFILE="$HOME/.sh_history"           # honored by sh/ksh; bash/zsh differ
 export SKORN_EDITOR='nvim +"set ft=sh"' ENABLE_WASM=true
 
 # --- rust (guarded) ---
