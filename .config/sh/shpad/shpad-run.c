@@ -1,9 +1,3 @@
-/*
- * shpad-run - $SHELL on a pty of its own, fed by this program's stdin and by a
- * fifo. The pty's line discipline echoes what arrives, which is what makes the
- * pane a transcript and not a log.
- */
-
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>

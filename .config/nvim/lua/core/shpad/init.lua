@@ -1,8 +1,3 @@
--- shpad - run a paragraph of this buffer in the shell pane.
---
--- All this does is put bytes in a fifo; shpad-run owns the pty. Nothing here
--- learns whether the command succeeded -- the other pane is the answer.
-
 local M = {}
 
 -- No `\21` prefix to clear a half-typed line: readline bells on an empty-line
