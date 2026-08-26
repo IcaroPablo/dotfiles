@@ -8,6 +8,10 @@
 -- Two ways in. <leader>R takes a visual selection or `vip`, from normal mode.
 -- <C-CR> takes the paragraph under the cursor and is meant for insert mode --
 -- mapped through <Cmd>, so it neither leaves insert nor moves the cursor.
+--
+-- Without a pane there is nothing to do but say so. Running the text in a
+-- throwaway subshell was the old behaviour and it lied about what shpad is:
+-- state did not persist, and nothing prompted could be answered.
 
 local M = {}
 
@@ -50,20 +54,6 @@ local function write_fifo(path, text)
     vim.system({ "sh", "-c", 'cat >> "$0"', path }, { stdin = text .. "\n" })
 end
 
--- What this did before there was a pane to send to: run in a subshell and show
--- the output in a scratch buffer. Kept so the normal-mode mapping still does
--- something sensible in an nvim that was not started by shpad.
-local function run_detached(text)
-    local res = vim.system({ vim.o.shell }, { stdin = text, text = true }):wait()
-    local output = vim.split((res.stdout or "") .. (res.stderr or ""), "\n")
-
-    vim.cmd("vnew")
-    vim.bo.buftype = "nofile"
-    vim.bo.bufhidden = "wipe"
-    vim.bo.swapfile = false
-    vim.api.nvim_buf_set_lines(0, 0, -1, false, output)
-end
-
 local function lines(first, last)
     return table.concat(vim.api.nvim_buf_get_lines(0, first - 1, last, false), "\n")
 end
@@ -100,7 +90,7 @@ local function selection()
     return lines(first, last)
 end
 
-local function send(text, no_pane)
+local function send(text)
     if not text or text:match("^%s*$") then
         return
     end
@@ -111,24 +101,19 @@ local function send(text, no_pane)
     end
 
     local path = fifo()
-    if path then
-        write_fifo(path, text)
-    else
-        no_pane(text)
+    if not path then
+        return vim.notify("shpad: nenhum pane ($SHPAD_FIFO)", vim.log.levels.WARN)
     end
+
+    write_fifo(path, text)
 end
 
--- Normal e visual. Fora do shpad cai no subshell avulso.
 function M.run()
-    send(selection(), run_detached)
+    send(selection())
 end
 
--- Insert, via <Cmd>. Sem fallback de propósito: abrir um split debaixo de quem
--- está no meio de uma frase é pior do que avisar.
 function M.run_paragraph()
-    send(paragraph(), function()
-        vim.notify("shpad: nenhum pane ($SHPAD_FIFO)", vim.log.levels.WARN)
-    end)
+    send(paragraph())
 end
 
 return M
