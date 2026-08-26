@@ -100,48 +100,35 @@ local function selection()
     return lines(first, last)
 end
 
--- Returns false when there was nothing to do or the text would not parse, so
--- each caller can decide what to do about a missing pane.
-local function send(text)
+local function send(text, no_pane)
     if not text or text:match("^%s*$") then
-        return false
+        return
     end
 
     local why = parse_error(text)
     if why then
-        vim.notify("shpad: " .. why, vim.log.levels.ERROR)
-        return false
+        return vim.notify("shpad: " .. why, vim.log.levels.ERROR)
     end
 
     local path = fifo()
-    if not path then
-        return false, "no pane"
+    if path then
+        write_fifo(path, text)
+    else
+        no_pane(text)
     end
-
-    write_fifo(path, text)
-    return true
 end
 
--- Normal and visual. Falls back to a detached subshell outside shpad.
+-- Normal e visual. Fora do shpad cai no subshell avulso.
 function M.run()
-    local text = selection()
-    local ok, why = send(text)
-    if not ok and why == "no pane" then
-        run_detached(text)
-    end
+    send(selection(), run_detached)
 end
 
--- Insert mode, through <Cmd>. No fallback here on purpose: opening a scratch
--- split out from under someone who is mid-sentence is worse than saying so.
+-- Insert, via <Cmd>. Sem fallback de propósito: abrir um split debaixo de quem
+-- está no meio de uma frase é pior do que avisar.
 function M.run_paragraph()
-    local text = paragraph()
-    if not text then
-        return
-    end
-    local ok, why = send(text)
-    if not ok and why == "no pane" then
+    send(paragraph(), function()
         vim.notify("shpad: nenhum pane ($SHPAD_FIFO)", vim.log.levels.WARN)
-    end
+    end)
 end
 
 return M

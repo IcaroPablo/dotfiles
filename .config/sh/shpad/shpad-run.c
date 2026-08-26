@@ -35,7 +35,7 @@
 static volatile sig_atomic_t got_winch;
 static volatile sig_atomic_t got_chld;
 
-/* Saved only when stdin is a terminal; `have_orig` says whether to put it back. */
+/* Saved only when stdin is a terminal. */
 static struct termios orig;
 static int have_orig;
 
@@ -160,10 +160,8 @@ static pid_t spawn_shell(const char *slave, const char *shell) {
         _exit(EXIT_FAILURE);
     if ((sfd = open(slave, O_RDWR)) < 0)
         _exit(EXIT_FAILURE);
-#ifdef TIOCSCTTY
     if (ioctl(sfd, TIOCSCTTY, 0) < 0)
         _exit(EXIT_FAILURE);
-#endif
     if (dup2(sfd, STDIN_FILENO) < 0 || dup2(sfd, STDOUT_FILENO) < 0 || dup2(sfd, STDERR_FILENO) < 0)
         _exit(EXIT_FAILURE);
     if (sfd > STDERR_FILENO)
@@ -198,7 +196,7 @@ static int pump(int from, int to) {
 }
 
 int main(int argc, char *argv[]) {
-    const char *fifo = argc > 1 ? argv[1] : getenv("SHPAD_FIFO");
+    const char *fifo;
     const char *shell = pick_shell();
     const char *slave;
     struct sigaction sa;
@@ -206,10 +204,12 @@ int main(int argc, char *argv[]) {
     pid_t child;
     int stdin_open = 1;
 
-    if (!fifo) {
-        fprintf(stderr, "usage: shpad-run [fifo]   (or set $SHPAD_FIFO)\n");
+    if (argc < 2) {
+        fprintf(stderr, "usage: shpad-run <fifo>\n");
         return EXIT_FAILURE;
     }
+    fifo = argv[1];
+
     if ((mfd = posix_openpt(O_RDWR | O_NOCTTY)) < 0)
         die("posix_openpt");
     if (grantpt(mfd) < 0)
@@ -236,6 +236,7 @@ int main(int argc, char *argv[]) {
     for (;;) {
         fd_set rd;
         int nfds = mfd > rfd ? mfd : rfd;
+        int r;
 
         FD_ZERO(&rd);
         FD_SET(mfd, &rd);
@@ -246,7 +247,8 @@ int main(int argc, char *argv[]) {
                 nfds = STDIN_FILENO;
         }
 
-        if (select(nfds + 1, &rd, NULL, NULL, NULL) < 0 && errno != EINTR)
+        r = select(nfds + 1, &rd, NULL, NULL, NULL);
+        if (r < 0 && errno != EINTR)
             break;
 
         if (got_winch) {
@@ -264,6 +266,13 @@ int main(int argc, char *argv[]) {
                 break;
             }
         }
+
+        /* After an interrupted select the descriptor sets are unspecified.
+         * Reading them anyway meant a blocking read on the pty master, so a
+         * window resize while the shell sat idle could park the loop there and
+         * leave the fifo unserved until the shell happened to print something. */
+        if (r < 0)
+            continue;
 
         if (FD_ISSET(mfd, &rd) && !pump(mfd, STDOUT_FILENO))
             break;
