@@ -1,20 +1,7 @@
 /*
- * shpad-run - an interactive shell whose input can also arrive from a fifo.
- *
- * Runs $SHELL (or /bin/sh) on a pty of its own and forwards two sources into
- * that pty: this program's stdin, so the pane stays a normal terminal you can
- * type into, and a fifo, so an editor elsewhere can hand it a command.
- *
- * The shell is not modified, wrapped or configured. It sees a pty and a
- * controlling terminal and behaves exactly as it would anywhere else --
- * job control, ^C, password prompts and full-screen programs included.
- *
- * The fifo carries bytes, not a protocol. `printf 'ls\n' > $SHPAD_FIFO` from
- * any other terminal drives this shell, which is also how you debug it.
- *
- * The pty's line discipline echoes whatever arrives, so an injected command
- * appears in the scrollback as though it had been typed. That is what makes
- * the pane a transcript rather than a log of results.
+ * shpad-run - $SHELL on a pty of its own, fed by this program's stdin and by a
+ * fifo. The pty's line discipline echoes what arrives, which is what makes the
+ * pane a transcript and not a log.
  */
 
 #include <errno.h>
@@ -35,7 +22,6 @@
 static volatile sig_atomic_t got_winch;
 static volatile sig_atomic_t got_chld;
 
-/* Saved only when stdin is a terminal. */
 static struct termios orig;
 static int have_orig;
 
@@ -49,8 +35,7 @@ static void on_chld(int sig) {
     got_chld = 1;
 }
 
-/* Set only when this process created the fifo, so a path handed to us by
- * somebody else is left where we found it. */
+/* Only when we created it; a path handed to us is left where it was found. */
 static const char *owned_fifo;
 
 static void cleanup(void) {
@@ -66,10 +51,8 @@ static void die(const char *what) {
     exit(EXIT_FAILURE);
 }
 
-/* cfmakeraw(3) written out, because it is not POSIX. Everything the outer
- * terminal would interpret is turned off, so keystrokes reach the inner pty
- * untouched and it is that pty's line discipline -- not this one -- that does
- * the erasing, killing and signal generation. */
+/* cfmakeraw(3) written out, because it is not POSIX. Erasing, killing and
+ * signal generation belong to the inner pty, not to this one. */
 static void raw_mode(void) {
     struct termios raw;
 
@@ -101,12 +84,9 @@ static void copy_winsize(int mfd) {
         ioctl(mfd, TIOCSWINSZ, &ws);
 }
 
-/* The fifo is opened twice on purpose. A read-only fifo with no writer is
- * always ready for reading and hands back end-of-file, which would spin
- * select() in a tight loop and then look like a closed channel. Holding a
- * write end of our own means there is always a writer, so the fifo simply
- * stays quiet until an editor writes to it. O_RDWR on a fifo would do the same
- * but POSIX leaves it undefined. */
+/* Opened twice: read-only with no writer is always ready and returns EOF,
+ * which spins select(). Our own write end keeps it quiet. O_RDWR would do the
+ * same, but POSIX leaves that undefined. */
 static int open_fifo(const char *path) {
     int rfd;
 
@@ -124,15 +104,9 @@ static int open_fifo(const char *path) {
     return rfd;
 }
 
-/* $SHELL, not /bin/sh: the pane should be the shell you actually use, so that
- * its own rc -- and therefore your functions and aliases -- is read without
- * anything being plumbed in from outside. A bare `sh -i` reads an rc file only
- * through $ENV, which is empty in a zsh session, and the pane came up with no
- * functions at all.
- *
- * Absolute or nothing: a relative $SHELL would be resolved against whatever
- * directory this happens to start in. SHPAD_SHELL overrides, for anyone who
- * wants the minimal shell back. */
+/* $SHELL so the pane reads its own rc and arrives with your functions; a bare
+ * `sh -i` reads one only through $ENV, which is empty under zsh. Absolute or
+ * nothing: a relative $SHELL would resolve against wherever this started. */
 static const char *pick_shell(void) {
     const char *s = getenv("SHPAD_SHELL");
 
@@ -144,9 +118,6 @@ static const char *pick_shell(void) {
     return s;
 }
 
-/* Everything the child needs is done between fork and exec: a session of its
- * own, the pty slave as its controlling terminal, and that slave on all three
- * standard descriptors. */
 static pid_t spawn_shell(const char *slave, const char *shell) {
     pid_t pid = fork();
     int sfd;
@@ -171,8 +142,7 @@ static pid_t spawn_shell(const char *slave, const char *shell) {
     _exit(EXIT_FAILURE);
 }
 
-/* Read once and hand the bytes on, retrying a short write until the whole
- * chunk is gone. Returns 0 when the source is finished. */
+/* Returns 0 when the source is finished. */
 static int pump(int from, int to) {
     char buf[BUFSIZE];
     ssize_t r = read(from, buf, sizeof buf);
@@ -256,8 +226,7 @@ int main(int argc, char *argv[]) {
             copy_winsize(mfd);
         }
 
-        /* The shell exiting is what ends the session. Fall through first, so
-         * whatever it printed on the way out still reaches the screen. */
+        /* Drain first: what it printed on the way out still has to land. */
         if (got_chld) {
             got_chld = 0;
             if (waitpid(child, NULL, WNOHANG) == child) {
@@ -267,10 +236,8 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        /* After an interrupted select the descriptor sets are unspecified.
-         * Reading them anyway meant a blocking read on the pty master, so a
-         * window resize while the shell sat idle could park the loop there and
-         * leave the fifo unserved until the shell happened to print something. */
+        /* The fd_sets are unspecified after an error. Reading them anyway meant
+         * a blocking read on the master, which a resize could park the loop in. */
         if (r < 0)
             continue;
 
@@ -278,9 +245,7 @@ int main(int argc, char *argv[]) {
             break;
         if (FD_ISSET(rfd, &rd))
             pump(rfd, mfd);
-        /* Our own stdin running dry is not the end of anything -- it is what
-         * happens when this is driven from a script rather than a terminal.
-         * Stop watching it and keep serving the fifo. */
+        /* Running dry is what a script-driven run looks like, not an ending. */
         if (stdin_open && FD_ISSET(STDIN_FILENO, &rd) && !pump(STDIN_FILENO, mfd))
             stdin_open = 0;
     }
