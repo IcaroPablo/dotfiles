@@ -6,6 +6,10 @@ SHPAD_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/sh/shpad"
 SHPAD_HISTORY="${SHPAD_HISTORY:-$HOME/.local/share/history.sh}"
 SHPAD_FIFO="${TMPDIR:-/tmp}/shpad.$$.fifo"
 
+# Exportado para que o rc do painel saiba que é um: é assim que ele ganha
+# HISTFILE próprio, e é por aqui que o painel pode se dirigir sozinho.
+export SHPAD_FIFO
+
 if [ -z "$DVTM_CMD_FIFO" ]; then
     printf 'shpad: só funciona dentro do dvtm (DVTM_CMD_FIFO vazio)\n' >&2
     exit 1
