@@ -144,6 +144,10 @@ dvtm() {
     fi
 }
 
+# shpad: promove um painel a shell do shpad e abre o editor ao lado. Depende do
+# -c acima, que é por onde ele pede o painel novo.
+[ -f "$XDG_CONFIG_HOME/sh/shpad/shpad.sh" ] && . "$XDG_CONFIG_HOME/sh/shpad/shpad.sh"
+
 alias a="create"
 alias doas="${DOAS} "
 alias ea="e -a"
