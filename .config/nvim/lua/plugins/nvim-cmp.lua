@@ -57,6 +57,17 @@ return {
         })
 
         -- Command line completion
+        -- shpad: completion no buffer do histórico. Grupo próprio acima do
+        -- path/buffer, porque o cmp só desce pro grupo seguinte quando o de
+        -- cima não devolve nada -- é essa a cascata.
+        cmp.register_source("shpad", require("core.shpad.complete").source.new())
+        cmp.setup.filetype("sh", {
+            sources = cmp.config.sources({ { name = "shpad" } }, {
+                { name = "path" },
+                { name = "buffer" },
+            }),
+        })
+
         cmp.setup.cmdline("/", {
             mapping = cmp.mapping.preset.cmdline(),
             sources = { { name = "buffer" } },
