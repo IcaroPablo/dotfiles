@@ -1,3 +1,4 @@
+-- Exporta só a tabela da fonte; quem registra é o plugins/nvim-cmp.lua.
 local M = {}
 
 local KIND = vim.lsp.protocol.CompletionItemKind
