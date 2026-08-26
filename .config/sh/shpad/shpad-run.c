@@ -124,6 +124,26 @@ static int open_fifo(const char *path) {
     return rfd;
 }
 
+/* $SHELL, not /bin/sh: the pane should be the shell you actually use, so that
+ * its own rc -- and therefore your functions and aliases -- is read without
+ * anything being plumbed in from outside. A bare `sh -i` reads an rc file only
+ * through $ENV, which is empty in a zsh session, and the pane came up with no
+ * functions at all.
+ *
+ * Absolute or nothing: a relative $SHELL would be resolved against whatever
+ * directory this happens to start in. SHPAD_SHELL overrides, for anyone who
+ * wants the minimal shell back. */
+static const char *pick_shell(void) {
+    const char *s = getenv("SHPAD_SHELL");
+
+    if (!s || !*s)
+        s = getenv("SHELL");
+    if (!s || *s != '/')
+        s = "/bin/sh";
+
+    return s;
+}
+
 /* Everything the child needs is done between fork and exec: a session of its
  * own, the pty slave as its controlling terminal, and that slave on all three
  * standard descriptors. */
@@ -179,7 +199,7 @@ static int pump(int from, int to) {
 
 int main(int argc, char *argv[]) {
     const char *fifo = argc > 1 ? argv[1] : getenv("SHPAD_FIFO");
-    const char *shell = getenv("SHPAD_SHELL");
+    const char *shell = pick_shell();
     const char *slave;
     struct sigaction sa;
     int mfd, rfd;
@@ -190,9 +210,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "usage: shpad-run [fifo]   (or set $SHPAD_FIFO)\n");
         return EXIT_FAILURE;
     }
-    if (!shell || !*shell)
-        shell = "/bin/sh";
-
     if ((mfd = posix_openpt(O_RDWR | O_NOCTTY)) < 0)
         die("posix_openpt");
     if (grantpt(mfd) < 0)
