@@ -1,9 +1,13 @@
--- shpad - run the paragraph under the cursor in the shell pane.
+-- shpad - run a paragraph of this buffer in the shell pane.
 --
 -- The pane is not a child of this editor. shpad-run owns a pty for the shell
 -- and reads a fifo, so all this module does is put bytes in that fifo. Nothing
 -- here waits for a result and nothing here learns whether the command
 -- succeeded: the transcript in the other pane is the answer.
+--
+-- Two ways in. <leader>R takes a visual selection or `vip`, from normal mode.
+-- <C-CR> takes the paragraph under the cursor and is meant for insert mode --
+-- mapped through <Cmd>, so it neither leaves insert nor moves the cursor.
 
 local M = {}
 
@@ -17,8 +21,7 @@ local M = {}
 
 -- The type is checked, not merely the existence. If the pane has not created
 -- the fifo yet, appending to that path would make a regular FILE there, which
--- shpad-run then finds with EEXIST and reads as if it were the fifo. Better to
--- fall back and run detached than to leave that behind.
+-- shpad-run then finds with EEXIST and reads as if it were the fifo.
 local function fifo()
     local path = vim.env.SHPAD_FIFO
     if not path or path == "" then
@@ -26,12 +29,6 @@ local function fifo()
     end
     local st = vim.uv.fs_stat(path)
     return (st and st.type == "fifo") and path or nil
-end
-
-local function selected_text()
-    local first = vim.api.nvim_buf_get_mark(0, "<")[1]
-    local last = vim.api.nvim_buf_get_mark(0, ">")[1]
-    return table.concat(vim.api.nvim_buf_get_lines(0, first - 1, last, false), "\n")
 end
 
 -- `sh -n` parses without executing. Without it an unbalanced quote reaches the
@@ -46,9 +43,16 @@ local function parse_error(text)
     return why ~= "" and why or "syntax error"
 end
 
+-- Written by a child process rather than by nvim itself: opening a fifo blocks
+-- until its reader is there, so a dead pane would otherwise freeze the editor.
+-- No :wait() for the same reason.
+local function write_fifo(path, text)
+    vim.system({ "sh", "-c", 'cat >> "$0"', path }, { stdin = text .. "\n" })
+end
+
 -- What this did before there was a pane to send to: run in a subshell and show
--- the output in a scratch buffer. Kept so the mapping still does something
--- sensible in an nvim that was not started by shpad.
+-- the output in a scratch buffer. Kept so the normal-mode mapping still does
+-- something sensible in an nvim that was not started by shpad.
 local function run_detached(text)
     local res = vim.system({ vim.o.shell }, { stdin = text, text = true }):wait()
     local output = vim.split((res.stdout or "") .. (res.stderr or ""), "\n")
@@ -60,27 +64,84 @@ local function run_detached(text)
     vim.api.nvim_buf_set_lines(0, 0, -1, false, output)
 end
 
-function M.run()
-    local text = selected_text()
-    if text:match("^%s*$") then
-        return
+local function lines(first, last)
+    return table.concat(vim.api.nvim_buf_get_lines(0, first - 1, last, false), "\n")
+end
+
+local function blank(n)
+    local l = vim.api.nvim_buf_get_lines(0, n - 1, n, false)[1]
+    return l == nil or l:match("^%s*$") ~= nil
+end
+
+-- The paragraph around the cursor, found by scanning out to blank lines. The
+-- marks `'<`/`'>` do not exist in insert mode, so the visual path cannot serve
+-- <C-CR>. A cursor on a blank line means you are between paragraphs and nothing
+-- is sent -- guessing which neighbour you meant would eventually guess wrong.
+local function paragraph()
+    local cur = vim.api.nvim_win_get_cursor(0)[1]
+    if blank(cur) then
+        return nil
+    end
+
+    local first, last = cur, cur
+    local count = vim.api.nvim_buf_line_count(0)
+    while first > 1 and not blank(first - 1) do
+        first = first - 1
+    end
+    while last < count and not blank(last + 1) do
+        last = last + 1
+    end
+    return lines(first, last)
+end
+
+local function selection()
+    local first = vim.api.nvim_buf_get_mark(0, "<")[1]
+    local last = vim.api.nvim_buf_get_mark(0, ">")[1]
+    return lines(first, last)
+end
+
+-- Returns false when there was nothing to do or the text would not parse, so
+-- each caller can decide what to do about a missing pane.
+local function send(text)
+    if not text or text:match("^%s*$") then
+        return false
     end
 
     local why = parse_error(text)
     if why then
         vim.notify("shpad: " .. why, vim.log.levels.ERROR)
-        return
+        return false
     end
 
     local path = fifo()
     if not path then
-        return run_detached(text)
+        return false, "no pane"
     end
 
-    -- Written by a child process rather than by nvim itself: opening a fifo
-    -- blocks until its reader is there, so a dead pane would otherwise freeze
-    -- the editor. No :wait() here for the same reason.
-    vim.system({ "sh", "-c", 'cat >> "$0"', path }, { stdin = text .. "\n" })
+    write_fifo(path, text)
+    return true
+end
+
+-- Normal and visual. Falls back to a detached subshell outside shpad.
+function M.run()
+    local text = selection()
+    local ok, why = send(text)
+    if not ok and why == "no pane" then
+        run_detached(text)
+    end
+end
+
+-- Insert mode, through <Cmd>. No fallback here on purpose: opening a scratch
+-- split out from under someone who is mid-sentence is worse than saying so.
+function M.run_paragraph()
+    local text = paragraph()
+    if not text then
+        return
+    end
+    local ok, why = send(text)
+    if not ok and why == "no pane" then
+        vim.notify("shpad: nenhum pane ($SHPAD_FIFO)", vim.log.levels.WARN)
+    end
 end
 
 return M
