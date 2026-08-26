@@ -40,6 +40,15 @@ shpad() {
     printf 'create "env SHPAD_FIFO=%s %s %s" shpad\n' \
         "$_shpad_fifo" "${EDITOR:-nvim}" "$_shpad_hist" > "$DVTM_CMD_FIFO"
 
+    # Um `sh -i` só lê rc file através do $ENV, e o zsh nunca leu o .profile que
+    # exporta essa variável -- ela fica vazia numa sessão do mac. O painel então
+    # subia sem função nenhuma: variável exportada atravessa o exec, função não.
+    #
+    # Respeita um $ENV que já exista, que é o caso no ksh do OpenBSD, onde o
+    # próprio `dot setup` já aponta pro rc.sh.
+    ENV="${ENV:-${XDG_CONFIG_HOME:-$HOME/.config}/sh/rc.sh}"
+    export ENV
+
     # O fifo é criado pelo shpad-run, que também o remove ao sair. Nada precisa
     # esperar por ele: o editor só o procura quando você manda algo.
     exec "$_shpad_home/shpad-run" "$_shpad_fifo"
