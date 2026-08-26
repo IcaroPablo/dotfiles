@@ -63,7 +63,14 @@ return {
         cmp.register_source("shpad", require("core.shpad.complete").source.new())
         cmp.setup.filetype("sh", {
             sources = cmp.config.sources({ { name = "shpad" } }, {
-                { name = "path" },
+                {
+                    name = "path",
+                    option = {
+                        get_cwd = function()
+                            return require("core.shpad").cwd()
+                        end,
+                    },
+                },
                 { name = "buffer" },
             }),
         })
