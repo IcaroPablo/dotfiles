@@ -10,32 +10,37 @@
 # dvtm no meio, e é justamente o que este desenho evita.
 
 shpad() {
+    _shpad_home="${XDG_CONFIG_HOME:-$HOME/.config}/sh/shpad"
+    _shpad_hist="${SHPAD_HISTORY:-$HOME/.local/share/history.sh}"
+    _shpad_fifo="${TMPDIR:-/tmp}/shpad.$$.fifo"
+
     if [ -z "$DVTM_CMD_FIFO" ]; then
         printf 'shpad: só funciona dentro do dvtm (DVTM_CMD_FIFO vazio)\n' >&2
+        unset _shpad_home _shpad_hist _shpad_fifo
         return 1
     fi
 
-    SHPAD_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/sh/shpad"
-    SHPAD_HISTORY="${SHPAD_HISTORY:-$HOME/.local/share/history.sh}"
-    SHPAD_FIFO="${TMPDIR:-/tmp}/shpad.$$.fifo"
-
-    if [ ! -x "$SHPAD_HOME/shpad-run" ]; then
-        printf 'shpad: não compilado -- rode `make -C %s`\n' "$SHPAD_HOME" >&2
+    if [ ! -x "$_shpad_home/shpad-run" ]; then
+        printf 'shpad: não compilado -- rode `make -C %s`\n' "$_shpad_home" >&2
+        unset _shpad_home _shpad_hist _shpad_fifo
         return 1
     fi
 
-    mkdir -p "$(dirname "$SHPAD_HISTORY")"
-    [ -e "$SHPAD_HISTORY" ] || : > "$SHPAD_HISTORY"
+    mkdir -p "${_shpad_hist%/*}"
+    [ -e "$_shpad_hist" ] || : > "$_shpad_hist"
 
-    export SHPAD_HOME SHPAD_HISTORY SHPAD_FIFO
+    # Um `env` inline e nada exportado: o painel que o dvtm cria herda o
+    # ambiente DELE, não o desta função, então exportar aqui não chegaria a
+    # lugar nenhum. O segundo argumento do create é o título da janela -- é ele
+    # que evita o basename do comando inteiro, e era a única razão de existir um
+    # script separado para abrir o editor.
+    #
+    # $EDITOR porque foi o que se pediu, mas a integração do <C-CR> é do lado do
+    # nvim: com outro editor isto abre o histórico e nada mais.
+    printf 'create "env SHPAD_FIFO=%s %s %s" shpad\n' \
+        "$_shpad_fifo" "${EDITOR:-nvim}" "$_shpad_hist" > "$DVTM_CMD_FIFO"
 
-    # Os caminhos vão como argumento, não por variável: o painel que o dvtm cria
-    # herda o ambiente DELE, não o desta função. O segundo argumento do `create`
-    # é o título da janela -- sem ele viria o basename do comando inteiro.
-    printf 'create "%s %s %s" shpad\n' \
-        "$SHPAD_HOME/shpad-edit" "$SHPAD_FIFO" "$SHPAD_HISTORY" > "$DVTM_CMD_FIFO"
-
-    # O fifo é criado pelo shpad-run, que também o remove ao sair. Nada aqui
-    # precisa esperar por ele: o editor só o procura quando você manda algo.
-    exec "$SHPAD_HOME/shpad-run" "$SHPAD_FIFO"
+    # O fifo é criado pelo shpad-run, que também o remove ao sair. Nada precisa
+    # esperar por ele: o editor só o procura quando você manda algo.
+    exec "$_shpad_home/shpad-run" "$_shpad_fifo"
 }
