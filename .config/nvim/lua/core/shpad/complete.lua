@@ -3,9 +3,12 @@
 -- Exporta só a tabela da fonte; quem registra é o plugins/nvim-cmp.lua, para
 -- que core/ não passe a depender de um plugin.
 --
--- Três camadas, a primeira que responder ganha. A quarta é o cmp-path e o
--- cmp-buffer que já existiam, num grupo abaixo deste -- o cmp só desce para o
--- grupo seguinte quando o de cima não devolve nada.
+-- Cascata, a primeira camada que responder ganha:
+--   1. carapace, para qualquer comando que ele conheça
+--   2. protocolo do cobra, por lista explícita, para quando não houver carapace
+--   3. primeira palavra: PATH + builtins
+--   4. cmp-path e cmp-buffer, que já existiam num grupo abaixo deste -- o cmp
+--      só desce para o grupo seguinte quando o de cima não devolve nada
 
 local M = {}
 
@@ -19,7 +22,10 @@ local M = {}
 -- sobreviveu, mas só por acidente da ordem dos argumentos. Depender disso seria
 -- apostar a integridade de arquivos na ordem em que alguém digitou uma linha.
 --
--- Estender é acrescentar o nome aqui, ou em vim.g.shpad_cobra.
+-- O carapace não tem esse problema: comando que ele não conhece devolve vazio e
+-- sai com zero, sem nunca executar o que você digitou. Onde ele existe, esta
+-- camada nunca dispara -- ele cobre todos estes e mais. Fica como rede para uma
+-- máquina sem carapace.
 local COBRA = { "gh", "docker", "kubectl", "helm", "podman", "hugo", "gitlab" }
 
 -- Builtins que não estão no PATH. `cd`, `echo` e `test` existem em /bin no
@@ -54,6 +60,7 @@ local BUILTINS = {
 local MAX_ITEMS = 500
 
 local path_cache
+local have_carapace
 
 -- Todo executável do PATH, uma vez por sessão. Não confere permissão de
 -- execução por arquivo: seriam milhares de stat() para tirar meia dúzia de
@@ -110,6 +117,38 @@ local function allowed(cmd)
     return false
 end
 
+-- `{"values":[{"value":..,"display":..,"description":..,"tag":..}, ...]}`.
+--
+-- description e tag são opcionais: um alvo de Makefile volta como
+-- `{"value":"all","display":"all"}` e nada mais. `messages` traz o motivo
+-- quando o completer não teve o que dizer (fora de um repositório git, por
+-- exemplo) -- não é candidato, e é ignorado de propósito.
+local function parse_carapace(stdout)
+    if not stdout or stdout == "" then
+        return {}
+    end
+
+    local ok, data = pcall(vim.json.decode, stdout)
+    if not ok or type(data) ~= "table" or type(data.values) ~= "table" then
+        return {}
+    end
+
+    local items = {}
+    for _, v in ipairs(data.values) do
+        if type(v) == "table" and v.value and v.value ~= "" then
+            items[#items + 1] = {
+                label = v.value,
+                documentation = v.description ~= "" and v.description or nil,
+                detail = v.tag ~= "" and v.tag or nil,
+            }
+            if #items >= MAX_ITEMS then
+                break
+            end
+        end
+    end
+    return items
+end
+
 -- Uma linha por candidato, `valor<TAB>descrição`, terminando numa diretiva
 -- `:<n>` que não é candidato nenhum.
 local function parse_cobra(stdout)
@@ -152,38 +191,65 @@ function source:get_trigger_characters()
     return { "-", "/" }
 end
 
-function source:complete(params, callback)
-    -- Uma consulta por vez: a anterior perdeu a validade assim que a linha
-    -- mudou, e esperar por ela só atrasaria esta.
+-- Uma consulta por vez: a anterior perdeu a validade assim que a linha mudou, e
+-- esperar por ela só atrasaria esta.
+function source:cancel()
     if self.job then
         pcall(function()
             self.job:kill(9)
         end)
         self.job = nil
     end
+end
+
+function source:spawn(argv, parse, done)
+    self.job = vim.system(argv, { text = true }, function(res)
+        self.job = nil
+        local items = res.code == 0 and parse(res.stdout) or {}
+        vim.schedule(function()
+            done(#items > 0 and items or nil)
+        end)
+    end)
+end
+
+function source:complete(params, callback)
+    self:cancel()
 
     local w = words(params.context.cursor_before_line or "")
-
     if #w <= 1 then
         return callback(commands())
     end
 
     local cmd = w[1]
-    if not allowed(cmd) or vim.fn.executable(cmd) ~= 1 then
+    if vim.fn.executable(cmd) ~= 1 then
         return callback(nil)
     end
 
-    local argv = { cmd, "__complete" }
+    local args = {}
     for i = 2, #w do
-        argv[#argv + 1] = w[i]
+        args[#args + 1] = w[i]
     end
 
-    self.job = vim.system(argv, { text = true }, function(res)
-        self.job = nil
-        local items = res.code == 0 and parse_cobra(res.stdout) or {}
-        vim.schedule(function()
-            callback(#items > 0 and items or nil)
-        end)
+    if have_carapace == nil then
+        have_carapace = vim.fn.executable("carapace") == 1
+    end
+
+    local function try_cobra()
+        if not allowed(cmd) then
+            return callback(nil)
+        end
+        self:spawn(vim.list_extend({ cmd, "__complete" }, args), parse_cobra, callback)
+    end
+
+    if not have_carapace then
+        return try_cobra()
+    end
+
+    self:spawn(vim.list_extend({ "carapace", cmd, "export", cmd }, args), parse_carapace, function(items)
+        if items then
+            return callback(items)
+        end
+        try_cobra()
     end)
 end
 
