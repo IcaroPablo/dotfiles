@@ -1,6 +1,3 @@
--- shpad.complete - carapace para argumento, PATH e builtins para a primeira
--- palavra. Exporta só a tabela da fonte; quem registra é o plugins/nvim-cmp.lua.
-
 local M = {}
 
 local KIND = vim.lsp.protocol.CompletionItemKind
