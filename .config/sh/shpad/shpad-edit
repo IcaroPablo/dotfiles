@@ -1,5 +1,13 @@
 #!/bin/sh
 #
-# shpad-edit - the editor pane. Its own file so the window is titled for it.
+# shpad-edit - o painel do editor. Arquivo próprio para a janela levar o nome
+# dele, e não o do arquivo aberto: o título vem do basename do comando.
+#
+# Os caminhos chegam por argumento porque o painel que o dvtm cria herda o
+# ambiente do dvtm, não o do shell que pediu.
 
-exec nvim "${SHPAD_HISTORY:-$HOME/.local/share/history.sh}"
+SHPAD_FIFO="${1:-$SHPAD_FIFO}"
+SHPAD_HISTORY="${2:-${SHPAD_HISTORY:-$HOME/.local/share/history.sh}}"
+export SHPAD_FIFO SHPAD_HISTORY
+
+exec nvim "$SHPAD_HISTORY"
