@@ -1,18 +1,11 @@
--- shpad.complete - fonte de completion do nvim-cmp para o buffer do shpad.
---
--- Exporta só a tabela da fonte; quem registra é o plugins/nvim-cmp.lua, para
--- que core/ não passe a depender de um plugin.
---
--- Duas camadas aqui: carapace para argumento, PATH mais builtins para a
--- primeira palavra. Caminho e palavra do buffer ficam com o cmp-path e o
--- cmp-buffer, num grupo abaixo deste.
+-- shpad.complete - carapace para argumento, PATH e builtins para a primeira
+-- palavra. Exporta só a tabela da fonte; quem registra é o plugins/nvim-cmp.lua.
 
 local M = {}
 
 local KIND = vim.lsp.protocol.CompletionItemKind
 
--- Builtins que não estão no PATH. `cd`, `echo` e `test` existem em /bin no
--- macOS e vêm da varredura; estes não existem como arquivo em lugar nenhum.
+-- Os que não existem como arquivo em lugar nenhum; `cd` e `echo` estão em /bin.
 local BUILTINS = {
     "alias",
     "bg",
@@ -43,8 +36,7 @@ local BUILTINS = {
 local path_cache
 local have_carapace
 
--- Não confere permissão de execução por arquivo: seriam milhares de stat() para
--- tirar meia dúzia de não-executáveis que ninguém ia digitar de qualquer forma.
+-- Sem stat() por arquivo: milhares deles para tirar meia dúzia de nomes.
 local function commands()
     if path_cache then
         return path_cache
@@ -74,8 +66,7 @@ local function commands()
     return out
 end
 
--- Sem aspas e sem expansão: serve para saber em qual comando você está e o que
--- já digitou, não para entender a linha. Espaço no fim é uma palavra nova, vazia.
+-- Sem aspas nem expansão; espaço no fim é uma palavra nova, vazia.
 local function words(line)
     local out = {}
     for w in line:gmatch("%S+") do
@@ -87,10 +78,8 @@ local function words(line)
     return out
 end
 
--- `{"values":[{"value":..,"description":..,"tag":..}, ...]}`, com description e
--- tag opcionais -- um alvo de Makefile volta como {"value":"all"} e nada mais.
--- `messages` diz por que um completer não teve o que dizer (fora de um
--- repositório git, por exemplo); não é candidato, e é ignorado.
+-- description e tag são opcionais: um alvo de Makefile volta só com value.
+-- `messages` diz por que não houve candidato; não é um deles.
 local function parse(stdout)
     local ok, data = pcall(vim.json.decode, stdout or "")
     if not ok or type(data) ~= "table" or type(data.values) ~= "table" then
@@ -116,8 +105,7 @@ function source.new()
     return setmetatable({}, { __index = source })
 end
 
--- Uma corrida de não-espaços, para que `--repo` e `./caminho` sejam uma palavra
--- só. O padrão do cmp pararia no hífen e na barra.
+-- O padrão do cmp pararia no hífen e na barra, partindo `--repo` em dois.
 function source:get_keyword_pattern()
     return [[\S\+]]
 end
@@ -127,7 +115,7 @@ function source:get_trigger_characters()
 end
 
 function source:complete(params, callback)
-    -- Uma consulta por vez: a anterior perdeu a validade assim que a linha mudou.
+    -- A anterior perdeu a validade quando a linha mudou.
     if self.job then
         pcall(function()
             self.job:kill(9)
@@ -147,8 +135,8 @@ function source:complete(params, callback)
         return callback(nil)
     end
 
-    -- Sem allowlist, e é o carapace que permite: comando que ele não conhece
-    -- devolve vazio e sai com zero, sem nunca executar o que você digitou.
+    -- Sem allowlist porque o carapace devolve vazio para o que não conhece, sem
+    -- nunca executar o que você digitou. Sondar `<cmd> __complete` executava.
     local argv = { "carapace", w[1], "export", w[1] }
     for i = 2, #w do
         argv[#argv + 1] = w[i]
