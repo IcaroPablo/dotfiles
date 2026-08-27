@@ -174,10 +174,11 @@ pkg_hint() {
     case "$_os" in
         Darwin)
             case "$1" in
-                mktemp|file|open) echo '' ;;
+                mktemp|file|open|git|make|lsof) echo '' ;;
                 nvim)     echo 'brew install neovim' ;;
                 fd)       echo 'brew install fd' ;;
                 exiftool) echo 'brew install exiftool' ;;
+                dvtm)     echo 'compile o fork; o do brew não tem os verbos do shpad' ;;
                 *)        echo "brew install $1" ;;
             esac ;;
         Linux)
@@ -188,6 +189,8 @@ pkg_hint() {
                 exiftool) echo 'apt install libimage-exiftool-perl' ;;
                 doas)     echo 'apt install opendoas' ;;
                 xdg-open) echo 'apt install xdg-utils' ;;
+                carapace) echo 'ver carapace.sh; não está no apt' ;;
+                dvtm)     echo 'compile o fork; o do apt não tem os verbos do shpad' ;;
                 mktemp)   echo '' ;;
                 *)        echo "apt install $1" ;;
             esac ;;
@@ -195,7 +198,9 @@ pkg_hint() {
             case "$1" in
                 nvim)     echo 'pkg_add neovim' ;;
                 exiftool) echo 'pkg_add p5-Image-ExifTool' ;;
-                mktemp|file|unzip|tar|doas) echo '' ;;
+                carapace) echo 'ver carapace.sh; não está nos pacotes' ;;
+                dvtm)     echo 'compile o fork; o do pkg_add não tem os verbos do shpad' ;;
+                mktemp|file|unzip|tar|doas|make) echo '' ;;
                 *)        echo "pkg_add $1" ;;
             esac ;;
         *) echo '' ;;
@@ -242,14 +247,14 @@ doctor() {
     printf 'icaro-dotfiles :: doctor (%s)\n\n' "$_os"
 
     _core_ok=1
-    report_group "CORE" fzf eza nvim bat file mktemp || _core_ok=0
-    report_group "NÚCLEO" fd zoxide readlink || :
+    report_group "CORE" git fzf eza nvim bat file mktemp dvtm || _core_ok=0
+    report_group "NÚCLEO" fd zoxide readlink make lsof carapace || :
     report_group "PREVIEW (opcional — recursos degradam sem)" \
         w3m exiftool unzip tar || :
 
     case "$_os" in
         Darwin)  report_group "OS/desktop (Darwin)" open || : ;;
-        Linux)   report_group "OS/desktop (Linux)" xdg-open flatpak || : ;;
+        Linux)   report_group "OS/desktop (Linux)" xdg-open flatpak xclip || : ;;
         OpenBSD) report_group "OS/desktop (OpenBSD)" doas || : ;;
     esac
 
