@@ -291,11 +291,3 @@ map.set("v", "<", "<gv")
 map.set("v", ">", ">gv")
 map.set("n", "<Leader><Leader>", ":write<CR>")
 map.set("n", "<c-[>", "<esc>:nohlsearch<CR>")
-
-map.set("x", "<leader>R", ":lua require('core.shpad').run()<CR>")
-map.set("n", "<leader>R", "vip:lua require('core.shpad').run()<CR>")
--- Ctrl+Enter roda o parágrafo sob o cursor sem sair do insert. Por <Cmd>, que
--- não troca de modo nem mexe no cursor. A Ghostty manda CSI 27;5;13~ para essa
--- tecla, o dvtm repassa byte a byte e o nvim decodifica como <C-CR> sozinho --
--- medido nas três pontas, nada precisou ser configurado no caminho.
-map.set("i", "<C-CR>", "<Cmd>lua require('core.shpad').run_paragraph()<CR>")
