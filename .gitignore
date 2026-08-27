@@ -42,16 +42,12 @@
 # ── .local: idem ─────────────────────────────────────────────────────────────
 /.local/*
 !/.local/scripts/
-!/.local/shpad/
 !/.local/wallpapers/
 
 # ── exceções dentro do que foi liberado ──────────────────────────────────────
 # gerados pelo lua_ls, nunca versionar
 .config/nvim/.luarc.json
 .config/nvim/lua/.luarc.json
-
-# binário compilado do shpad, nunca versionar
-.local/shpad/shpad-run
 
 # o próprio bare repo. Já cairia no `/.config/*`, mas a linha literal existe
 # porque o `dot start` faz grep por ela antes de apendar (ver .local/scripts/dot).
