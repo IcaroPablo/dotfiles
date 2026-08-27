@@ -2,14 +2,15 @@
 
 set -e
 
-SHPAD_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/sh/shpad"
+SHPAD_HOME="$HOME/.local/shpad"
 SHPAD_HISTORY="${SHPAD_HISTORY:-$HOME/.local/share/history.sh}"
 SHPAD_FIFO="${TMPDIR:-/tmp}/shpad.$$.fifo"
+SHPAD_ON_IDLE_FILE="${TMPDIR:-/tmp}/shpad.$$.on-idle"
 SHPAD_PID=$$
 
 # Exportado para que o rc do painel saiba que é um: é assim que ele ganha
 # HISTFILE próprio, e é por aqui que o painel pode se dirigir sozinho.
-export SHPAD_FIFO SHPAD_PID
+export SHPAD_FIFO SHPAD_ON_IDLE_FILE SHPAD_PID
 
 if [ -z "$DVTM_CMD_FIFO" ]; then
     printf 'shpad: só funciona dentro do dvtm (DVTM_CMD_FIFO vazio)\n' >&2
@@ -24,10 +25,16 @@ fi
 mkdir -p "${SHPAD_HISTORY%/*}"
 [ -e "$SHPAD_HISTORY" ] || : > "$SHPAD_HISTORY"
 
-# `env` inline porque o painel que o dvtm cria herda o ambiente DELE. O segundo
-# argumento é o título, senão a janela leva o basename do comando inteiro.
-printf 'create "env SHPAD_FIFO=%s SHPAD_PID=%s %s %s" shpad\n' \
-    "$SHPAD_FIFO" "$SHPAD_PID" "${EDITOR:-nvim}" "$SHPAD_HISTORY" > "$DVTM_CMD_FIFO"
+# Onde o broker entrega a volta que o editor deixar escrita. Nomeado assim, e não
+# DVTM_CMD_FIFO, porque é tudo que ele precisa saber: um fifo e um arquivo.
+SHPAD_ON_IDLE_FIFO="$DVTM_CMD_FIFO"
+export SHPAD_ON_IDLE_FIFO
 
-# O shpad-run cria o fifo e o remove ao sair; o editor só o procura ao mandar.
+# `env` inline porque o painel que o dvtm cria herda o ambiente DELE. O último
+# argumento é o título, senão a janela leva o basename do comando inteiro. O `+`
+# abre o histórico na última linha, onde você parou.
+printf 'create "env SHPAD_FIFO=%s SHPAD_PID=%s SHPAD_ON_IDLE_FILE=%s %s + %s" shpad\n' \
+    "$SHPAD_FIFO" "$SHPAD_PID" "$SHPAD_ON_IDLE_FILE" "${EDITOR:-nvim}" "$SHPAD_HISTORY" \
+    > "$DVTM_CMD_FIFO"
+
 exec "$SHPAD_HOME/shpad-run" "$SHPAD_FIFO"
