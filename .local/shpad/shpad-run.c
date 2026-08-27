@@ -33,10 +33,14 @@ static void on_chld(int sig) {
 static const char *owned_fifo;
 
 static void cleanup(void) {
+    const char *idle_file = getenv("SHPAD_ON_IDLE_FILE");
+
     if (have_orig)
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig);
     if (owned_fifo)
         unlink(owned_fifo);
+    if (idle_file && *idle_file)
+        unlink(idle_file);
 }
 
 static void die(const char *what) {
@@ -96,6 +100,38 @@ static int open_fifo(const char *path) {
         die("open fifo for writing");
 
     return rfd;
+}
+
+/* O editor volta quando o comando que ele mandou termina. Não basta esperar
+ * "ocupado, depois ocioso": builtin como `cd` roda no próprio shell e nunca
+ * muda o grupo de primeiro plano -- medido. Então conta ocioso CONTÍNUO, que um
+ * comando externo não consegue fingir.
+ *
+ * A volta em si é o que o editor deixou escrito, repassado byte a byte. Quem
+ * sabe o id do painel é ele, e esse id não existia quando este processo começou
+ * -- por isso um arquivo, e por isso este aqui é só o carteiro: não sabe ler o
+ * que carrega, nem que existe um dvtm do outro lado. */
+static void fire_idle(void) {
+    const char *fifo = getenv("SHPAD_ON_IDLE_FIFO");
+    const char *file = getenv("SHPAD_ON_IDLE_FILE");
+    char buf[256];
+    ssize_t r;
+    int in, out;
+
+    if (!fifo || !*fifo || !file || !*file)
+        return;
+    if ((in = open(file, O_RDONLY)) < 0)
+        return;
+
+    r = read(in, buf, sizeof buf);
+    close(in);
+    if (r <= 0)
+        return;
+
+    if ((out = open(fifo, O_WRONLY | O_NONBLOCK)) < 0)
+        return;
+    (void)write(out, buf, (size_t)r);
+    close(out);
 }
 
 /* $SHELL so the pane reads its own rc and arrives with your functions; a bare
@@ -167,6 +203,7 @@ int main(int argc, char *argv[]) {
     int mfd, rfd;
     pid_t child;
     int stdin_open = 1;
+    int armed = 0, idle = 0;
 
     if (argc < 2) {
         fprintf(stderr, "usage: shpad-run <fifo>\n");
@@ -199,6 +236,7 @@ int main(int argc, char *argv[]) {
 
     for (;;) {
         fd_set rd;
+        struct timeval tv, *tvp = NULL;
         int nfds = mfd > rfd ? mfd : rfd;
         int r;
 
@@ -211,7 +249,13 @@ int main(int argc, char *argv[]) {
                 nfds = STDIN_FILENO;
         }
 
-        r = select(nfds + 1, &rd, NULL, NULL, NULL);
+        if (armed) {
+            tv.tv_sec = 0;
+            tv.tv_usec = 100000;
+            tvp = &tv;
+        }
+
+        r = select(nfds + 1, &rd, NULL, NULL, tvp);
         if (r < 0 && errno != EINTR)
             break;
 
@@ -230,6 +274,21 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        /* Só no timeout: contado por volta do laço, o eco dos bytes injetados
+         * acorda o select em milissegundos, com o shell ainda em primeiro plano
+         * porque nem forkou -- o editor voltava antes de o comando começar. */
+        if (armed && r == 0) {
+            if (tcgetpgrp(mfd) == child)
+                idle++;
+            else
+                idle = 0;
+
+            if (idle >= 2) {
+                fire_idle();
+                armed = idle = 0;
+            }
+        }
+
         /* The fd_sets are unspecified after an error. Reading them anyway meant
          * a blocking read on the master, which a resize could park the loop in. */
         if (r < 0)
@@ -237,8 +296,11 @@ int main(int argc, char *argv[]) {
 
         if (FD_ISSET(mfd, &rd) && !pump(mfd, STDOUT_FILENO))
             break;
-        if (FD_ISSET(rfd, &rd))
+        if (FD_ISSET(rfd, &rd)) {
             pump(rfd, mfd);
+            armed = 1;
+            idle = 0;
+        }
         /* Running dry is what a script-driven run looks like, not an ending. */
         if (stdin_open && FD_ISSET(STDIN_FILENO, &rd) && !pump(STDIN_FILENO, mfd))
             stdin_open = 0;
