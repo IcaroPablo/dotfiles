@@ -28,7 +28,6 @@ vim.api.nvim_create_autocmd("ColorScheme", {
         vim.o.termguicolors = truecolor()
     end,
 })
--- vim.opt.cursorline = true -- realça a linha do cursor (ver autocmd comentado abaixo)
 
 -- ── Números de linha ─────────────────────────────────────────────────────────
 vim.opt.number = true -- números de linha
@@ -46,6 +45,7 @@ vim.opt.tabstop = 4 -- largura visual de um tab
 vim.opt.softtabstop = 4 -- quantos espaços o Tab/Backspace contam na edição
 vim.opt.shiftwidth = 4 -- largura da indentação (>>, <<, autoindent)
 vim.opt.smartindent = true -- indent automático após blocos estilo C
+vim.opt.shiftround = true
 -- vim.opt.autoindent = true -- redundante: já é o default
 
 -- ── Quebra de linha ──────────────────────────────────────────────────────────
@@ -54,8 +54,10 @@ vim.opt.smartindent = true -- indent automático após blocos estilo C
 -- ── Splits ───────────────────────────────────────────────────────────────────
 vim.opt.splitbelow = true -- split horizontal abre embaixo da janela atual
 vim.opt.splitright = true -- split vertical abre à direita da janela atual
+-- vim.opt.laststatus = 2
 
 -- ── Rolagem ──────────────────────────────────────────────────────────────────
+-- vim.opt.cursorline = true -- realça a linha do cursor (ver autocmd comentado abaixo)
 vim.opt.scrolloff = 10 -- mantém 10 linhas de contexto acima/abaixo do cursor
 
 -- ── Arquivos / persistência ──────────────────────────────────────────────────
