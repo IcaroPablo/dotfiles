@@ -1,0 +1,31 @@
+#!/bin/sh
+# requires X11 + tesseract
+#
+# scrotocr [lang] — recorta uma região da tela, passa OCR nela e joga o texto
+# no clipboard. O idioma é o primeiro argumento (padrão: eng); `tesseract
+# --list-langs` mostra os instalados.
+
+lang="${1:-eng}"
+
+for dep in scrot mogrify tesseract xclip; do
+    command -v "$dep" >/dev/null 2>&1 || {
+        printf 'scrotocr: %s não encontrado\n' "$dep" >&2
+        exit 1
+    }
+done
+
+img="$(mktemp)"
+trap 'rm -f "$img" "$img.png" "$img.txt"' EXIT
+
+scrot -s -q 100 "$img.png" || exit 1
+
+# Amplia e tira a saturação antes do OCR: em texto pequeno a taxa de acerto do
+# tesseract cai muito, e o resize de 400% é o que mais ajuda.
+mogrify -modulate 100,0 -resize 400% "$img.png"
+
+tesseract "$img.png" "$img" -l "$lang" >/dev/null 2>&1 || {
+    printf 'scrotocr: tesseract falhou (idioma "%s" instalado?)\n' "$lang" >&2
+    exit 1
+}
+
+xclip -selection clipboard -i "$img.txt"
