@@ -49,7 +49,7 @@ xset dpms 0 0 0
 . "$HOME/.config/sh/env.sh"
 $HOME/.fehbg &
 # setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.\+=\([0-9]\+\).\+/\1/'` br &
-setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.*=//' | awk '{print $1}'` br &
+# setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.*=//' | awk '{print $1}'` br &
 setxkbmap br &
 
 if [ "$(uname)" = OpenBSD ]; then
@@ -60,8 +60,11 @@ fi
 
 bar &
 
+# Registra as variáveis do X11 na sessão D-Bus (resolve o xdg-desktop-portal)
+dbus-update-activation-environment --all &
+
 # run the WM in the foreground (no exec) so the ssh-agent teardown below runs on logout
-dwm
+smawm
 # exec startdwm
 # exec sowm
 # xhost +SI:localuser:$USER
