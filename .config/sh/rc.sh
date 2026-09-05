@@ -203,13 +203,6 @@ esac
 
 have nsxiv && alias img="nsxiv --thumbnail"
 have mpv && alias play="mpv --shuffle ."
-if [ -n "${DISPLAY:-}" ] && have xrandr; then
-    alias bright="monitor bright"
-    alias offmon="monitor off"
-    alias onmon="monitor on"
-    alias scl="monitor scale"
-    alias same="monitor same"
-fi
 
 [ -n "${ZSH_VERSION:-}" ] && setopt PROMPT_SUBST 2>/dev/null
 if [ -n "${ZSH_VERSION:-}" ]; then _m1='%{'; _m2='%}'
