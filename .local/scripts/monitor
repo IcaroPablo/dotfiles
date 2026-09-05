@@ -6,5 +6,6 @@ case "$1" in
     on)     xrandr --output eDP-1 --auto ;;
     bright) xrandr --output eDP-1 --brightness "$2" ;;
     same)   xrandr --output HDMI-1 --same-as eDP-1 ;;
-    *)      echo "usage: monitor off|on|bright VALUE|same" >&2; exit 1 ;;
+    scale)  xrandr --output eDP-1 --scale "$2x$2" ;;
+    *)      echo "usage: monitor off|on|bright VALUE|scale FACTOR|same" >&2; exit 1 ;;
 esac

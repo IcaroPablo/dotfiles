@@ -207,6 +207,7 @@ if [ -n "${DISPLAY:-}" ] && have xrandr; then
     alias bright="monitor bright"
     alias offmon="monitor off"
     alias onmon="monitor on"
+    alias scl="monitor scale"
     alias same="monitor same"
 fi
 
