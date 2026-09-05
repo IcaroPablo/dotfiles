@@ -16,13 +16,71 @@ get_network() {
     elif have ifconfig; then printf 'net: %s | ' "$(ifconfig 2>/dev/null | awk '/status: active/{print "up"; exit}')"; fi
 }
 
-get_brightness() { have xbacklight && printf 'screen: %s%% | ' "$(xbacklight -get | sed 's/\..*$//')"; }
+# Três fontes, da mais específica para a mais genérica. O xbacklight sozinho não
+# serve: quando não há propriedade de backlight no RandR ele falha no stderr e
+# devolve string vazia, e o valor saía como "screen: %".
+get_brightness() {
+    for _b in /sys/class/backlight/*/; do
+        [ -r "$_b/brightness" ] && [ -r "$_b/max_brightness" ] || continue
+        awk -v c="$(cat "$_b/brightness")" -v m="$(cat "$_b/max_brightness")" \
+            'BEGIN { if (m > 0) printf "screen: %.0f%% | ", c * 100 / m }'
+        return
+    done
+
+    if have xbacklight; then
+        _v="$(xbacklight -get 2>/dev/null)"
+        [ -n "$_v" ] && { printf 'screen: %s%% | ' "${_v%%.*}"; return; }
+    fi
+
+    # Brilho por software (gamma do X): é o que o `monitor bright` mexe, e a
+    # única fonte que sobra numa máquina sem backlight de hardware. Lê o output
+    # que está de fato ligado — o que tem geometria —, não o primeiro conectado.
+    if have xrandr; then
+        _v="$(xrandr --verbose 2>/dev/null |
+            awk '/^[A-Za-z0-9-]+ connected/ { a = ($0 ~ /[0-9]+x[0-9]+\+[0-9]+\+[0-9]+/) }
+                 a && /Brightness:/ { print $2; exit }')"
+        [ -n "$_v" ] && printf 'screen: %s%% | ' "$(awk -v p="$_v" 'BEGIN{printf "%.0f", p*100}')"
+    fi
+}
 
 get_volume() {
-    if have pactl; then printf 'sound: %s | ' "$(pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null | awk '{print $5; exit}')"
-    elif have sndioctl; then
-        v="$(sndioctl -n output.level 2>/dev/null)"
-        [ -n "$v" ] && printf 'sound: %s%% | ' "$(awk -v p="$v" 'BEGIN{printf "%.0f", p*100}')"
+    if have pactl; then
+        _v="$(pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null | awk '{print $5; exit}')"
+        if [ -n "$_v" ]; then
+            case "$(pactl get-sink-mute @DEFAULT_SINK@ 2>/dev/null)" in
+                *yes) printf 'sound: muted | ' ;;
+                *)    printf 'sound: %s | ' "$_v" ;;
+            esac
+            return
+        fi
+    fi
+
+    if have wpctl; then
+        _v="$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null)"
+        case "$_v" in
+            *MUTED*)  printf 'sound: muted | ' ; return ;;
+            Volume:*) printf 'sound: %s%% | ' \
+                          "$(awk -v p="${_v#Volume: }" 'BEGIN{printf "%.0f", p*100}')"
+                      return ;;
+        esac
+    fi
+
+    if have amixer; then
+        # nível e estado numa chamada só: o bar redesenha a cada segundo
+        _v="$(amixer get Master 2>/dev/null |
+            awk -F'[][]' '/Playback .*%/{ print $2, $4; exit }')"
+        if [ -n "$_v" ]; then
+            case "$_v" in
+                *\ off) printf 'sound: muted | ' ;;
+                *)      printf 'sound: %s | ' "${_v% *}" ;;
+            esac
+            return
+        fi
+    fi
+
+    if have sndioctl; then
+        _v="$(sndioctl -n output.level 2>/dev/null)"
+        [ -n "$_v" ] && printf 'sound: %s%% | ' "$(awk -v p="$_v" 'BEGIN{printf "%.0f", p*100}')"
     fi
 }
 
