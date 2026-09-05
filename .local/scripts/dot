@@ -142,11 +142,17 @@ setup() {
     # on tty1 fire at login. The interactive rc sources rc.sh on top.
     case "$_shell" in
         ksh|ksh93|oksh|mksh|pdksh|sh)
-            # ksh/sh have no separate interactive rc file — the profile sources
-            # env.sh and points $ENV at rc.sh (which re-pulls env.sh idempotently).
+            # ksh/sh have no separate interactive rc file — the profile points
+            # $ENV at rc.sh (que re-puxa o env.sh de forma idempotente) e só
+            # depois carrega o env.sh.
+            #
+            # A ordem importa: o env.sh termina no auto-startx do tty1, que
+            # bloqueia até a sessão do X morrer. Com o export depois, o ENV só
+            # valeria no logout, e todo terminal aberto dentro do X herdaria ENV
+            # vazio — shell interativo sem rc nenhum.
             inject_block "$_profile" \
-". \"\$HOME/.config/sh/env.sh\"
-ENV=\"\$HOME/.config/sh/rc.sh\"; export ENV" ;;
+"ENV=\"\$HOME/.config/sh/rc.sh\"; export ENV
+. \"\$HOME/.config/sh/env.sh\"" ;;
         *)
             # zsh/bash: profile sources env.sh; interactive rc sources rc.sh.
             inject_block "$_profile" ". \"\$HOME/.config/sh/env.sh\""
