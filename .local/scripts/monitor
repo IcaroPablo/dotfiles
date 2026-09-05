@@ -1,11 +1,55 @@
 #!/bin/sh
 # requires X11
+#
+# monitor off|on|bright VALUE|scale FACTOR|same
+#
+# Os nomes dos outputs não são fixos — mudam com a máquina (eDP-1, LVDS1,
+# HDMI-A-0) e o painel interno pode nem existir. Nada aqui é hardcoded: cada
+# verbo resolve o output que lhe cabe e reclama quando ele não existe.
+
+# O xrandr só imprime geometria (1920x1080+0+0) para output que está aceso:
+# conectado mas --off não tem nenhuma. É esse o teste de "está em uso".
+# Entre vários acesos, o primário ganha — é a tela em que você está.
+active() {
+    xrandr 2>/dev/null | awk '
+        / connected/ && /[0-9]+x[0-9]+\+[0-9]+\+[0-9]+/ {
+            if (!first) first = $1
+            if ($0 ~ / primary /) pri = $1
+        }
+        END { if (pri) print pri; else if (first) print first }'
+}
+
+# Painel embutido: eDP (moderno), LVDS (antigo), DSI (tablet/ARM).
+internal() { xrandr 2>/dev/null | awk '/ connected/ && $1 ~ /^(eDP|LVDS|DSI)/  { print $1; exit }'; }
+external() { xrandr 2>/dev/null | awk '/ connected/ && $1 !~ /^(eDP|LVDS|DSI)/ { print $1; exit }'; }
+
+# need <valor> <o que faltou>
+need() {
+    [ -n "$1" ] && return 0
+    printf 'monitor: %s\n' "$2" >&2
+    exit 1
+}
+
+usage() { echo "usage: monitor off|on|bright VALUE|scale FACTOR|same" >&2; exit 1; }
 
 case "$1" in
-    off)    xrandr --output eDP-1 --off ;;
-    on)     xrandr --output eDP-1 --auto ;;
-    bright) xrandr --output eDP-1 --brightness "$2" ;;
-    same)   xrandr --output HDMI-1 --same-as eDP-1 ;;
-    scale)  xrandr --output eDP-1 --scale "$2x$2" ;;
-    *)      echo "usage: monitor off|on|bright VALUE|scale FACTOR|same" >&2; exit 1 ;;
+    off)
+        o="$(internal)"; need "$o" "nenhum painel interno (eDP/LVDS/DSI) conectado"
+        xrandr --output "$o" --off ;;
+    on)
+        o="$(internal)"; need "$o" "nenhum painel interno (eDP/LVDS/DSI) conectado"
+        xrandr --output "$o" --auto ;;
+    bright)
+        [ -n "$2" ] || usage
+        o="$(active)"; need "$o" "nenhum output aceso"
+        xrandr --output "$o" --brightness "$2" ;;
+    scale)
+        [ -n "$2" ] || usage
+        o="$(active)"; need "$o" "nenhum output aceso"
+        xrandr --output "$o" --scale "$2x$2" ;;
+    same)
+        i="$(internal)"; need "$i" "nenhum painel interno para espelhar"
+        e="$(external)"; need "$e" "nenhum monitor externo conectado"
+        xrandr --output "$e" --same-as "$i" ;;
+    *)  usage ;;
 esac
