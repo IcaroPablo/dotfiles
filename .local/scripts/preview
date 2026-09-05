@@ -45,6 +45,9 @@ case "$(printf "%s\n" "$(abspath "$1")" | awk '{print tolower($0)}')" in
 	*.wav|*.mp3|*.flac|*.m4a|*.wma|*.ape|*.ac3|*.og[agx]|*.spx|*.opus|*.as[fx]|*.mka)
 		have exiftool && exiftool "$1" || desc "$1"
 		;;
+	*.jpg|*.jpeg|*.png|*.gif|*.bmp|*.tiff|*.webp)
+		have pixterm && pixterm "$1" || desc "$1"
+		;;
 	*.ino) batorcat --language=cpp "$1" ;;
 	*) handlenoextension "$1" ;;
 esac

@@ -250,7 +250,7 @@ doctor() {
     report_group "CORE" git fzf eza nvim bat file mktemp dvtm || _core_ok=0
     report_group "NÚCLEO" fd zoxide readlink make lsof carapace || :
     report_group "PREVIEW (opcional — recursos degradam sem)" \
-        w3m exiftool unzip tar || :
+        w3m exiftool unzip tar pixterm || :
 
     case "$_os" in
         Darwin)  report_group "OS/desktop (Darwin)" open || : ;;
