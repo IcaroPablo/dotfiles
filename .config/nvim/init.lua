@@ -11,21 +11,21 @@ vim.opt.showmode = false -- não mostra "-- INSERT --": a statusline já exibe o
 vim.opt.showcmd = false -- não mostra o comando parcial no canto inferior direito
 
 -- ── Aparência ────────────────────────────────────────────────────────────────
--- 24-bit só quando o terminal diz que aceita. Afirmar sempre pinta errado onde
--- não dá: num tty o dvtm entrega colors#8 aos painéis, e o nvim mandando RGB
--- ali é aproximado na marra em vez de degradar pro esquema de 8 cores.
+-- 24-bit só quando o terminal aceita -- o porquê da fonte está no core/term.lua.
+-- Afirmar sempre pinta errado onde não dá: num tty o dvtm entrega colors#8 aos
+-- painéis, e o nvim mandando RGB ali é aproximado na marra.
 --
 -- Em autocmd, e não só uma atribuição: o gruvbox.nvim liga termguicolors por
 -- conta própria quando o colorscheme carrega (lua/gruvbox.lua:1379, sem opção
--- pra desligar), então qualquer valor posto aqui na largada é sobrescrito.
-local function truecolor()
-    return vim.env.COLORTERM == "truecolor" or vim.env.COLORTERM == "24bit"
-end
-vim.opt.termguicolors = truecolor()
+-- pra desligar), então qualquer valor posto aqui na largada é sobrescrito. Só
+-- ele faz isso -- o retrobox, que entra no lugar dele quando não há truecolor,
+-- lê a opção em vez de forçá-la (retrobox.vim:14).
+local term = require("core.term")
+vim.opt.termguicolors = term.truecolor()
 vim.api.nvim_create_autocmd("ColorScheme", {
     group = vim.api.nvim_create_augroup("truecolor", { clear = true }),
     callback = function()
-        vim.o.termguicolors = truecolor()
+        vim.o.termguicolors = term.truecolor()
     end,
 })
 
