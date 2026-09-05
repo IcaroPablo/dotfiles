@@ -33,11 +33,15 @@ export PAGER
 
 # --- locale / history / misc app env ---
 export LANG="en_US.UTF-8" LC_MESSAGES="en_US.UTF-8" LC_TIME="pt_PT.UTF-8"
-export SKORN_EDITOR='nvim +"set ft=sh"' ENABLE_WASM=true
+export ENABLE_WASM=true
 
 # --- rust (guarded) ---
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 _path_prepend "$HOME/.cargo/bin"
+
+# --- go (guarded) ---
+export GOPATH="$HOME/.go"
+_path_prepend "$GOPATH/bin"
 
 # ------------------------------------------------- per-OS env deltas (real ones)
 case "$(uname)" in
