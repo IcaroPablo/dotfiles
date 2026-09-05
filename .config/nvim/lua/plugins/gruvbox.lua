@@ -16,6 +16,20 @@ return {
     lazy = false,
     priority = 1000,
     config = function()
+        -- Sem truecolor o gruvbox.nvim não tem o que mandar: ele define só
+        -- atributos gui, zero ctermfg/ctermbg em grupo nenhum, então o buffer
+        -- inteiro sairia na cor default do terminal -- não é degradação pras 16
+        -- cores, é ausência de cor. Quem degrada é o retrobox, que vem com o
+        -- nvim e define as duas paletas: Comment sai ctermfg=102 / fg=#928374,
+        -- exatamente o mesmo RGB que o gruvbox.nvim usa. Ele também respeita o
+        -- termguicolors em vez de forçá-lo (retrobox.vim:14), então basta a
+        -- opção já estar resolvida aqui -- e está: o init.lua a define antes de
+        -- o pack carregar os plugins.
+        if not require("core.term").truecolor() then
+            vim.cmd("colorscheme retrobox")
+            return
+        end
+
         require("gruvbox").setup({
             terminal_colors = true,
             undercurl = false,
