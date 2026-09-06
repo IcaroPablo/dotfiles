@@ -19,9 +19,7 @@
 /*
 
 # ── arquivos de topo versionados ─────────────────────────────────────────────
-!/.gitconfig
 !/.gitignore
-!/.jjconfig.toml
 !/.xinitrc
 !/README.md
 
@@ -34,6 +32,8 @@
 !/.config/bacon/
 !/.config/bat/
 !/.config/ghostty/
+!/.config/git/
+!/.config/jj/
 !/.config/nvim/
 !/.config/sh/
 !/.config/vis/
