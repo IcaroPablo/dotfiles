@@ -1,0 +1,38 @@
+#!/bin/sh
+#
+# wallpaper — põe o papel de parede, com o caminho resolvido a partir do repo.
+#
+# Substitui a chamada ao ~/.fehbg no .xinitrc. Aquele arquivo é gerado pelo feh
+# com caminho absoluto e o nome de usuário embutido, e por ser untracked (a
+# whitelist do .gitignore nem deixa versionar) nenhuma máquina nova tem um —
+# o .xinitrc chamava um arquivo inexistente e falhava calado. Aqui o caminho
+# sai do DOT_ROOT, então acompanha o repo para onde ele for.
+#
+#   wallpaper              usa o $DOT_WALLPAPER, ou o default abaixo
+#   wallpaper <imagem>     nome dentro de .local/wallpapers, ou caminho absoluto
+
+: "${DOT_ROOT:="$HOME"}"
+
+DEFAULT_WALLPAPER="brown-mountain-in-scottsdale-landscape-ma-1920x1080.jpg"
+
+img="${1:-${DOT_WALLPAPER:-$DEFAULT_WALLPAPER}}"
+
+# nome solto resolve dentro do repo; caminho absoluto passa direto
+case "$img" in
+    /*) : ;;
+    *)  img="$DOT_ROOT/.local/wallpapers/$img" ;;
+esac
+
+command -v feh >/dev/null 2>&1 || {
+    printf 'wallpaper: feh não encontrado\n' >&2
+    exit 1
+}
+
+[ -f "$img" ] || {
+    printf 'wallpaper: %s: não encontrado\n' "$img" >&2
+    exit 1
+}
+
+# --no-fehbg: não regravar o ~/.fehbg. Quem decide o papel de parede é este
+# script; deixar o feh escrever de volta traria o caminho absoluto de novo.
+exec feh --no-fehbg --bg-scale "$img"

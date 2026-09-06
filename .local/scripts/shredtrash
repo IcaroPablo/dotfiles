@@ -2,9 +2,11 @@
 
 clear 2>/dev/null
 
-printf '\nempty ~/.trash? [y/N] '
+TRASH="${DOT_TRASH:-$HOME/.trash}"
+
+printf '\nempty %s? [y/N] ' "$TRASH"
 read -r ans || exit 0
 
 case "$ans" in
-    [yY]) rm -rf -- "$HOME/.trash" && mkdir -p -- "$HOME/.trash" ;;
+    [yY]) rm -rf -- "$TRASH" && mkdir -p -- "$TRASH" ;;
 esac

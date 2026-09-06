@@ -46,8 +46,8 @@ xset -dpms
 xset dpms 0 0 0
 #setterm -blank 0 -powerdown 0
 
-. "$HOME/.config/sh/env.sh"
-$HOME/.fehbg &
+. "${DOT_ROOT:-$HOME}/.config/sh/env.sh"
+wallpaper &
 # setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.\+=\([0-9]\+\).\+/\1/'` br &
 # setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.*=//' | awk '{print $1}'` br &
 setxkbmap br &
