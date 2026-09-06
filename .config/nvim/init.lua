@@ -159,7 +159,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
 
 -- Salva a saída de :messages num arquivo (útil pra depurar)
 vim.api.nvim_create_user_command("LogMessages", function()
-    local path = vim.fn.expand("~/nvim_msgs.txt")
+    local path = vim.fs.joinpath(vim.fn.stdpath("state"), "nvim_msgs.txt")
     vim.fn.writefile(vim.split(vim.fn.execute("messages"), "\n"), path)
     vim.notify("mensagens salvas em " .. path)
 end, {})
@@ -198,7 +198,9 @@ map.set("n", "<leader>q", function()
 end)
 
 map.set("n", "<leader>n", ":enew | startinsert<CR>") -- New file
-map.set("n", "<leader>C", ":e $HOME/.config/nvim/init.lua<CR>") -- Configs
+map.set("n", "<leader>C", function() -- Configs
+    vim.cmd.edit(vim.fs.joinpath(vim.fn.stdpath("config"), "init.lua"))
+end)
 
 -- Painel do dvtm carregando o socket desta sessão: o launch_nvim de lá roteia os
 -- arquivos de volta pra cá em vez de abrir um nvim aninhado.

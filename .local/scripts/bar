@@ -97,8 +97,9 @@ get_datetime()   { date +"%a %d %b %Y | %I:%M %p (%Z GMT)"; }
 status()  { printf ' %s%s%s%s%s%s%s' "$(get_uptime)" "$(get_ram)" "$(get_network)" "$(get_brightness)" "$(get_volume)" "$(get_battery)" "$(get_datetime)"; }
 refresh() { xsetroot -name "$(status)"; }
 
-mkdir -p "$HOME/.cache"
-printf '%s\n' "$$" > "$HOME/.cache/barpid"
+_cache="${XDG_CACHE_HOME:-$HOME/.cache}"
+mkdir -p "$_cache"
+printf '%s\n' "$$" > "$_cache/barpid"
 
 trap refresh 30
 while :; do

@@ -8,7 +8,7 @@ local lombok = vim.fs.joinpath(vim.fn.stdpath("data"), "lombok.jar")
 local jdtls_url = "https://download.eclipse.org/jdtls/snapshots/jdt-language-server-latest.tar.gz"
 
 local function jdtls_home()
-    return vim.env.JDTLS_HOME or vim.fs.joinpath(home, ".local", "share", "jdtls-install")
+    return vim.env.JDTLS_HOME or vim.fs.joinpath(vim.fn.stdpath("data"), "jdtls-install")
 end
 
 local function launcher_jar()
@@ -108,7 +108,7 @@ vim.lsp.config("jdtls", {
             error("jdtls: launcher não encontrado")
         end
         local project = config.root_dir and vim.fn.fnamemodify(config.root_dir, ":p:h:t") or "default"
-        local data_dir = vim.fs.joinpath(home, ".local", "share", "jdtls", project)
+        local data_dir = vim.fs.joinpath(vim.fn.stdpath("data"), "jdtls", project)
         local java = vim.env.JAVA_HOME and vim.fs.joinpath(vim.env.JAVA_HOME, "bin", "java") or "java"
         local argv = {
             java,
