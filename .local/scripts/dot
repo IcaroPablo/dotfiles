@@ -1,17 +1,23 @@
 #!/bin/sh
 #
-# dot — liga esta cópia do repositório à máquina, por symlinks.
+# dot — gerencia estes dotfiles e prepara a máquina.
+#
+# O gitdir mora fora da work-tree, que é o $HOME. É isso que impede o git de
+# achá-lo sozinho: nenhum `git` rodado num diretório qualquer da home cai aqui
+# por engano. O repositório NÃO é bare — tem core.bare=false e core.worktree
+# apontando para o $HOME, que é o que dispensa o --work-tree em toda invocação.
+# Bare, no truque original, era só o jeito preguiçoso de fazer o `git init` não
+# criar o gitdir dentro da work-tree; não era a parte que importava.
 #
 # Usage:
-#   dot link [--force]       cria os symlinks no $HOME
-#   dot unlink               remove os symlinks que apontam para este repo
-#   dot setup [--uninstall]  link + bloco no shell + doctor
-#   dot doctor               o que está ligado, o que está instalado, o que falta
+#   dot start <url>          clona o repositório e instala na home
+#   dot setup [--uninstall]  liga o shell ao ~/.config/sh, e roda o doctor
+#   dot doctor               o que está instalado e o que falta
+#   dot <git command>        git contra a work-tree dos dotfiles
 #
 # POSIX sh only (dash/ksh/bash). Sem perl, sem bashismo.
-#
-# Não há manifesto de o-que-vai-onde: a lista de links sai da própria árvore do
-# repositório (ver `targets`). Diretório novo em .config/ entra sozinho.
+
+DOTFILES_REPO="$HOME/.config/dotfiles"
 
 MARK_BEGIN="# >>> icaro-dotfiles >>>"
 MARK_END="# <<< icaro-dotfiles <<<"
@@ -19,124 +25,69 @@ MARK_END="# <<< icaro-dotfiles <<<"
 _OK='✓'
 _NO='✗'
 
+dotgit() { git --git-dir="$DOTFILES_REPO" "$@"; }
+
 have() { command -v "$1" >/dev/null 2>&1; }
-
-# resolve <caminho>: absoluto, com os symlinks resolvidos.
-resolve() {
-    if have realpath; then realpath "$1" 2>/dev/null && return 0; fi
-    if readlink -f / >/dev/null 2>&1; then readlink -f "$1" 2>/dev/null && return 0; fi
-    # BSD antigo, sem readlink -f: segue a cadeia na mão
-    _r="$1"
-    while [ -L "$_r" ]; do
-        _l="$(readlink "$_r")"
-        case "$_l" in
-            /*) _r="$_l" ;;
-            *)  _r="$(dirname "$_r")/$_l" ;;
-        esac
-    done
-    (CDPATH= cd "$(dirname "$_r")" 2>/dev/null && printf '%s/%s\n' "$(pwd -P)" "$(basename "$_r")")
-}
-
-# A raiz sai da localização deste script. Depois do `dot link` o dot é alcançado
-# por ~/.local/scripts, que é symlink — resolver antes de subir dois níveis, ou
-# a raiz daria no $HOME.
-SELF="$(resolve "$0")"
-REPO="${SELF%/.local/scripts/dot}"
-
-if [ "$REPO" = "$SELF" ] || [ ! -e "$REPO/.git" ]; then
-    printf 'dot: não achei a raiz do repositório a partir de %s\n' "$SELF" >&2
-    exit 1
-fi
 
 usage() {
     cat <<'EOF'
-dot liga estes dotfiles à máquina, por symlinks.
+dot gerencia estes dotfiles: o gitdir fica em ~/.config/dotfiles e a work-tree
+é o $HOME.
 
 Usage:
 
-    dot link [--force]       cria os symlinks no $HOME
-    dot unlink               remove os symlinks que apontam para este repo
-    dot setup [--uninstall]  link + bloco no shell + doctor
-    dot doctor               o que está ligado, o que está instalado, o que falta
+    dot start <url>          clona o repositório e instala na home
+    dot setup [--uninstall]  liga o shell ao ~/.config/sh, e roda o doctor
+    dot doctor               o que está instalado e o que falta
+    dot <git command>        git contra a work-tree dos dotfiles
 
-Versionar é git normal: cd no repositório e use o git.
 EOF
 }
 
-# ------------------------------------------------------------------- symlinks
+# ----------------------------------------------------------------- bootstrap
 
-# Arquivos de topo que alguma ferramenta exige no $HOME. O .xinitrc está aqui
-# porque o startx do OpenBSD não lê o $XDG_CONFIG_HOME/xinitrc — só o ~/.xinitrc.
-TOP_LEVEL='.xinitrc'
+start() {
+    _url="$1"
+    if [ -z "$_url" ]; then
+        printf 'uso: dot start <url do repositório>\n' >&2
+        return 1
+    fi
+    if [ -e "$DOTFILES_REPO" ]; then
+        printf 'dot: %s já existe\n' "$DOTFILES_REPO" >&2
+        return 1
+    fi
 
-# targets: um alvo por linha, relativo à raiz do repositório.
-targets() {
-    for _d in "$REPO"/.config/*/ "$REPO"/.local/*/; do
-        [ -d "$_d" ] || continue
-        _d="${_d%/}"
-        printf '%s\n' "${_d#$REPO/}"
+    # init + remote + fetch, e não `git clone --bare`: o clone --bare não
+    # configura refspec de tracking nenhum, e o repositório nasce sem origin/*
+    # — dá pra ver com `git config remote.origin.fetch`, que volta vazio.
+    git init -q --bare "$DOTFILES_REPO" || return 1
+    dotgit config core.bare false
+    dotgit config core.worktree "$HOME"
+    dotgit remote add origin "$_url"
+
+    printf 'buscando %s\n' "$_url"
+    dotgit fetch -q origin || return 1
+    dotgit remote set-head origin -a >/dev/null 2>&1
+
+    _branch="$(dotgit symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)"
+    _branch="${_branch#origin/}"
+    [ -n "$_branch" ] || _branch=main
+
+    # O checkout aborta inteiro no primeiro arquivo que já existe, e em máquina
+    # nova sempre existe algum (.profile, .bashrc vêm com o sistema). Tirar da
+    # frente antes, guardando o que estava lá — perder configuração alheia numa
+    # instalação é o pior momento possível.
+    _stamp="$(date +%Y%m%d%H%M%S)"
+    dotgit ls-tree -r --name-only "origin/$_branch" | while IFS= read -r _f; do
+        [ -e "$HOME/$_f" ] || continue
+        mv -- "$HOME/$_f" "$HOME/$_f.dot-bak.$_stamp" &&
+            printf '  ~ %s (o que estava aí virou %s.dot-bak.%s)\n' "$_f" "$_f" "$_stamp"
     done
-    for _f in $TOP_LEVEL; do
-        [ -e "$REPO/$_f" ] && printf '%s\n' "$_f"
-    done
-}
 
-# linked <rel>: verdadeiro se o $HOME já tem o link certo para o repositório.
-linked() {
-    [ -L "$HOME/$1" ] || return 1
-    [ "$(resolve "$HOME/$1")" = "$(resolve "$REPO/$1")" ]
-}
+    dotgit checkout -q "$_branch" || return 1
+    dotgit branch --quiet --set-upstream-to="origin/$_branch" "$_branch" 2>/dev/null
 
-link() {
-    _force=0
-    [ "$1" = "--force" ] && _force=1
-
-    _bad=0
-    _ifs="$IFS"; IFS='
-'
-    for _rel in $(targets); do
-        _dst="$HOME/$_rel"
-
-        if linked "$_rel"; then
-            printf '  =  %s\n' "$_rel"
-            continue
-        fi
-
-        if [ -e "$_dst" ] || [ -L "$_dst" ]; then
-            if [ "$_force" = 1 ]; then
-                _bak="$_dst.dot-bak.$(date +%Y%m%d%H%M%S)"
-                mv -- "$_dst" "$_bak" || { _bad=1; continue; }
-                printf '  ~  %s  (o que estava aí virou %s)\n' "$_rel" "${_bak##*/}"
-            else
-                printf '  !  %s  existe e não é o link — use --force pra mover de lado\n' "$_rel"
-                _bad=1
-                continue
-            fi
-        fi
-
-        mkdir -p -- "$(dirname -- "$_dst")"
-        if ln -s -- "$REPO/$_rel" "$_dst"; then
-            printf '  +  %s\n' "$_rel"
-        else
-            _bad=1
-        fi
-    done
-    IFS="$_ifs"
-
-    [ "$_bad" = 0 ]
-}
-
-# Só remove o que aponta para este repositório: link alheio no mesmo caminho
-# fica onde está.
-unlink_all() {
-    _ifs="$IFS"; IFS='
-'
-    for _rel in $(targets); do
-        if linked "$_rel"; then
-            rm -- "$HOME/$_rel" && printf '  -  %s\n' "$_rel"
-        fi
-    done
-    IFS="$_ifs"
+    printf 'pronto. agora: dot setup\n'
 }
 
 # -------------------------------------------------------------- shell wiring
@@ -195,29 +146,23 @@ setup() {
 
     case "$1" in
         --uninstall)
-            printf 'icaro-dotfiles :: setup --uninstall (shell: %s)\n\n' "$_shell"
-            printf 'shell\n'
+            printf 'icaro-dotfiles :: setup --uninstall (shell: %s)\n' "$_shell"
             remove_block "$_rc"
             remove_block "$_profile"
-            printf '\nsymlinks\n'
-            unlink_all
             return 0 ;;
     esac
 
-    printf 'icaro-dotfiles :: setup\n  repo:  %s\n  shell: %s\n\n' "$REPO" "$_shell"
-
-    printf 'symlinks\n'
-    if ! link "$@"; then
-        printf '\nsetup: resolva os conflitos acima, ou repita com --force.\n' >&2
+    if [ ! -f "$HOME/.config/sh/rc.sh" ]; then
+        printf 'setup: ~/.config/sh/rc.sh não existe — rode `dot start <url>` antes.\n' >&2
         return 1
     fi
 
-    printf '\nshell\n'
+    printf 'icaro-dotfiles :: setup (shell: %s)\n' "$_shell"
+
     case "$_shell" in
         ksh|ksh93|oksh|mksh|pdksh|sh)
-            # ksh/sh have no separate interactive rc file — the profile points
-            # $ENV at rc.sh (que re-puxa o env.sh de forma idempotente) e só
-            # depois carrega o env.sh.
+            # ksh/sh não têm rc interativo separado — o profile aponta o $ENV
+            # para o rc.sh e só depois carrega o env.sh.
             #
             # A ordem importa: o env.sh termina no auto-startx do tty1, que
             # bloqueia até a sessão do X morrer. Com o export depois, o ENV só
@@ -246,9 +191,9 @@ present() {
     esac
 }
 
-# report_group <rótulo> <ferramenta...>: ✓/✗ por ferramenta. Retorna não-zero se
-# faltar alguma. Sem instruções de instalação: cada máquina tem o seu gerenciador
-# e as tabelas por SO envelheciam mais rápido do que eram lidas.
+# report_group <rótulo> <ferramenta...>: ✓/✗ por ferramenta, não-zero se faltar
+# alguma. Sem instrução de instalação: cada máquina tem o seu gerenciador, e as
+# tabelas por SO envelheciam mais rápido do que eram lidas.
 report_group() {
     _label="$1"; shift
     _missing=""
@@ -273,25 +218,26 @@ _block_status() {
     fi
 }
 
-link_status() {
-    printf 'symlinks\n'
-    _ifs="$IFS"; IFS='
-'
-    for _rel in $(targets); do
-        if linked "$_rel"; then
-            printf '  %s %s\n' "$_OK" "$_rel"
-        else
-            printf '  %s %s\n' "$_NO" "$_rel"
-        fi
-    done
-    IFS="$_ifs"
+repo_status() {
+    printf 'repositório\n'
+    if [ ! -e "$DOTFILES_REPO" ]; then
+        printf '  %s %s não existe\n\n' "$_NO" "$DOTFILES_REPO"
+        return 1
+    fi
+    printf '  %s gitdir     %s\n' "$_OK" "$DOTFILES_REPO"
+    _wt="$(dotgit config core.worktree 2>/dev/null)"
+    if [ "$_wt" = "$HOME" ]; then
+        printf '  %s work-tree  %s\n' "$_OK" "$_wt"
+    else
+        printf '  %s work-tree  %s (esperado %s)\n' "$_NO" "${_wt:-<não configurada>}" "$HOME"
+    fi
     printf '\n'
 }
 
 doctor() {
-    printf 'icaro-dotfiles :: doctor (%s)\n  repo: %s\n\n' "$(uname)" "$REPO"
+    printf 'icaro-dotfiles :: doctor (%s)\n\n' "$(uname)"
 
-    link_status
+    repo_status
 
     _core=1
     report_group "CORE" git fzf eza nvim tree-sitter bat file mktemp dvtm || _core=0
@@ -323,9 +269,8 @@ doctor() {
 
 case "${1:-}" in
     ""|-h|--help|help) usage ;;
-    link)    shift; link "$@" ;;
-    unlink)  unlink_all ;;
+    start)   shift; start "$@" ;;
     setup)   shift; setup "$@" ;;
     doctor)  doctor ;;
-    *)       printf 'dot: verbo desconhecido: %s\n\n' "$1" >&2; usage; exit 1 ;;
+    *)       dotgit "$@" ;;
 esac
