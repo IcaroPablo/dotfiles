@@ -1,20 +1,17 @@
 #!/bin/sh
 #
-# dot — manage these dotfiles as a git bare repo, plus a tiny install wizard.
+# dot — liga esta cópia do repositório à máquina, por symlinks.
 #
 # Usage:
-#   dot start [<git repo>]   set up the bare repo (clone if a URL is given)
-#   dot setup [--uninstall]  wire the current shell to load ~/.config/sh, and
-#                            run the dependency doctor (never installs anything)
-#   dot doctor               report which dependencies are present / missing
-#   dot <git command>        run any git command against the dotfiles work tree
+#   dot link [--force]       cria os symlinks no $HOME
+#   dot unlink               remove os symlinks que apontam para este repo
+#   dot setup [--uninstall]  link + bloco no shell + doctor
+#   dot doctor               o que está ligado, o que está instalado, o que falta
 #
-# POSIX sh only (works under dash/ksh/bash). No perl, no bashisms.
-
-DOTFILES_BARE_REPO="$HOME/.config/dotfiles"
-
-: "${XDG_CONFIG_HOME:="$HOME/.config"}"
-DOT_SH="$XDG_CONFIG_HOME/sh"
+# POSIX sh only (dash/ksh/bash). Sem perl, sem bashismo.
+#
+# Não há manifesto de o-que-vai-onde: a lista de links sai da própria árvore do
+# repositório (ver `targets`). Diretório novo em .config/ entra sozinho.
 
 MARK_BEGIN="# >>> icaro-dotfiles >>>"
 MARK_END="# <<< icaro-dotfiles <<<"
@@ -22,51 +19,124 @@ MARK_END="# <<< icaro-dotfiles <<<"
 _OK='✓'
 _NO='✗'
 
-dotgit() { git --git-dir="$DOTFILES_BARE_REPO" "$@"; }
-
 have() { command -v "$1" >/dev/null 2>&1; }
+
+# resolve <caminho>: absoluto, com os symlinks resolvidos.
+resolve() {
+    if have realpath; then realpath "$1" 2>/dev/null && return 0; fi
+    if readlink -f / >/dev/null 2>&1; then readlink -f "$1" 2>/dev/null && return 0; fi
+    # BSD antigo, sem readlink -f: segue a cadeia na mão
+    _r="$1"
+    while [ -L "$_r" ]; do
+        _l="$(readlink "$_r")"
+        case "$_l" in
+            /*) _r="$_l" ;;
+            *)  _r="$(dirname "$_r")/$_l" ;;
+        esac
+    done
+    (CDPATH= cd "$(dirname "$_r")" 2>/dev/null && printf '%s/%s\n' "$(pwd -P)" "$(basename "$_r")")
+}
+
+# A raiz sai da localização deste script. Depois do `dot link` o dot é alcançado
+# por ~/.local/scripts, que é symlink — resolver antes de subir dois níveis, ou
+# a raiz daria no $HOME.
+SELF="$(resolve "$0")"
+REPO="${SELF%/.local/scripts/dot}"
+
+if [ "$REPO" = "$SELF" ] || [ ! -e "$REPO/.git" ]; then
+    printf 'dot: não achei a raiz do repositório a partir de %s\n' "$SELF" >&2
+    exit 1
+fi
 
 usage() {
     cat <<'EOF'
-Dot manages dotfiles as a git bare repo, with a small install wizard.
+dot liga estes dotfiles à máquina, por symlinks.
 
 Usage:
 
-    dot start [<git repo>]     set up the bare repo (clone if a URL is given)
-    dot setup [--uninstall]    wire the current shell to ~/.config/sh + doctor
-    dot doctor                 report present/missing dependencies
-    dot <git command>          run git against the dotfiles work tree
+    dot link [--force]       cria os symlinks no $HOME
+    dot unlink               remove os symlinks que apontam para este repo
+    dot setup [--uninstall]  link + bloco no shell + doctor
+    dot doctor               o que está ligado, o que está instalado, o que falta
 
+Versionar é git normal: cd no repositório e use o git.
 EOF
 }
 
-# ----------------------------------------------------------------- bare repo
+# ------------------------------------------------------------------- symlinks
 
-start() {
-    # the bare repo always lives at $HOME/.config/dotfiles
-    dotfiles_repo=".config/dotfiles"
+# Arquivos de topo que alguma ferramenta exige no $HOME. O .xinitrc está aqui
+# porque o startx do OpenBSD não lê o $XDG_CONFIG_HOME/xinitrc — só o ~/.xinitrc.
+TOP_LEVEL='.xinitrc'
 
-    if [ -n "$1" ]; then
-        printf 'make sure your git repo ignores %s (Abort/ok)\n' "$dotfiles_repo"
-        read -r answer
-        case "$answer" in
-            a|A|"") echo "aborting"; exit 1 ;;
-            *) ;;
-        esac
-        git clone --bare "$1" "$DOTFILES_BARE_REPO"
-    else
-        if [ "$(dotgit rev-parse --is-bare-repository 2>/dev/null)" = "true" ]; then
-            echo "already set up in $DOTFILES_BARE_REPO"
-        else
-            dotgit init --bare "$DOTFILES_BARE_REPO"
-            dotgit branch -m main
-            # sem showUntrackedFiles=no: o ~/.gitignore é uma whitelist
-            # (ignora tudo, libera o versionado), então o status já vem limpo
-            # e arquivo novo dentro do que é versionado continua aparecendo.
-            grep -q "$dotfiles_repo" "$HOME/.gitignore" 2>/dev/null \
-                || printf '%s\n' "$dotfiles_repo" >> "$HOME/.gitignore"
+# targets: um alvo por linha, relativo à raiz do repositório.
+targets() {
+    for _d in "$REPO"/.config/*/ "$REPO"/.local/*/; do
+        [ -d "$_d" ] || continue
+        _d="${_d%/}"
+        printf '%s\n' "${_d#$REPO/}"
+    done
+    for _f in $TOP_LEVEL; do
+        [ -e "$REPO/$_f" ] && printf '%s\n' "$_f"
+    done
+}
+
+# linked <rel>: verdadeiro se o $HOME já tem o link certo para o repositório.
+linked() {
+    [ -L "$HOME/$1" ] || return 1
+    [ "$(resolve "$HOME/$1")" = "$(resolve "$REPO/$1")" ]
+}
+
+link() {
+    _force=0
+    [ "$1" = "--force" ] && _force=1
+
+    _bad=0
+    _ifs="$IFS"; IFS='
+'
+    for _rel in $(targets); do
+        _dst="$HOME/$_rel"
+
+        if linked "$_rel"; then
+            printf '  =  %s\n' "$_rel"
+            continue
         fi
-    fi
+
+        if [ -e "$_dst" ] || [ -L "$_dst" ]; then
+            if [ "$_force" = 1 ]; then
+                _bak="$_dst.dot-bak.$(date +%Y%m%d%H%M%S)"
+                mv -- "$_dst" "$_bak" || { _bad=1; continue; }
+                printf '  ~  %s  (o que estava aí virou %s)\n' "$_rel" "${_bak##*/}"
+            else
+                printf '  !  %s  existe e não é o link — use --force pra mover de lado\n' "$_rel"
+                _bad=1
+                continue
+            fi
+        fi
+
+        mkdir -p -- "$(dirname -- "$_dst")"
+        if ln -s -- "$REPO/$_rel" "$_dst"; then
+            printf '  +  %s\n' "$_rel"
+        else
+            _bad=1
+        fi
+    done
+    IFS="$_ifs"
+
+    [ "$_bad" = 0 ]
+}
+
+# Só remove o que aponta para este repositório: link alheio no mesmo caminho
+# fica onde está.
+unlink_all() {
+    _ifs="$IFS"; IFS='
+'
+    for _rel in $(targets); do
+        if linked "$_rel"; then
+            rm -- "$HOME/$_rel" && printf '  -  %s\n' "$_rel"
+        fi
+    done
+    IFS="$_ifs"
 }
 
 # -------------------------------------------------------------- shell wiring
@@ -125,21 +195,24 @@ setup() {
 
     case "$1" in
         --uninstall)
-            printf 'icaro-dotfiles :: setup --uninstall (shell: %s)\n' "$_shell"
+            printf 'icaro-dotfiles :: setup --uninstall (shell: %s)\n\n' "$_shell"
+            printf 'shell\n'
             remove_block "$_rc"
             remove_block "$_profile"
+            printf '\nsymlinks\n'
+            unlink_all
             return 0 ;;
     esac
 
-    if [ ! -f "$DOT_SH/rc.sh" ]; then
-        printf 'setup: %s/rc.sh não encontrado — rode `dot start <repo>` primeiro.\n' "$DOT_SH" >&2
+    printf 'icaro-dotfiles :: setup\n  repo:  %s\n  shell: %s\n\n' "$REPO" "$_shell"
+
+    printf 'symlinks\n'
+    if ! link "$@"; then
+        printf '\nsetup: resolva os conflitos acima, ou repita com --force.\n' >&2
         return 1
     fi
 
-    printf 'icaro-dotfiles :: setup (shell vigente: %s)\n' "$_shell"
-
-    # The login profile always sources env.sh, so login env and the auto-startx
-    # on tty1 fire at login. The interactive rc sources rc.sh on top.
+    printf '\nshell\n'
     case "$_shell" in
         ksh|ksh93|oksh|mksh|pdksh|sh)
             # ksh/sh have no separate interactive rc file — the profile points
@@ -154,7 +227,6 @@ setup() {
 "ENV=\"\$HOME/.config/sh/rc.sh\"; export ENV
 . \"\$HOME/.config/sh/env.sh\"" ;;
         *)
-            # zsh/bash: profile sources env.sh; interactive rc sources rc.sh.
             inject_block "$_profile" ". \"\$HOME/.config/sh/env.sh\""
             inject_block "$_rc" ". \"\$HOME/.config/sh/rc.sh\"" ;;
     esac
@@ -165,7 +237,7 @@ setup() {
 
 # -------------------------------------------------------------------- doctor
 
-# present <tool>: true if the tool (or an accepted alternate) is available.
+# present <cmd>: verdadeiro se a ferramenta (ou um substituto aceito) existe.
 present() {
     case "$1" in
         fd)     have fd || have fdfind ;;
@@ -174,119 +246,86 @@ present() {
     esac
 }
 
-# pkg_hint <tool>: print the install command for the current OS, or nothing.
-pkg_hint() {
-    _os="$(uname)"
-    case "$_os" in
-        Darwin)
-            case "$1" in
-                mktemp|file|open|git|make|lsof) echo '' ;;
-                nvim)     echo 'brew install neovim' ;;
-                fd)       echo 'brew install fd' ;;
-                exiftool) echo 'brew install exiftool' ;;
-                dvtm)     echo 'compile o fork; o do brew não tem os verbos do shpad' ;;
-                tree-sitter) echo 'brew install tree-sitter' ;;
-                *)        echo "brew install $1" ;;
-            esac ;;
-        Linux)
-            case "$1" in
-                nvim)     echo 'apt install neovim' ;;
-                fd)       echo 'apt install fd-find' ;;
-                bat)      echo 'apt install bat  # binário: batcat' ;;
-                exiftool) echo 'apt install libimage-exiftool-perl' ;;
-                doas)     echo 'apt install opendoas' ;;
-                xdg-open) echo 'apt install xdg-utils' ;;
-                carapace) echo 'ver carapace.sh; não está no apt' ;;
-                dvtm)     echo 'compile o fork; o do apt não tem os verbos do shpad' ;;
-                tree-sitter) echo 'cargo install tree-sitter-cli; não está no apt' ;;
-                mktemp)   echo '' ;;
-                *)        echo "apt install $1" ;;
-            esac ;;
-        OpenBSD)
-            case "$1" in
-                nvim)     echo 'pkg_add neovim' ;;
-                exiftool) echo 'pkg_add p5-Image-ExifTool' ;;
-                carapace) echo 'ver carapace.sh; não está nos pacotes' ;;
-                dvtm)     echo 'compile o fork; o do pkg_add não tem os verbos do shpad' ;;
-                tree-sitter) echo 'cargo install tree-sitter-cli' ;;
-                mktemp|file|unzip|tar|doas|make) echo '' ;;
-                *)        echo "pkg_add $1" ;;
-            esac ;;
-        *) echo '' ;;
-    esac
-}
-
-# report_group <label> <tool...>: print ✓/✗ per tool + hints. Return non-zero
-# if any tool in the group is missing.
+# report_group <rótulo> <ferramenta...>: ✓/✗ por ferramenta. Retorna não-zero se
+# faltar alguma. Sem instruções de instalação: cada máquina tem o seu gerenciador
+# e as tabelas por SO envelheciam mais rápido do que eram lidas.
 report_group() {
     _label="$1"; shift
-    _grp_missing=""
+    _missing=""
     printf '%s\n  ' "$_label"
     for _t in "$@"; do
         if present "$_t"; then
             printf '%s %s  ' "$_OK" "$_t"
         else
             printf '%s %s  ' "$_NO" "$_t"
-            _grp_missing="$_grp_missing $_t"
+            _missing="$_missing $_t"
         fi
     done
-    printf '\n'
-    for _t in $_grp_missing; do
-        _h="$(pkg_hint "$_t")"
-        if [ -n "$_h" ]; then
-            printf '    → falta %s  (%s)\n' "$_t" "$_h"
-        else
-            printf '    → falta %s\n' "$_t"
-        fi
-    done
-    printf '\n'
-    [ -z "$_grp_missing" ]
+    printf '\n\n'
+    [ -z "$_missing" ]
 }
 
 _block_status() {
     if [ -f "$1" ] && grep -qF "$MARK_BEGIN" "$1" 2>/dev/null; then
-        printf '  %s [bloco presente]\n' "$1"
+        printf '  %s %s\n' "$_OK" "$1"
     else
-        printf '  %s [sem bloco]\n' "$1"
+        printf '  %s %s\n' "$_NO" "$1"
     fi
 }
 
-doctor() {
-    _os="$(uname)"
-    printf 'icaro-dotfiles :: doctor (%s)\n\n' "$_os"
+link_status() {
+    printf 'symlinks\n'
+    _ifs="$IFS"; IFS='
+'
+    for _rel in $(targets); do
+        if linked "$_rel"; then
+            printf '  %s %s\n' "$_OK" "$_rel"
+        else
+            printf '  %s %s\n' "$_NO" "$_rel"
+        fi
+    done
+    IFS="$_ifs"
+    printf '\n'
+}
 
-    _core_ok=1
-    report_group "CORE" git fzf eza nvim tree-sitter bat file mktemp dvtm || _core_ok=0
+doctor() {
+    printf 'icaro-dotfiles :: doctor (%s)\n  repo: %s\n\n' "$(uname)" "$REPO"
+
+    link_status
+
+    _core=1
+    report_group "CORE" git fzf eza nvim tree-sitter bat file mktemp dvtm || _core=0
     report_group "NÚCLEO" fd zoxide readlink make lsof carapace || :
     report_group "PREVIEW (opcional — recursos degradam sem)" \
         w3m exiftool unzip tar pixterm || :
 
-    case "$_os" in
+    case "$(uname)" in
         Darwin)  report_group "OS/desktop (Darwin)" open || : ;;
         Linux)   report_group "OS/desktop (Linux)" xdg-open flatpak xclip || : ;;
         OpenBSD) report_group "OS/desktop (OpenBSD)" doas || : ;;
     esac
 
     _shell="$(detect_shell)"
-    printf 'Shell vigente: %s\n' "$_shell"
+    printf 'shell (%s)\n' "$_shell"
     _block_status "$(rc_path_for "$_shell")"
     _block_status "$(profile_path_for "$_shell")"
 
     printf '\n'
-    if [ "$_core_ok" = 1 ]; then
-        printf 'Resultado: núcleo CORE completo.\n'
+    if [ "$_core" = 1 ]; then
+        printf 'CORE completo.\n'
         return 0
     fi
-    printf 'Resultado: dependência(s) CORE ausente(s).\n'
+    printf 'falta dependência do CORE.\n'
     return 1
 }
 
 # ------------------------------------------------------------------ dispatch
 
-case "$1" in
-    "")      usage ;;
-    start)   start "$2" ;;
+case "${1:-}" in
+    ""|-h|--help|help) usage ;;
+    link)    shift; link "$@" ;;
+    unlink)  unlink_all ;;
     setup)   shift; setup "$@" ;;
     doctor)  doctor ;;
-    *)       dotgit --work-tree="$HOME" "$@" ;;
+    *)       printf 'dot: verbo desconhecido: %s\n\n' "$1" >&2; usage; exit 1 ;;
 esac
