@@ -9,8 +9,9 @@
 # exported terminal launcher and the tty1 auto-startx (a login-time action).
 
 # DOT_ROOT — a raiz destes dotfiles: o diretório que contém .config/ e .local/.
-# Hoje é o $HOME, porque o bare repo tem o $HOME como work-tree, então o default
-# preserva o comportamento atual. Ter a raiz numa variável é o que permite
+# O default é o $HOME apenas para o caso de alguém carregar este arquivo solto;
+# a instalação normal aponta para o clone. Ter a raiz numa variável é o que
+# permite
 # apontar esta mesma configuração para um clone em outro lugar — uma sessão
 # volátil numa máquina alheia — sem editar nada aqui.
 : "${DOT_ROOT:="$HOME"}"
