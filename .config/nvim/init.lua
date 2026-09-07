@@ -104,11 +104,6 @@ end
 --     autocmd FileType man colorscheme gruvbox
 -- ]])
 
--- vim.api.nvim_create_user_command("SetDotfilesGitVars", function()
---     vim.env.GIT_WORK_TREE = vim.fn.expand("~")
---     vim.env.GIT_DIR = vim.fn.expand("~/.config/dotfiles")
--- end, {})
-
 -- vim.api.nvim_create_user_command("DisableLSPColors", function()
 --     for _, group in ipairs(vim.fn.getcompletion("@lsp", "highlight")) do
 --         vim.api.nvim_set_hl(0, group, {})
