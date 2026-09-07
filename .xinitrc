@@ -46,7 +46,8 @@ xset -dpms
 xset dpms 0 0 0
 #setterm -blank 0 -powerdown 0
 
-. "${DOT_ROOT:-$HOME}/.config/sh/env.sh"
+# DOT_ROOT, PATH e o resto vêm herdados: o profile carrega o env.sh no login e
+# é o env.sh que dispara o startx. Sem essa herança nada aqui embaixo resolve.
 
 # papel de parede. Era `$HOME/.fehbg &`, um arquivo que o feh gera com o
 # caminho absoluto e o nome de usuário dentro, untracked e que a whitelist nem
