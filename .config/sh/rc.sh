@@ -10,9 +10,15 @@ ulimit -c 0 2>/dev/null || true
 
 [ -n "${INITIAL_FOLDER:-}" ] && cd "$INITIAL_FOLDER"
 
+# o eza é o normal, mas o ls precisa servir: numa máquina recém-instalada o
+# rc.sh carrega antes de existir pacote nenhum, e o e() é a última linha daqui
 e() {
     clear 2>/dev/null || true
-    eza -lh "$@" --group-directories-first --no-quotes --icons always --color always
+    if have eza; then
+        eza -lh "$@" --group-directories-first --no-quotes --icons always --color always
+    else
+        ls -lh "$@"
+    fi
 }
 
 # ponto único de navegação e abertura. todo diretório alcançado por aqui é
@@ -86,6 +92,10 @@ m() { [ -s "$CLIPFILE" ] || return; while IFS= read -r _e; do mv -v -- "$_e" .; 
 # único selecionador. sem argumento só enche o clipboard, para p e m; com
 # argumento, o primeiro é um comando e a seleção vira o final dos args dele
 sel() {
+    # sem fzf não há seleção nenhuma, e sem eza o corte do ícone (${_sel_l#* })
+    # comeria o começo dos nomes — recusar é mais honesto que listar errado
+    have fzf && have eza || { printf 'sel: precisa de fzf e eza\n' >&2; return 1; }
+
     if [ -n "$1" ]; then _sel_cmd="$1"; shift; else _sel_cmd=""; fi
     _sel_ls='eza -1 --group-directories-first --no-quotes --icons always --color always'
 
