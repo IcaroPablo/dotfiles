@@ -2,7 +2,7 @@
 
 clear 2>/dev/null
 
-TRASH="${DOT_TRASH:-$HOME/.trash}"
+TRASH="$HOME/.trash"
 
 printf '\nempty %s? [y/N] ' "$TRASH"
 read -r ans || exit 0
