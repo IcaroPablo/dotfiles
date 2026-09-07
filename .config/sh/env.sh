@@ -55,9 +55,9 @@ if [ -d "$DOT_ROOT/.local/terminfo" ]; then
     export TERMINFO_DIRS="$DOT_ROOT/.local/terminfo:${TERMINFO_DIRS:-}"
 fi
 
-# --- rust (guarded) ---
-[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
-_path_prepend "$HOME/.cargo/bin"
+# # --- rust (guarded) ---
+# [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+# _path_prepend "$HOME/.cargo/bin"
 
 # --- go (guarded) ---
 export GOPATH="$HOME/.go"
