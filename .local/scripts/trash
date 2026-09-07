@@ -2,7 +2,7 @@
 
 [ "$#" -gt 0 ] || exit 0
 
-TRASH="${DOT_TRASH:-$HOME/.trash}"
+TRASH="$HOME/.trash"
 [ -d "$TRASH" ] || mkdir -p -- "$TRASH"
 
 mv -- "$@" "$TRASH"

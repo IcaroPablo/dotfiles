@@ -46,15 +46,15 @@ xset -dpms
 xset dpms 0 0 0
 #setterm -blank 0 -powerdown 0
 
-# DOT_ROOT, PATH e o resto vêm herdados: o profile carrega o env.sh no login e
-# é o env.sh que dispara o startx. Sem essa herança nada aqui embaixo resolve.
+# PATH e o resto vêm herdados: o profile carrega o env.sh no login e é o
+# env.sh que dispara o startx. Sem essa herança nada aqui embaixo resolve.
 
-# papel de parede. Era `$HOME/.fehbg &`, um arquivo que o feh gera com o
-# caminho absoluto e o nome de usuário dentro, untracked e que a whitelist nem
-# deixa versionar — máquina nova ficava sem papel de parede e sem erro visível.
-# O --no-fehbg impede o feh de reescrever aquele arquivo de novo.
-: "${DOT_WALLPAPER:=$DOT_ROOT/.local/wallpapers/brown-mountain-in-scottsdale-landscape-ma-1920x1080.jpg}"
-feh --no-fehbg --bg-scale "$DOT_WALLPAPER" &
+# papel de parede. Era `$HOME/.fehbg &`, que o feh gera com caminho absoluto e
+# nome de usuário dentro, untracked — máquina nova ficava sem papel de parede e
+# sem erro nenhum. O current é um symlink versionado apontando para a escolhida;
+# o --no-fehbg impede o feh de reescrever aquele arquivo.
+_w="$HOME/.local/wallpapers/current"
+[ -f "$_w" ] && feh --no-fehbg --bg-scale "$_w" &
 # setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.\+=\([0-9]\+\).\+/\1/'` br &
 # setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.*=//' | awk '{print $1}'` br &
 setxkbmap br &

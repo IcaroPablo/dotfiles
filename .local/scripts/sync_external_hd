@@ -3,7 +3,7 @@ set -e
 
 local_mirror=/mnt/secretstuff/
 external_mirror=/mnt/external_backup_drive/
-exclude="${DOT_ROOT:-$HOME}/.local/scripts/exclude_from_sync.txt"
+exclude="$HOME/.local/scripts/exclude_from_sync.txt"
 device=/dev/sd3i
 
 mount | grep -q "$external_mirror" || doas ntfs-3g "$device" "$external_mirror"
