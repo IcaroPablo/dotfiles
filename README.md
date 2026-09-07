@@ -49,9 +49,13 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
     - [dmenu](https://github.com/IcaroPablo/dmenu)
 
 - Setup my dotfiles
-    >These dotfiles are managed using the [git bare repo method](https://www.atlassian.com/git/tutorials/dotfiles) through a small shellscript called "dot" for ease of use.
-    - download only the [dot script](.local/scripts/dot)
-    - `$ dot start https://github.com/IcaroPablo/dotfiles`
+    >A plain git repository plus symlinks, managed by a small POSIX shell script called [dot](.local/scripts/dot). The only things written into `$HOME` are the links themselves and one marked block in the shell profile — `dot setup --uninstall` reverses both.
+    - `$ git clone https://github.com/IcaroPablo/dotfiles ~/Workspace/dotfiles`
+    - `$ ~/Workspace/dotfiles/.local/scripts/dot setup`
+
+    >`dot doctor` reports what is linked, what is installed and what is missing. `dot link --force` moves aside anything already sitting where a link belongs, instead of clobbering it. There is no manifest of what-links-where: the list comes from the repository tree, so a new directory under `.config/` is picked up on its own.
+
+    >**Future goal — deploying this on a host I don't own.** Getting my shell and editor config onto someone else's machine without touching their dotfiles is achievable: the configs are XDG-native, and every shell has an entry point that loads config from an arbitrary path (`ENV=` for ksh, `--rcfile` for bash, `ZDOTDIR=` for zsh), so no host file needs patching. What does not travel is the tools — fzf, eza, nvim, dvtm are binaries, and there is no portable way to get them onto an arbitrary unix host. So the realistic target is config portability with graceful degradation, not an identical environment everywhere.
 
 - Properly configure rc.local e rc.shutdown to mount/umount encrypted discs using the following reference scripts
     - [mount_encrypted](.local/scripts/mount_encrypted)
