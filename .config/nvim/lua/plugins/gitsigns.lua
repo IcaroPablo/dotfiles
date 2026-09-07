@@ -5,6 +5,11 @@ return {
     dependencies = { "nvim-lua/plenary.nvim" },
     config = function()
         require("gitsigns").setup({
+            -- o gitdir dos dotfiles fica fora da work-tree, então o
+            -- gitsigns não descobre o repo sozinho
+            worktrees = {
+                { toplevel = vim.env.HOME, gitdir = vim.env.HOME .. "/.config/dotfiles" },
+            },
             on_attach = function(bufnr)
                 local gs = require("gitsigns")
                 local opts = { buffer = bufnr }
