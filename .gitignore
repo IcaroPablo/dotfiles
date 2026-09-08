@@ -23,9 +23,8 @@
 !/.xinitrc
 !/README.md
 
-# ── os dois diretórios curados (liberar o dir, não o conteúdo) ───────────────
+# ── o diretório curado (liberar o dir, não o conteúdo) ───────────────────────
 !/.config/
-!/.local/
 
 # ── .config: ignora tudo, libera os nossos ───────────────────────────────────
 /.config/*
@@ -38,9 +37,6 @@
 !/.config/vis/
 !/.config/zathura/
 
-# ── .local: idem ─────────────────────────────────────────────────────────────
-/.local/*
-!/.local/scripts/
 
 # ── exceções dentro do que foi liberado ──────────────────────────────────────
 # gerados pelo lua_ls, nunca versionar

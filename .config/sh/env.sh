@@ -19,8 +19,12 @@ _path_prepend() {
     esac
 }
 
+# .local/bin recebe os utilitários avulsos (o `make install` do repo scripts);
+# .config/sh/bin são os que fazem parte desta configuração e são chamados daqui.
+# O segundo vem depois porque o _path_prepend põe na frente: em caso de nome
+# repetido, ganha o que pertence ao ambiente.
 _path_prepend "$HOME/.local/bin"
-_path_prepend "$HOME/.local/scripts"
+_path_prepend "$HOME/.config/sh/bin"
 
 # --- editor / pager (guarded: degrade instead of pointing at a missing tool) ---
 if command -v nvim >/dev/null 2>&1; then EDITOR='nvim'; MANPAGER='nvim +Man!'; else EDITOR='vi'; unset MANPAGER; fi
