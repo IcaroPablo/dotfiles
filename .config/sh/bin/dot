@@ -245,6 +245,12 @@ doctor() {
     report_group "PREVIEW (opcional — recursos degradam sem)" \
         w3m exiftool unzip tar pixterm || :
 
+    # Outro repositório: github.com/IcaroPablo/posix-shell-scripts-collection,
+    # instalado com `make install`. Sem ele os aliases a/f/g/t ficam sem o
+    # comando por trás, e o shpad não abre painel — o nvim chama o create.
+    report_group "COLEÇÃO (posix-shell-scripts-collection)" \
+        create findfile simplegrep trash || :
+
     case "$(uname)" in
         Darwin)  report_group "OS/desktop (Darwin)" open || : ;;
         Linux)   report_group "OS/desktop (Linux)" xdg-open flatpak xclip || : ;;
