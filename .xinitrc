@@ -73,7 +73,7 @@ dbus-update-activation-environment --all &
 
 # run the WM in the foreground (no exec) so the ssh-agent teardown below runs on logout
 smawm
-# exec startdwm
+# while true; do dwm; done   # era o script startdwm, seis linhas para isto
 # exec sowm
 # xhost +SI:localuser:$USER
 # exec distrobox enter -T -n arch -- xmonad

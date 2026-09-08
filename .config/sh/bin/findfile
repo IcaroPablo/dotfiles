@@ -1,9 +1,0 @@
-#!/bin/sh
-
-if command -v fd >/dev/null 2>&1; then
-    fd "$1"
-elif command -v fdfind >/dev/null 2>&1; then
-    fdfind "$1"
-else
-    find . -iname "*$1*"
-fi
