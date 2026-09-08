@@ -1,5 +1,0 @@
-#!/bin/sh
-
-[ -f "$1" ] || { echo "dw: not a file: $1" >&2; exit 1; }
-
-$TERM_CMD sh -c '"$1" 2>&1 | less' sh "$1" &
