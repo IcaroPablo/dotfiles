@@ -45,8 +45,7 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
  
 - Install my graphical environment (I use Xorg)
     - [st](https://github.com/IcaroPablo/st)
-    - [dwm](https://github.com/IcaroPablo/dwm)
-    - [dmenu](https://github.com/IcaroPablo/dmenu)
+    - [smawm](https://github.com/IcaroPablo/sowm/tree/smawm)
 
 - Setup my dotfiles
     >The gitdir lives outside the work-tree (which is `$HOME`), so git never finds it by accident — a stray `git` command in a home subdirectory won't touch these files. The repository is *not* bare: `core.worktree` points at `$HOME`, which is what lets [dot](.config/sh/bin/dot) pass only `--git-dir`.
@@ -56,10 +55,7 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
 
     >`dot start` moves aside anything already sitting where a tracked file belongs, saving it as `<name>.dot-bak.<timestamp>`: a fresh install always has a `.profile` or `.bashrc` in the way, and a checkout aborts entirely on the first collision. `dot setup` wires the shell and runs `dot doctor`, which reports what is installed and what is missing. Any other verb goes straight to git — `dot status`, `dot commit`, `dot push`.
 
-- Install the standalone scripts
-    >Utilities that don't depend on this configuration live in their own repository, with a Makefile that symlinks them into `~/.local/bin`. The ones that *are* part of the environment — the fzf `preview`, `openfile`, the `bar` of the xinitrc, the `shpad` broker — live here instead, in `.config/sh/bin`, next to the `rc.sh` that calls them. The split is by dependency, not by taste.
-    - `$ git clone https://github.com/IcaroPablo/posix-shell-scripts-collection ~/Workspace/scripts`
-    - `$ make -C ~/Workspace/scripts install`
+- Install my [shell scripts collection](https://github.com/IcaroPablo/posix-shell-scripts-collection)
 
 - Properly configure rc.local e rc.shutdown to mount/umount encrypted discs using the following reference scripts
     - [mount_encrypted](https://github.com/IcaroPablo/posix-shell-scripts-collection/blob/main/bin/mount_encrypted)
