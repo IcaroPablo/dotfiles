@@ -69,15 +69,6 @@ case "$(uname)" in
 esac
 export PATH
 
-# Terminal launcher — EXPORTED porque split_scr e dw leem em outro processo.
-# st nas máquinas dwm/X11 (Linux + OpenBSD), wezterm no macOS.
-if command -v st >/dev/null 2>&1; then
-    TERM_CMD='st -e'
-elif command -v wezterm >/dev/null 2>&1; then
-    TERM_CMD='wezterm start --'
-fi
-[ -n "${TERM_CMD:-}" ] && export TERM_CMD
-
 # Start X automatically on the first console (Linux and OpenBSD). This is a
 # login-time action; env.sh is sourced once per login, so it fires just once.
 if [ -z "${DISPLAY:-}" ] && [ "$(tty 2>/dev/null)" = "/dev/tty1" ] && command -v startx >/dev/null 2>&1; then
