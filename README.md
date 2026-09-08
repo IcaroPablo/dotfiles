@@ -49,13 +49,16 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
     - [dmenu](https://github.com/IcaroPablo/dmenu)
 
 - Setup my dotfiles
-    >A plain git repository plus symlinks, managed by a small POSIX shell script called [dot](.local/scripts/dot). The only things written into `$HOME` are the links themselves and one marked block in the shell profile — `dot setup --uninstall` reverses both.
-    - `$ git clone https://github.com/IcaroPablo/dotfiles ~/Workspace/dotfiles`
-    - `$ ~/Workspace/dotfiles/.local/scripts/dot setup`
+    >The gitdir lives outside the work-tree (which is `$HOME`), so git never finds it by accident — a stray `git` command in a home subdirectory won't touch these files. The repository is *not* bare: `core.worktree` points at `$HOME`, which is what lets [dot](.config/sh/bin/dot) pass only `--git-dir`.
+    - download only the [dot script](.config/sh/bin/dot)
+    - `$ dot start https://github.com/IcaroPablo/dotfiles`
+    - `$ dot setup`
 
-    >`dot doctor` reports what is linked, what is installed and what is missing. `dot link --force` moves aside anything already sitting where a link belongs, instead of clobbering it. There is no manifest of what-links-where: the list comes from the repository tree, so a new directory under `.config/` is picked up on its own.
+    >`dot start` moves aside anything already sitting where a tracked file belongs, saving it as `<name>.dot-bak.<timestamp>`: a fresh install always has a `.profile` or `.bashrc` in the way, and a checkout aborts entirely on the first collision. `dot setup` wires the shell and runs `dot doctor`, which reports what is installed and what is missing. Any other verb goes straight to git — `dot status`, `dot commit`, `dot push`.
 
-    >**Future goal — deploying this on a host I don't own.** Getting my shell and editor config onto someone else's machine without touching their dotfiles is achievable: the configs are XDG-native, and every shell has an entry point that loads config from an arbitrary path (`ENV=` for ksh, `--rcfile` for bash, `ZDOTDIR=` for zsh), so no host file needs patching. What does not travel is the tools — fzf, eza, nvim, dvtm are binaries, and there is no portable way to get them onto an arbitrary unix host. So the realistic target is config portability with graceful degradation, not an identical environment everywhere.
+- Install the standalone scripts
+    >Utilities that don't depend on this configuration live in their own repository, with a Makefile that symlinks them into `~/.local/bin`. The ones that *are* part of the environment — the fzf `preview`, `openfile`, the `bar` of the xinitrc, the `shpad` broker — live here instead, in `.config/sh/bin`, next to the `rc.sh` that calls them. The split is by dependency, not by taste.
+    - `$ make -C ~/Workspace/scripts install`
 
 - Properly configure rc.local e rc.shutdown to mount/umount encrypted discs using the following reference scripts
     - [mount_encrypted](.local/scripts/mount_encrypted)
