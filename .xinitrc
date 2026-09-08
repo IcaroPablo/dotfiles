@@ -49,11 +49,12 @@ xset dpms 0 0 0
 # PATH e o resto vêm herdados: o profile carrega o env.sh no login e é o
 # env.sh que dispara o startx. Sem essa herança nada aqui embaixo resolve.
 
-# papel de parede. Era `$HOME/.fehbg &`, que o feh gera com caminho absoluto e
-# nome de usuário dentro, untracked — máquina nova ficava sem papel de parede e
-# sem erro nenhum. O current é um symlink versionado apontando para a escolhida;
-# o --no-fehbg impede o feh de reescrever aquele arquivo.
-_w="$HOME/.local/wallpapers/current"
+# papel de parede. As imagens não são versionadas — moram fora do repo, e o
+# current é um symlink apontando para a escolhida. Máquina sem elas apenas
+# não põe papel de parede: o -f cobre tanto o arquivo ausente quanto o
+# symlink quebrado. O --no-fehbg impede o feh de deixar um ~/.fehbg para trás,
+# que é como o caminho absoluto voltaria a ficar embutido em arquivo nenhum.
+_w="$HOME/Downloads/wallpapers/current"
 [ -f "$_w" ] && feh --no-fehbg --bg-scale "$_w" &
 # setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.\+=\([0-9]\+\).\+/\1/'` br &
 # setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.*=//' | awk '{print $1}'` br &
