@@ -62,8 +62,8 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
     - `$ make -C ~/Workspace/scripts install`
 
 - Properly configure rc.local e rc.shutdown to mount/umount encrypted discs using the following reference scripts
-    - [mount_encrypted](.local/scripts/mount_encrypted)
-    - [umount_encrypted](.local/scripts/umount_encrypted)
+    - [mount_encrypted](https://github.com/IcaroPablo/scripts/blob/main/bin/mount_encrypted)
+    - [umount_encrypted](https://github.com/IcaroPablo/scripts/blob/main/bin/umount_encrypted)
 
 - Properly configure autohotplug
 
