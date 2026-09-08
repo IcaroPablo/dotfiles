@@ -39,7 +39,7 @@ install:
 				bad=1; continue; \
 			fi; \
 			mkdir -p $(DISPLACED) || { bad=1; continue; }; \
-			mv "$$d" "$(DISPLACED)/`echo $$rel | tr / _`.`date +%Y%m%d%H%M%S`" || { bad=1; continue; }; \
+			mv "$$d" "$(DISPLACED)/`echo $$rel | sed -e 's|^\.||' -e 's|/|_|g'`.`date +%Y%m%d%H%M%S`" || { bad=1; continue; }; \
 			echo "  ~ $$rel (o que estava lá foi para $(DISPLACED))"; \
 		fi; \
 		mkdir -p "`dirname $$d`"; \
