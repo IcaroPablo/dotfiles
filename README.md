@@ -62,7 +62,7 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
 
     >The Makefile is POSIX make, so it runs under bmake and OpenBSD's make as well as GNU make — no `wildcard`, `notdir` or `CURDIR`, and the lists come from shell globs. Use `cd` rather than `make -C`: OpenBSD's make has no `-C`.
 
-    >`make install` refuses to clobber: anything already sitting where a link belongs is reported and skipped, the rest still install, and the target exits non-zero. `FORCE=1` displaces the occupant into `~/.local/share/dotfiles/displaced` — dated, not deleted — rather than overwriting it. `make uninstall` removes only links that point back at the repository. `dot` reports what this machine has and what it is missing.
+    >`make install` refuses to clobber: anything already sitting where a link belongs is reported and skipped, the rest still install, and the target exits non-zero. `FORCE=1` displaces the occupant into `~/.local/share/dotfiles/displaced` — dated, not deleted — rather than overwriting it. `make uninstall` removes only links that point back at the repository. `make doctor` reports which links are in place, whether the shell is wired, and which tools this configuration needs are missing — it checks only what this repository's own code invokes; the scripts collection has its own `make doctor` for its own dependencies.
 
 - Install my [shell scripts collection](https://github.com/IcaroPablo/posix-shell-scripts-collection)
 

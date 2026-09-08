@@ -26,10 +26,57 @@ HOME_DIR ?= $(HOME)
 # próprio diretório de configuração não deve topar com cópia velha lá dentro.
 DISPLACED = $(HOME_DIR)/.local/share/dotfiles/displaced
 
-.PHONY: all install uninstall list
+# O que esta configuração chama, e nada além disso: os utilitários avulsos têm
+# as dependências deles, no doctor do repositório da coleção. Cada repositório
+# responde pelo que o próprio código invoca.
+REQUIRED = git nvim fzf eza bat file mktemp dvtm tree-sitter
+
+# label:ferramentas. Grupo opcional só informa; nada aqui derruba o resultado.
+# O create e o monitor são da coleção, mas entram porque é este código que os
+# chama: o nvim abre painel com o create, o xinitrc arruma a tela com o monitor.
+GROUPS = \
+	"NÚCLEO (degradam, mas fazem falta):fd fdfind zoxide readlink realpath make lsof carapace" \
+	"PREVIEW (opcional):w3m exiftool unzip tar pixterm" \
+	"X11 (só na máquina gráfica):feh xsetroot xset xrdb xmodmap setxkbmap xinput smawm" \
+	"COLEÇÃO (outro repositório):create monitor"
+
+.PHONY: all install uninstall list doctor
 
 all:
-	@echo "make install | make uninstall | make list"
+	@echo "make install | make uninstall | make list | make doctor"
+
+doctor:
+	@src=`pwd`; echo "dotfiles :: doctor (`uname`)"; echo ""; \
+	printf 'symlinks\n'; \
+	for s in "$$src"/.config/* "$$src"/.xinitrc; do \
+		rel=$${s#$$src/}; d="$(HOME_DIR)/$$rel"; \
+		if [ -L "$$d" ] && [ "`readlink "$$d"`" = "$$s" ]; then \
+			printf '  \342\234\223 %s\n' "$$rel"; \
+		else printf '  \342\234\227 %s\n' "$$rel"; fi; \
+	done; printf '\n'; \
+	printf 'shell\n'; found=0; \
+	for f in "$(HOME_DIR)/.profile" "$(HOME_DIR)/.zprofile" "$(HOME_DIR)/.bash_profile"; do \
+		[ -f "$$f" ] || continue; \
+		if grep -q 'config/sh/env.sh' "$$f" 2>/dev/null; then \
+			printf '  \342\234\223 %s carrega o env.sh\n' "$$f"; found=1; \
+		fi; \
+	done; \
+	[ $$found = 1 ] || printf '  \342\234\227 nenhum profile carrega o ~/.config/sh/env.sh\n'; \
+	printf '\n'; \
+	bad=0; printf 'OBRIGATÓRIO\n  '; \
+	for t in $(REQUIRED); do \
+		if command -v "$$t" >/dev/null 2>&1; then printf '\342\234\223 %s  ' "$$t"; \
+		else printf '\342\234\227 %s  ' "$$t"; bad=1; fi; \
+	done; printf '\n\n'; \
+	for g in $(GROUPS); do \
+		printf '%s\n  ' "$${g%%:*}"; \
+		for t in $${g#*:}; do \
+			if command -v "$$t" >/dev/null 2>&1; then printf '\342\234\223 %s  ' "$$t"; \
+			else printf '\342\234\227 %s  ' "$$t"; fi; \
+		done; printf '\n\n'; \
+	done; \
+	if [ $$bad = 0 ]; then echo "obrigatórios presentes."; else echo "falta obrigatório."; fi; \
+	exit $$bad
 
 # Não atropela o que já está lá: o alvo é o ~/.config de verdade, e apagar a
 # configuração alheia do nvim é bem pior do que sombrear um comando.
