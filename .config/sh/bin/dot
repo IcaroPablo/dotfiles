@@ -1,186 +1,33 @@
 #!/bin/sh
 #
-# dot — gerencia estes dotfiles e prepara a máquina.
+# dot — o que esta máquina tem e o que falta para a configuração funcionar.
 #
-# O gitdir mora fora da work-tree, que é o $HOME. É isso que impede o git de
-# achá-lo sozinho: nenhum `git` rodado num diretório qualquer da home cai aqui
-# por engano. O repositório NÃO é bare — tem core.bare=false e core.worktree
-# apontando para o $HOME, que é o que dispensa o --work-tree em toda invocação.
-# Bare, no truque original, era só o jeito preguiçoso de fazer o `git init` não
-# criar o gitdir dentro da work-tree; não era a parte que importava.
-#
-# Usage:
-#   dot start <url>          clona o repositório e instala na home
-#   dot setup [--uninstall]  liga o shell ao ~/.config/sh, e roda o doctor
-#   dot doctor               o que está instalado e o que falta
-#   dot <git command>        git contra a work-tree dos dotfiles
+# Só isso. Instalar é `make install` no repositório, que liga os symlinks;
+# versionar é git dentro dele; ligar o shell são duas linhas no ~/.profile, que
+# estão no README. Sobrou o relatório, que é o que nenhum dos três dá.
 #
 # POSIX sh only (dash/ksh/bash). Sem perl, sem bashismo.
-
-DOTFILES_REPO="$HOME/.config/dotfiles"
-
-MARK_BEGIN="# >>> icaro-dotfiles >>>"
-MARK_END="# <<< icaro-dotfiles <<<"
 
 _OK='✓'
 _NO='✗'
 
-dotgit() { git --git-dir="$DOTFILES_REPO" "$@"; }
-
 have() { command -v "$1" >/dev/null 2>&1; }
+
+MARK_BEGIN="# >>> icaro-dotfiles >>>"
 
 usage() {
     cat <<'EOF'
-dot gerencia estes dotfiles: o gitdir fica em ~/.config/dotfiles e a work-tree
-é o $HOME.
+dot relata o estado desta máquina: o que está instalado, o que falta, e se o
+shell está ligado à configuração.
 
-Usage:
+    dot            o relatório
+    dot doctor     idem, para quem tem o dedo viciado
 
-    dot start <url>          clona o repositório e instala na home
-    dot setup [--uninstall]  liga o shell ao ~/.config/sh, e roda o doctor
-    dot doctor               o que está instalado e o que falta
-    dot <git command>        git contra a work-tree dos dotfiles
-
+Instalar é `make install` no repositório; versionar é git dentro dele.
 EOF
 }
 
-# ----------------------------------------------------------------- bootstrap
-
-start() {
-    _url="$1"
-    if [ -z "$_url" ]; then
-        printf 'uso: dot start <url do repositório>\n' >&2
-        return 1
-    fi
-    if [ -e "$DOTFILES_REPO" ]; then
-        printf 'dot: %s já existe\n' "$DOTFILES_REPO" >&2
-        return 1
-    fi
-
-    # init + remote + fetch, e não `git clone --bare`: o clone --bare não
-    # configura refspec de tracking nenhum, e o repositório nasce sem origin/*
-    # — dá pra ver com `git config remote.origin.fetch`, que volta vazio.
-    git init -q --bare "$DOTFILES_REPO" || return 1
-    dotgit config core.bare false
-    dotgit config core.worktree "$HOME"
-    dotgit remote add origin "$_url"
-
-    printf 'buscando %s\n' "$_url"
-    dotgit fetch -q origin || return 1
-    dotgit remote set-head origin -a >/dev/null 2>&1
-
-    _branch="$(dotgit symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)"
-    _branch="${_branch#origin/}"
-    [ -n "$_branch" ] || _branch=main
-
-    # O checkout aborta inteiro no primeiro arquivo que já existe, e em máquina
-    # nova sempre existe algum (.profile, .bashrc vêm com o sistema). Tirar da
-    # frente antes, guardando o que estava lá — perder configuração alheia numa
-    # instalação é o pior momento possível.
-    _stamp="$(date +%Y%m%d%H%M%S)"
-    dotgit ls-tree -r --name-only "origin/$_branch" | while IFS= read -r _f; do
-        [ -e "$HOME/$_f" ] || continue
-        mv -- "$HOME/$_f" "$HOME/$_f.dot-bak.$_stamp" &&
-            printf '  ~ %s (o que estava aí virou %s.dot-bak.%s)\n' "$_f" "$_f" "$_stamp"
-    done
-
-    dotgit checkout -q "$_branch" || return 1
-    dotgit branch --quiet --set-upstream-to="origin/$_branch" "$_branch" 2>/dev/null
-
-    printf 'pronto. agora: dot setup\n'
-}
-
-# -------------------------------------------------------------- shell wiring
-
-detect_shell() {
-    _sh="${SHELL:-}"
-    [ -z "$_sh" ] && _sh="$(ps -p "$$" -o comm= 2>/dev/null)"
-    basename "$_sh" 2>/dev/null
-}
-
-rc_path_for() {
-    case "$1" in
-        zsh)  printf '%s\n' "${ZDOTDIR:-$HOME}/.zshrc" ;;
-        bash) printf '%s\n' "$HOME/.bashrc" ;;
-        ksh|ksh93|oksh|mksh|pdksh|sh) printf '%s\n' "$HOME/.kshrc" ;;
-        *)    printf '%s\n' "$HOME/.${1}rc" ;;
-    esac
-}
-
-profile_path_for() {
-    case "$1" in
-        zsh)  printf '%s\n' "${ZDOTDIR:-$HOME}/.zprofile" ;;
-        bash) printf '%s\n' "$HOME/.bash_profile" ;;
-        *)    printf '%s\n' "$HOME/.profile" ;;
-    esac
-}
-
-inject_block() {
-    _file="$1"; _line="$2"
-    if [ -f "$_file" ] && grep -qF "$MARK_BEGIN" "$_file" 2>/dev/null; then
-        printf '  %s [bloco já presente]\n' "$_file"
-        return 0
-    fi
-    printf '\n%s\n%s\n%s\n' "$MARK_BEGIN" "$_line" "$MARK_END" >> "$_file"
-    printf '  %s [bloco injetado]\n' "$_file"
-}
-
-remove_block() {
-    _file="$1"
-    [ -f "$_file" ] || return 0
-    grep -qF "$MARK_BEGIN" "$_file" 2>/dev/null || return 0
-    _tmp="$(mktemp)"
-    awk -v b="$MARK_BEGIN" -v e="$MARK_END" '
-        $0==b {skip=1; next}
-        $0==e {skip=0; next}
-        skip!=1 {print}
-    ' "$_file" > "$_tmp" && cat "$_tmp" > "$_file"
-    rm -f "$_tmp"
-    printf '  %s [bloco removido]\n' "$_file"
-}
-
-setup() {
-    _shell="$(detect_shell)"
-    _rc="$(rc_path_for "$_shell")"
-    _profile="$(profile_path_for "$_shell")"
-
-    case "$1" in
-        --uninstall)
-            printf 'icaro-dotfiles :: setup --uninstall (shell: %s)\n' "$_shell"
-            remove_block "$_rc"
-            remove_block "$_profile"
-            return 0 ;;
-    esac
-
-    if [ ! -f "$HOME/.config/sh/rc.sh" ]; then
-        printf 'setup: ~/.config/sh/rc.sh não existe — rode `dot start <url>` antes.\n' >&2
-        return 1
-    fi
-
-    printf 'icaro-dotfiles :: setup (shell: %s)\n' "$_shell"
-
-    case "$_shell" in
-        ksh|ksh93|oksh|mksh|pdksh|sh)
-            # ksh/sh não têm rc interativo separado — o profile aponta o $ENV
-            # para o rc.sh e só depois carrega o env.sh.
-            #
-            # A ordem importa: o env.sh termina no auto-startx do tty1, que
-            # bloqueia até a sessão do X morrer. Com o export depois, o ENV só
-            # valeria no logout, e todo terminal aberto dentro do X herdaria ENV
-            # vazio — shell interativo sem rc nenhum.
-            inject_block "$_profile" \
-"ENV=\"\$HOME/.config/sh/rc.sh\"; export ENV
-. \"\$HOME/.config/sh/env.sh\"" ;;
-        *)
-            inject_block "$_profile" ". \"\$HOME/.config/sh/env.sh\""
-            inject_block "$_rc" ". \"\$HOME/.config/sh/rc.sh\"" ;;
-    esac
-
-    printf '\n'
-    doctor
-}
-
-# -------------------------------------------------------------------- doctor
+# ---------------------------------------------------------------- ferramentas
 
 # present <cmd>: verdadeiro se a ferramenta (ou um substituto aceito) existe.
 present() {
@@ -210,6 +57,31 @@ report_group() {
     [ -z "$_missing" ]
 }
 
+# ---------------------------------------------------------------------- shell
+
+detect_shell() {
+    _sh="${SHELL:-}"
+    [ -z "$_sh" ] && _sh="$(ps -p "$$" -o comm= 2>/dev/null)"
+    basename "$_sh" 2>/dev/null
+}
+
+rc_path_for() {
+    case "$1" in
+        zsh)  printf '%s\n' "${ZDOTDIR:-$HOME}/.zshrc" ;;
+        bash) printf '%s\n' "$HOME/.bashrc" ;;
+        ksh|ksh93|oksh|mksh|pdksh|sh) printf '%s\n' "$HOME/.kshrc" ;;
+        *)    printf '%s\n' "$HOME/.${1}rc" ;;
+    esac
+}
+
+profile_path_for() {
+    case "$1" in
+        zsh)  printf '%s\n' "${ZDOTDIR:-$HOME}/.zprofile" ;;
+        bash) printf '%s\n' "$HOME/.bash_profile" ;;
+        *)    printf '%s\n' "$HOME/.profile" ;;
+    esac
+}
+
 _block_status() {
     if [ -f "$1" ] && grep -qF "$MARK_BEGIN" "$1" 2>/dev/null; then
         printf '  %s %s\n' "$_OK" "$1"
@@ -218,26 +90,10 @@ _block_status() {
     fi
 }
 
-repo_status() {
-    printf 'repositório\n'
-    if [ ! -e "$DOTFILES_REPO" ]; then
-        printf '  %s %s não existe\n\n' "$_NO" "$DOTFILES_REPO"
-        return 1
-    fi
-    printf '  %s gitdir     %s\n' "$_OK" "$DOTFILES_REPO"
-    _wt="$(dotgit config core.worktree 2>/dev/null)"
-    if [ "$_wt" = "$HOME" ]; then
-        printf '  %s work-tree  %s\n' "$_OK" "$_wt"
-    else
-        printf '  %s work-tree  %s (esperado %s)\n' "$_NO" "${_wt:-<não configurada>}" "$HOME"
-    fi
-    printf '\n'
-}
+# -------------------------------------------------------------------- relatório
 
 doctor() {
     printf 'icaro-dotfiles :: doctor (%s)\n\n' "$(uname)"
-
-    repo_status
 
     _core=1
     report_group "CORE" git fzf eza nvim tree-sitter bat file mktemp dvtm || _core=0
@@ -246,8 +102,8 @@ doctor() {
         w3m exiftool unzip tar pixterm || :
 
     # Outro repositório: github.com/IcaroPablo/posix-shell-scripts-collection,
-    # instalado com `make install`. Sem ele os aliases a/f/g/t ficam sem o
-    # comando por trás, e o shpad não abre painel — o nvim chama o create.
+    # instalado com `make install`. Sem ele o shpad não abre painel — o nvim
+    # chama o create — e os atalhos do rc.sh ficam sem o comando por trás.
     report_group "COLEÇÃO (posix-shell-scripts-collection)" \
         create findfile simplegrep trash || :
 
@@ -271,12 +127,8 @@ doctor() {
     return 1
 }
 
-# ------------------------------------------------------------------ dispatch
-
 case "${1:-}" in
-    ""|-h|--help|help) usage ;;
-    start)   shift; start "$@" ;;
-    setup)   shift; setup "$@" ;;
-    doctor)  doctor ;;
-    *)       dotgit "$@" ;;
+    ""|doctor) doctor ;;
+    -h|--help|help) usage ;;
+    *) printf 'dot: %s não é mais um verbo daqui\n\n' "$1" >&2; usage; exit 1 ;;
 esac

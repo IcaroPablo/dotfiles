@@ -48,12 +48,19 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
     - [smawm](https://github.com/IcaroPablo/sowm/tree/smawm)
 
 - Setup my dotfiles
-    >The gitdir lives outside the work-tree (which is `$HOME`), so git never finds it by accident — a stray `git` command in a home subdirectory won't touch these files. The repository is *not* bare: `core.worktree` points at `$HOME`, which is what lets [dot](.config/sh/bin/dot) pass only `--git-dir`.
-    - download only the [dot script](.config/sh/bin/dot)
-    - `$ dot start https://github.com/IcaroPablo/dotfiles`
-    - `$ dot setup`
+    >An ordinary git repository plus symlinks. `make install` links each directory under `.config/` into `~/.config`, and `.xinitrc` into `$HOME` — nothing is copied, so whatever a tool writes into its own config (nvim's `nvim-pack-lock.json`, for one) lands back in the repository and shows up in `git status`.
+    - `$ git clone https://github.com/IcaroPablo/dotfiles ~/Workspace/dotfiles`
+    - `$ make -C ~/Workspace/dotfiles install`
+    - add the two lines below to `~/.profile` (`~/.zprofile` for zsh)
 
-    >`dot start` moves aside anything already sitting where a tracked file belongs, saving it as `<name>.dot-bak.<timestamp>`: a fresh install always has a `.profile` or `.bashrc` in the way, and a checkout aborts entirely on the first collision. `dot setup` wires the shell and runs `dot doctor`, which reports what is installed and what is missing. Any other verb goes straight to git — `dot status`, `dot commit`, `dot push`.
+    ```sh
+    ENV="$HOME/.config/sh/rc.sh"; export ENV      # ksh/sh only
+    . "$HOME/.config/sh/env.sh"
+    ```
+
+    >Order matters: `env.sh` ends in the tty1 auto-`startx`, which blocks until the X session dies, so exporting `ENV` afterwards would only take effect at logout and every terminal inside X would come up with no rc at all. For bash and zsh, put `env.sh` in the profile and `. "$HOME/.config/sh/rc.sh"` in the rc file instead.
+
+    >`make install` refuses to clobber: anything already sitting where a link belongs is reported and skipped, the rest still install, and the target exits non-zero. `FORCE=1` displaces the occupant into `~/.local/share/dotfiles/displaced` — dated, not deleted — rather than overwriting it. `make uninstall` removes only links that point back at the repository. `dot` reports what this machine has and what it is missing.
 
 - Install my [shell scripts collection](https://github.com/IcaroPablo/posix-shell-scripts-collection)
 
