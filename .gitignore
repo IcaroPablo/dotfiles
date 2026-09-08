@@ -41,7 +41,6 @@
 # ── .local: idem ─────────────────────────────────────────────────────────────
 /.local/*
 !/.local/scripts/
-!/.local/wallpapers/
 
 # ── exceções dentro do que foi liberado ──────────────────────────────────────
 # gerados pelo lua_ls, nunca versionar
