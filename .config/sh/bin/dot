@@ -113,9 +113,15 @@ doctor() {
         OpenBSD) report_group "OS/desktop (OpenBSD)" doas || : ;;
     esac
 
+    # ksh e sh não têm rc interativo separado: o bloco mora só no profile, e é
+    # o $ENV que aponta para o rc.sh. Cobrar um .kshrc que nunca vai existir é
+    # alarme falso, e relatório que mente sobre uma linha perde a outra junto.
     _shell="$(detect_shell)"
     printf 'shell (%s)\n' "$_shell"
-    _block_status "$(rc_path_for "$_shell")"
+    case "$_shell" in
+        ksh|ksh93|oksh|mksh|pdksh|sh) : ;;
+        *) _block_status "$(rc_path_for "$_shell")" ;;
+    esac
     _block_status "$(profile_path_for "$_shell")"
 
     printf '\n'
