@@ -50,7 +50,7 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
 - Setup my dotfiles
     >An ordinary git repository plus symlinks. `make install` links each directory under `.config/` into `~/.config`, and `.xinitrc` into `$HOME` — nothing is copied, so whatever a tool writes into its own config (nvim's `nvim-pack-lock.json`, for one) lands back in the repository and shows up in `git status`.
     - `$ git clone https://github.com/IcaroPablo/dotfiles ~/Workspace/dotfiles`
-    - `$ make -C ~/Workspace/dotfiles install`
+    - `$ cd ~/Workspace/dotfiles && make install`
     - add the two lines below to `~/.profile` (`~/.zprofile` for zsh)
 
     ```sh
@@ -59,6 +59,8 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
     ```
 
     >Order matters: `env.sh` ends in the tty1 auto-`startx`, which blocks until the X session dies, so exporting `ENV` afterwards would only take effect at logout and every terminal inside X would come up with no rc at all. For bash and zsh, put `env.sh` in the profile and `. "$HOME/.config/sh/rc.sh"` in the rc file instead.
+
+    >The Makefile is POSIX make, so it runs under bmake and OpenBSD's make as well as GNU make — no `wildcard`, `notdir` or `CURDIR`, and the lists come from shell globs. Use `cd` rather than `make -C`: OpenBSD's make has no `-C`.
 
     >`make install` refuses to clobber: anything already sitting where a link belongs is reported and skipped, the rest still install, and the target exits non-zero. `FORCE=1` displaces the occupant into `~/.local/share/dotfiles/displaced` — dated, not deleted — rather than overwriting it. `make uninstall` removes only links that point back at the repository. `dot` reports what this machine has and what it is missing.
 
