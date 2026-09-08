@@ -154,6 +154,24 @@ dvtm() {
     fi
 }
 
+# painel novo no diretório em que você está — o que o ss fazia com janela do WM,
+# agora dentro do dvtm.
+#
+# O cd vai explícito porque o dvtm cria a janela como filha dele mesmo: ela
+# herdaria o cwd do dvtm, não o do painel focado. É o mesmo problema que o shpad
+# resolve passando INITIAL_FOLDER; aqui o cd basta, e vale também quando se pede
+# um comando em vez de um shell (aí não há rc.sh para ler a variável).
+#
+# Sem o fifo não há dvtm em volta, e não há o que dividir.
+ss() {
+    [ -n "${DVTM_CMD_FIFO:-}" ] || { printf 'ss: só dentro do dvtm\n' >&2; return 1; }
+    if [ "$#" -gt 0 ]; then
+        printf "create \"cd '%s' && exec %s\"\n" "$PWD" "$*"
+    else
+        printf "create \"cd '%s' && exec \$SHELL\"\n" "$PWD"
+    fi > "$DVTM_CMD_FIFO"
+}
+
 alias a="create"
 alias doas="${DOAS} "
 alias ea="e -a"
@@ -163,7 +181,6 @@ alias nvim="launch_nvim"
 alias rm="rm -i"
 alias s="sel"
 alias sc="sel c"
-alias ss="split_scr"
 alias t="trash"
 alias u="cd .. && e"
 
