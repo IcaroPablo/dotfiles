@@ -20,18 +20,23 @@ if [ -f "$usermodmap" ]; then
     xmodmap "$usermodmap"
 fi
 
-# if we have private ssh key(s), start ssh-agent and add the key(s)
-id1=$HOME/.ssh/identity
-id2=$HOME/.ssh/id_dsa
-id3=$HOME/.ssh/id_rsa
-id4=$HOME/.ssh/id_ecdsa
-id5=$HOME/.ssh/id_ed25519
-
-if [ -z "$SSH_AGENT_PID" ]; then
-	if [ -x /usr/bin/ssh-agent ] && [ -f $id1 -o -f $id2 -o -f $id3 -o -f $id4 -o -f $id5 ]; then
-        eval `ssh-agent -s`
-        ssh-add < /dev/null
+# Nem o OpenBSD nem o Linux têm agente de sessão pronto como o launchd do macOS:
+# um sobe aqui e cai no logout, no teardown lá embaixo. A lista de chaves sai do
+# diretório, e não de nomes fixos -- o esqueleto do OpenBSD procurava id_rsa,
+# id_dsa e companhia, e nenhuma das minhas se chama assim. Chave privada é o
+# arquivo que tem um .pub ao lado. O < /dev/null é o que manda a senha ser pedida
+# pelo askpass gráfico: aqui não há tty para o ssh-add perguntar.
+if [ -z "$SSH_AGENT_PID" ] && command -v ssh-agent >/dev/null 2>&1; then
+    _keys=''
+    for _pub in "$HOME"/.ssh/*.pub; do
+        _key="${_pub%.pub}"
+        [ -f "$_key" ] && _keys="$_keys $_key"
+    done
+    if [ -n "$_keys" ]; then
+        eval "$(ssh-agent -s)"
+        ssh-add $_keys < /dev/null
     fi
+    unset _pub _key _keys
 fi
 
 if [ "$(xrandr | grep HDMI)" != "" ]; then
@@ -73,10 +78,8 @@ dbus-update-activation-environment --all &
 
 # run the WM in the foreground (no exec) so the ssh-agent teardown below runs on logout
 smawm
-# while true; do dwm; done   # era o script startdwm, seis linhas para isto
-# exec sowm
+# while true; do smawm; done
 # xhost +SI:localuser:$USER
-# exec distrobox enter -T -n arch -- xmonad
 
 # session ended: drop keys and stop the ssh-agent
 if [ "$SSH_AGENT_PID" ]; then
