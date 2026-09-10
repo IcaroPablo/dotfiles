@@ -1,12 +1,9 @@
 # env.sh — portable login environment: EXPORTED VARIABLES ONLY. POSIX sh.
-#
+
 # Sourced ONCE per login by the shell's profile (via the wizard's block).
 # Interactive shells inherit these exported variables from their login ancestor,
 # so env.sh is NOT re-sourced per session. Functions and aliases (which are not
 # inheritable) live in rc.sh instead.
-#
-# Layout: portable env, then per-OS env deltas via `case $(uname)`, then the
-# exported terminal launcher and the tty1 auto-startx (a login-time action).
 
 : "${XDG_CONFIG_HOME:="$HOME/.config"}"
 export XDG_CONFIG_HOME
@@ -19,26 +16,12 @@ _path_prepend() {
     esac
 }
 
-# .local/bin recebe os utilitários avulsos (o `make install` do repo scripts);
-# .config/sh/bin são os que fazem parte desta configuração e são chamados daqui.
-# O segundo vem depois porque o _path_prepend põe na frente: em caso de nome
-# repetido, ganha o que pertence ao ambiente.
 _path_prepend "$HOME/.local/bin"
 _path_prepend "$HOME/.config/sh/bin"
 
-# --- editor / pager (guarded: degrade instead of pointing at a missing tool) ---
-if command -v nvim >/dev/null 2>&1; then EDITOR='nvim'; MANPAGER='nvim +Man!'; else EDITOR='vi'; unset MANPAGER; fi
-FCEDIT="$EDITOR"
-export EDITOR FCEDIT
-[ -n "${MANPAGER:-}" ] && export MANPAGER
-
-if command -v bat >/dev/null 2>&1; then PAGER='bat'; else PAGER='less'; fi
-export PAGER
-
 # --- locale / history / misc app env ---
 export LANG="en_US.UTF-8" LC_MESSAGES="en_US.UTF-8" LC_TIME="pt_PT.UTF-8"
-export ENABLE_WASM=true
-
+# export ENABLE_WASM=true
 
 # # --- rust (guarded) ---
 # [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
@@ -60,16 +43,17 @@ case "$(uname)" in
     Linux)
         [ -d /var/lib/flatpak/exports/bin ] && _path_prepend /var/lib/flatpak/exports/bin
         ;;
-    Darwin)
-        _path_prepend /opt/homebrew/bin
-        _path_prepend /opt/homebrew/sbin
-        _path_prepend /usr/local/bin
-        _path_prepend /usr/local/sbin
-        ;;
 esac
 export PATH
 
-# Start X automatically on the first console (Linux and OpenBSD). This is a
+if command -v nvim >/dev/null 2>&1; then EDITOR='nvim'; MANPAGER='nvim +Man!'; else EDITOR='vi'; unset MANPAGER; fi
+FCEDIT="$EDITOR"
+export EDITOR FCEDIT
+[ -n "${MANPAGER:-}" ] && export MANPAGER
+
+if command -v bat >/dev/null 2>&1; then PAGER='bat'; else PAGER='less'; fi
+export PAGER
+
 # login-time action; env.sh is sourced once per login, so it fires just once.
 if [ -z "${DISPLAY:-}" ] && [ "$(tty 2>/dev/null)" = "/dev/tty1" ] && command -v startx >/dev/null 2>&1; then
     startx
