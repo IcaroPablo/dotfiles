@@ -36,7 +36,7 @@ REQUIRED = git nvim fzf eza bat file mktemp dvtm tree-sitter
 # chama: o nvim abre painel com o create, o xinitrc arruma a tela com o monitor.
 GROUPS = \
 	"NÚCLEO (degradam, mas fazem falta):fd fdfind zoxide readlink realpath make lsof carapace" \
-	"PREVIEW (opcional):w3m exiftool unzip tar pixterm" \
+	"PREVIEW (opcional):w3m exiftool unzip tar chafa pixterm ffmpeg" \
 	"X11 (só na máquina gráfica):feh xsetroot xset xrdb xmodmap setxkbmap xinput smawm" \
 	"COLEÇÃO (outro repositório):create monitor"
 
