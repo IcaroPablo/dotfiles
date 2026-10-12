@@ -10,11 +10,39 @@ if ! command -v os_open >/dev/null 2>&1; then
     }
 fi
 
+# ~/.config/openfile/remote (sh), written by fangorn rebuild na VM: mídia sob
+# $root abre na tela de outra máquina, por ssh ($host, com $key, conferindo $known)
+remote="${XDG_CONFIG_HOME:-$HOME/.config}/openfile/remote"
+
+# manda os arquivos para a tela remota; falha calado se não há remote, se algum
+# está fora de $root ou se a máquina não responde, e quem chamou se vira aqui
+send_remote() {
+    [ -f "$remote" ] || return 1
+    . "$remote"
+    _sr_root=$(abspath "$root")
+    _sr_list=
+    for _f in "$@"; do
+        _sr_f=$(abspath "$_f")
+        case "$_sr_f" in
+            *"
+"*) return 1 ;;
+            "$_sr_root"/*) _sr_list="$_sr_list${_sr_f#"$_sr_root"/}
+" ;;
+            *) return 1 ;;
+        esac
+    done
+    printf '%s' "$_sr_list" | ssh -i "$key" -o IdentitiesOnly=yes -o BatchMode=yes \
+        -o ConnectTimeout=3 -o UserKnownHostsFile="$known" -o StrictHostKeyChecking=yes \
+        "$host" 2>/dev/null
+}
+
+# sem tela aqui (por ssh, sem X): o que der, no terminal
+here() { [ -n "${DISPLAY:-}" ]; }
+noscreen() { printf 'openfile: sem tela aqui para %s\n' "$1" >&2; return 1; }
+
 handlenoextension() {
     case "$(mimetype "$1")" in
-        inode/directory)
-            echo "$1"
-            break ;;
+        inode/directory) echo "$1" ;;
         *) os_open "$@" ;;
     esac
 }
@@ -25,9 +53,19 @@ test -L "$first" && first="$(abspath "$first")"
 
 case "$(mimetype "$first")" in
     inode/x-empty|text/*|application/json|*shellscript|application/x-empty|application/octet-stream) launch_nvim "$@" ;;
-    application/pdf|application/vnd.djvu|application/epub*) have zathura && zathura "$@" || os_open "$@" ;;
-    audio/*|video/x-ms-asf) have mpv && mpv --shuffle --no-audio-display "$@" || os_open "$@" ;;
-    video/*) have mpv && mpv "$@" >/dev/null 2>&1 || os_open "$@" ;;
-    image/*) have nsxiv && nsxiv -a --thumbnail "$@" || os_open "$@" ;;
+    application/pdf|application/vnd.djvu|application/epub*)
+        send_remote "$@" ||
+            if here; then have zathura && zathura "$@" || os_open "$@"
+            else noscreen "$first"; fi ;;
+    audio/*|video/x-ms-asf)
+        send_remote "$@" || { have mpv && mpv --shuffle --no-audio-display "$@" || os_open "$@"; } ;;
+    video/*)
+        send_remote "$@" ||
+            if here; then have mpv && mpv "$@" >/dev/null 2>&1 || os_open "$@"
+            else have mpv && mpv --vo=tct --really-quiet "$@" || noscreen "$first"; fi ;;
+    image/*)
+        send_remote "$@" ||
+            if here; then have nsxiv && nsxiv -a --thumbnail "$@" || os_open "$@"
+            else for _f in "$@"; do preview "$_f"; done; fi ;;
 	*) handlenoextension "$@" ;;
 esac
