@@ -1,3 +1,10 @@
+# antes de tudo, para os aliases daqui valerem sobre os dele; o alias p dele
+# (ps -l) quebraria a definição da função p() mais abaixo
+if [ "$(uname)" = "OpenBSD" ] && [ -n "${KSH_VERSION:-}" ] && [ -f /etc/ksh.kshrc ]; then
+    . /etc/ksh.kshrc
+    unalias p 2>/dev/null
+fi
+
 : "${XDG_CONFIG_HOME:="$HOME/.config"}"
 
 [ -f "$XDG_CONFIG_HOME/sh/lib/guard.sh" ] && . "$XDG_CONFIG_HOME/sh/lib/guard.sh"
@@ -157,7 +164,6 @@ dvtm() {
     fi
 }
 
-
 alias a="create"
 alias doas="${DOAS} "
 alias ea="e -a"
@@ -186,8 +192,6 @@ newb() { _b="$(_gbranch)"; git checkout "$_b" && git pull origin "$_b" && git ch
 
 case "$(uname)" in
     OpenBSD)
-        [ -n "${KSH_VERSION:-}" ] && [ -f /etc/ksh.kshrc ] && . /etc/ksh.kshrc
-
         req() {
             _in=0
             printf "%s" "$(pkg_info "$1")" | while IFS= read -r _line; do
