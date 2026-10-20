@@ -74,44 +74,6 @@ vim.api.nvim_create_autocmd("CursorHold", {
 })
 
 -- ── Config por server (jdtls tem a sua em jdtls_config.lua) ───────────────────
-vim.lsp.config("texlab", {
-    cmd = { "texlab" },
-    filetypes = { "tex", "bib" },
-    root_markers = { ".latexmkrc", "latexmkrc", ".texlabroot", "texlabroot", "Tectonic.toml", ".git" },
-    settings = {
-        texlab = {
-            auxDirectory = ".",
-            bibtexFormatter = "texlab",
-            build = {
-                args = { "-pdf", "-interaction=nonstopmode", "-synctex=1", "%f", "-shell-escape" },
-                executable = "latexmk",
-                forwardSearchAfter = true,
-                onSave = true,
-            },
-            chktex = {
-                onEdit = true,
-                onOpenAndSave = true,
-            },
-            diagnosticsDelay = 300,
-            formatterLineLength = 80,
-            forwardSearch = {
-                executable = "zathura",
-                args = {
-                    "--synctex-editor-command",
-                    [[nvim --headless -c 'TexlabInverseSearch %{input} %{line}']],
-                    "--synctex-forward",
-                    "%l:1:%f",
-                    "%p",
-                },
-            },
-            latexFormatter = "latexindent",
-            latexindent = {
-                modifyLineBreaks = false,
-            },
-        },
-    },
-})
-
 vim.lsp.config("lua_ls", {
     -- cmd = {os.getenv('HOME') .. '/lua-language-server-rust/target/release/lua-language-server'},
     -- cmd = {'/usr/local/bin/lua-language-server'},
@@ -169,7 +131,6 @@ vim.lsp.enable({
     "clangd",
     -- "vimls",
     -- "bashls",
-    "texlab",
     "lua_ls",
     "jdtls",
 })
