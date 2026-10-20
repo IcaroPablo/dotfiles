@@ -29,7 +29,7 @@ DISPLACED = $(HOME_DIR)/.local/share/dotfiles/displaced
 # O que esta configuração chama, e nada além disso: os utilitários avulsos têm
 # as dependências deles, no doctor do repositório da coleção. Cada repositório
 # responde pelo que o próprio código invoca.
-REQUIRED = git fzf eza bat file mktemp
+REQUIRED = git fzf eza file mktemp
 
 # label:ferramentas. Grupo opcional só informa; nada aqui derruba o resultado.
 # O create e o monitor são da coleção, mas entram porque é este código que os

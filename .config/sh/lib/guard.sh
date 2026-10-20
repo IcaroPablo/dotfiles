@@ -62,15 +62,3 @@ os_open() {
 # that works on macOS, Linux and OpenBSD alike (BSD `file -i` does not report
 # MIME). Shared by openfile and preview.
 mimetype() { file --mime-type -bL "$1" 2>/dev/null; }
-
-# batorcat <file> [bat-args...]: show <file> with bat (first 100 lines) when
-# available, otherwise cat. Shared by preview (and usable anywhere).
-batorcat() {
-    _bf="$1"
-    shift
-    if have bat; then
-        bat --line-range=:100 "$_bf" "$@"
-    else
-        cat "$_bf"
-    fi
-}

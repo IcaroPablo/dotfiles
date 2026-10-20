@@ -21,8 +21,7 @@
     default = current
 #    gpgSign = if-asked
 
-[core]
-    pager = bat
+# [core]
 #     autocrlf = input
 #     pager = delta
 #     quotePath = false

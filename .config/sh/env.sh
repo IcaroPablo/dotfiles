@@ -52,9 +52,6 @@ FCEDIT="$EDITOR"
 export EDITOR FCEDIT
 [ -n "${MANPAGER:-}" ] && export MANPAGER
 
-if command -v bat >/dev/null 2>&1; then PAGER='bat'; else PAGER='less'; fi
-export PAGER
-
 # login-time action; env.sh is sourced once per login, so it fires just once.
 if [ -z "${DISPLAY:-}" ] && [ "$(tty 2>/dev/null)" = "/dev/tty1" ] && command -v startx >/dev/null 2>&1; then
     startx

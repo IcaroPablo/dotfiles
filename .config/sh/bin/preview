@@ -4,10 +4,9 @@
 # do eza, toda ferramenta externa é opcional: faltando, o ramo cai numa descrição
 # de uma linha em vez de dar erro.
 
-# portable helpers (have/abspath/mimetype/batorcat) shared with openfile
+# portable helpers (have/abspath/mimetype) shared with openfile
 . "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" 2>/dev/null || true
 command -v have >/dev/null 2>&1 || have() { command -v "$1" >/dev/null 2>&1; }
-command -v batorcat >/dev/null 2>&1 || batorcat() { cat "$1"; }
 command -v mimetype >/dev/null 2>&1 || mimetype() { file --mime-type -bL "$1" 2>/dev/null; }
 
 # one-line human description — the universal fallback (no tool required)
@@ -47,7 +46,7 @@ video() {
 
 handlenoextension() {
     case "$(mimetype "$1")" in
-        text/*) batorcat "$1" ;;
+        text/*) cat "$1" ;;
         inode/directory) eza -1 --group-directories-first --no-quotes --icons always -a "$1" ;;
         *) desc "$1" ;;
     esac
@@ -61,7 +60,7 @@ case "$(printf "%s\n" "$(abspath "$1")" | awk '{print tolower($0)}')" in
 	*.zip|*.jar|*.war|*.ear|*.oxt) have unzip && unzip -l "$1" || desc "$1" ;;
 	*.gz) have gzip && gzip -l "$1" || desc "$1" ;;
 	*.rar) have unrar && unrar l "$1" || desc "$1" ;;
-	*.md) have glow && glow "$1" || batorcat "$1" ;;
+	*.md) have glow && glow "$1" || cat "$1" ;;
 	*.7z) have 7z && 7z l "$1" || desc "$1" ;;
 	*.[1-8]) have man && man "$1" | col -b || desc "$1" ;;
 	*.o) have nm && nm "$1" || desc "$1" ;;
@@ -70,9 +69,9 @@ case "$(printf "%s\n" "$(abspath "$1")" | awk '{print tolower($0)}')" in
 	*.odt|*.ods|*.odp|*.sxw) have odt2txt && odt2txt "$1" || desc "$1" ;;
 	*.doc) have catdoc && catdoc "$1" || desc "$1" ;;
 	*.docx) have docx2txt && docx2txt "$1" || desc "$1" ;;
-	*.xml|*.html) have w3m && w3m -dump "$1" || batorcat "$1" ;;
+	*.xml|*.html) have w3m && w3m -dump "$1" || cat "$1" ;;
 	*.xls|*.xlsx)
-		have ssconvert && ssconvert --export-type=Gnumeric_stf:stf_csv "$1" "fd://1" | batorcat --language=csv || desc "$1"
+		have ssconvert && ssconvert --export-type=Gnumeric_stf:stf_csv "$1" "fd://1" || desc "$1"
 		;;
 	*.wav|*.mp3|*.flac|*.m4a|*.wma|*.ape|*.ac3|*.og[agx]|*.spx|*.opus|*.as[fx]|*.mka)
 		have exiftool && exiftool "$1" || desc "$1"
@@ -83,7 +82,6 @@ case "$(printf "%s\n" "$(abspath "$1")" | awk '{print tolower($0)}')" in
 	*.mp4|*.m4v|*.mkv|*.webm|*.mov|*.avi|*.wmv|*.flv|*.mpg|*.mpeg|*.ogv|*.3gp)
 		video "$1"
 		;;
-	*.ino) batorcat --language=cpp "$1" ;;
 	*) handlenoextension "$1" ;;
 esac
 
