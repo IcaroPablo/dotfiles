@@ -54,10 +54,13 @@ test -L "$first" && first="$(abspath "$first")"
 case "$(mimetype "$first")" in
     inode/x-empty|text/*|application/json|*shellscript|application/x-empty|application/octet-stream)
         if have nvim; then launch_nvim "$@"; else vi "$@"; fi ;;
-    application/pdf|application/vnd.djvu|application/epub*)
-        send_remote "$@" ||
-            if here; then have zathura && zathura "$@" || os_open "$@"
-            else noscreen "$first"; fi ;;
+    # documents open only in the terminal, with spdfv (sixel); never sent to
+    # another screen. file calls DjVu image/, hence before image/*
+    application/pdf|image/vnd.djvu*|application/vnd.djvu*|application/epub*)
+        have spdfv && [ -t 0 ] || {
+            printf 'openfile: documents open only in a terminal with spdfv: %s\n' "$first" >&2
+            exit 1; }
+        for _f in "$@"; do spdfv "$_f"; done ;;
     audio/*|video/x-ms-asf)
         send_remote "$@" || { have mpv && mpv --shuffle --no-audio-display "$@" || os_open "$@"; } ;;
     video/*)
