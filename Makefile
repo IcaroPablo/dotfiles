@@ -29,15 +29,17 @@ DISPLACED = $(HOME_DIR)/.local/share/dotfiles/displaced
 # O que esta configuração chama, e nada além disso: os utilitários avulsos têm
 # as dependências deles, no doctor do repositório da coleção. Cada repositório
 # responde pelo que o próprio código invoca.
-REQUIRED = git nvim fzf eza bat file mktemp dvtm tree-sitter
+REQUIRED = git fzf eza bat file mktemp
 
 # label:ferramentas. Grupo opcional só informa; nada aqui derruba o resultado.
 # O create e o monitor são da coleção, mas entram porque é este código que os
 # chama: o nvim abre painel com o create, o xinitrc arruma a tela com o monitor.
 GROUPS = \
-	"NÚCLEO (degradam, mas fazem falta):fd fdfind zoxide readlink realpath make lsof carapace" \
+	"NÚCLEO (degradam, mas fazem falta):fd fdfind zoxide readlink realpath make lsof" \
 	"PREVIEW (opcional):w3m exiftool unzip tar chafa pixterm ffmpeg" \
 	"X11 (só na máquina gráfica):feh xsetroot xset xrdb xmodmap setxkbmap xinput smawm" \
+	"EDITOR (só onde o nvim roda; sem ele, vi):nvim tree-sitter" \
+	"SHPAD (só no fangorn; dvtm, e o carapace completa no nvim):dvtm carapace" \
 	"COLEÇÃO (outro repositório):create monitor"
 
 .PHONY: all install uninstall list doctor

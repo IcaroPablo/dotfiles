@@ -55,19 +55,11 @@
     decorate = true
 
 [diff]
-    tool = nvim
     submodule = log
     colorMoved = default
 
-[difftool]
-    prompt = true
-
 [merge]
     conflictstyle = diff3
-    tool = nvim
-
-[mergetool]
-    prompt = false
 
 [rerere]
     enabled = true
