@@ -59,8 +59,9 @@ xset dpms 0 0 0
 # não põe papel de parede: o -f cobre tanto o arquivo ausente quanto o
 # symlink quebrado. O --no-fehbg impede o feh de deixar um ~/.fehbg para trás,
 # que é como o caminho absoluto voltaria a ficar embutido em arquivo nenhum.
-_w="$HOME/Downloads/wallpapers/current"
-[ -f "$_w" ] && feh --no-fehbg --bg-scale "$_w" &
+_w="$HOME/.local/wallpapers/current"
+# [ -f "$_w" ] && feh --no-fehbg --bg-scale "$_w" &
+[ -f "$_w" ] && feh --no-fehbg --bg-fill "$_w" &
 # setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.\+=\([0-9]\+\).\+/\1/'` br &
 # setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.*=//' | awk '{print $1}'` br &
 setxkbmap br &
@@ -70,6 +71,15 @@ if [ "$(uname)" = OpenBSD ]; then
     mad=$(xinput list-props "$mid" | grep 'Device Accel Constant Deceleration' | awk '{print $5}' | sed 's/[():]//g')
     [ -n "$mid" ] && [ -n "$mad" ] && xinput set-prop "$mid" "$mad" 2
 fi
+
+# tap to click and natural scrolling on every libinput touchpad, found by the
+# tapping property (mice don't have it), not by name; on OpenBSD nothing matches
+xinput list --name-only | while read -r _d; do
+    xinput list-props "$_d" 2>/dev/null | grep -q 'libinput Tapping Enabled (' && {
+        xinput set-prop "$_d" 'libinput Tapping Enabled' 1
+        xinput set-prop "$_d" 'libinput Natural Scrolling Enabled' 1
+    }
+done
 
 bar &
 
