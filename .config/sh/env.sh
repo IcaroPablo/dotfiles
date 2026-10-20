@@ -42,6 +42,7 @@ case "$(uname)" in
         ;;
     Linux)
         [ -d /var/lib/flatpak/exports/bin ] && _path_prepend /var/lib/flatpak/exports/bin
+        export LIBSEAT_BACKEND=logind
         ;;
 esac
 export PATH
