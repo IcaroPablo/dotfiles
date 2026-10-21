@@ -1,5 +1,5 @@
 #!/bin/sh
-# Fresh Chimera install -> my environment. Run as root: doas sh chimera-setup.sh
+# Fresh Chimera install -> my environment. Run as root: doas sh chimera-setup
 # Safe to rerun.
 set -e
 
@@ -8,35 +8,54 @@ host=shire
 ws=/home/$user/Workspace
 
 [ "$(id -u)" -eq 0 ] || { echo "run as root: doas sh $0" >&2; exit 1; }
-[ -d "/home/$user/.ssh" ] || {
-	echo "/home/$user/.ssh not found: repos are cloned over ssh, copy your keys there first" >&2
-	exit 1
-}
 
-as_user() { doas -u "$user" sh -c "$1"; }
-has() { as_user "PATH=\$HOME/.local/bin:\$HOME/.go/bin:\$PATH; command -v $1 >/dev/null"; }
-
-if ! id "$user" >/dev/null 2>&1; then
-	useradd -m "$user"
-	passwd "$user"
-fi
-usermod -a -G wheel,kvm "$user"
+# ==== 1. preflight ====
 
 echo "$host" > /etc/hostname
 ln -sf /usr/share/zoneinfo/America/Fortaleza /etc/localtime
-echo localtime > /etc/hwclock
+
+id "$user" >/dev/null 2>&1 || useradd -m "$user"
+
+grep -q "^$user:[!*]" /etc/shadow && passwd "$user"
+
+usermod -a -G wheel "$user"
+
+as_user() { doas -u "$user" sh -c "$1"; }
+
+# ==== 2. system ====
 
 apk add chimera-repo-user chimera-repo-contrib
 apk update
 apk upgrade
 
-apk add base-full base-devel chimerautils cryptsetup-scripts lvm2 \
-	grub-x86_64-efi linux-stable
+# what booting needs; already there after the first boot, needed in the chroot
+apk add base-full chimerautils cryptsetup-scripts lvm2 \
+	grub-x86_64-efi linux-stable networkmanager
 
-# The system disk is an NVMe in a JMicron USB enclosure. At shutdown Linux only
-# flushes a USB disk's cache; with manage_shutdown it also sends STOP UNIT,
-# which the bridge turns into the NVMe's shutdown notice. Without it, every
-# poweroff is an unsafe shutdown to the drive (smartctl -A /dev/sda counts them).
+# microcode and Intel's video decoding, for whatever this machine has
+case $(grep -m1 vendor_id /proc/cpuinfo) in
+*GenuineIntel*) ucode=ucode-intel ;;
+*AuthenticAMD*) ucode=ucode-amd ;;
+*) ucode= ;;
+esac
+# loaded early from the initramfs, which needs a rebuild once it's installed
+if [ -n "$ucode" ] && ! apk info -e "$ucode" >/dev/null 2>&1; then
+	apk add "$ucode"
+	update-initramfs -c -k all
+fi
+for d in /sys/bus/pci/devices/*; do
+	case $(cat "$d/class"):$(cat "$d/vendor") in 0x03*:0x8086) apk add intel-media-driver ;; esac
+done
+
+# what this script itself uses
+apk add git curl openssh
+
+# no dhcpcd (conflicts with NetworkManager)
+for s in networkmanager syslog-ng; do
+	[ -e "/etc/dinit.d/boot.d/$s" ] || dinitctl -o enable "$s"
+done
+
+# the system disk's USB-NVMe bridge needs STOP UNIT, or every poweroff is unsafe
 mkdir -p /etc/udev/rules.d
 cat > /etc/udev/rules.d/60-jmicron-nvme-shutdown.rules <<'EOF'
 # JMicron USB-NVMe enclosure (system disk): send STOP UNIT at shutdown; the bridge turns it into the NVMe shutdown notice
@@ -48,100 +67,88 @@ for d in /sys/class/scsi_disk/*; do
 	esac
 done
 
-# X11
+# ==== 3. shell ====
+
+apk add oksh github-cli fzf fd eza ripgrep zoxide file lsof htop rsync llvm-binutils \
+	7zip zip unzip xz unrar w3m exiftool chafa ffmpeg tesseract yt-dlp \
+	imagemagick python android-tools
+
+as_user "mkdir -p $ws"
+
+# GitHub over ssh with a key it accepts; otherwise over https, or abort
+key=/home/$user/.ssh/id_ed25519
+url=git@github.com:IcaroPablo
+# ssh -T exits 1 even when it logs in: what tells is GitHub's greeting
+case $([ -f "$key" ] && as_user "ssh -T -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new git@github.com 2>&1") in
+*"successfully authenticated"*) ;;
+*)
+	[ -t 0 ] || { echo "GitHub doesn't take $key, and no terminal to ask about https" >&2; exit 1; }
+	printf "GitHub doesn't take %s (missing or not added); clone over https or abort? [h/A] " "$key"
+	read -r ans
+	case $ans in
+	[Hh]*) url=https://github.com/IcaroPablo ;;
+	*) echo "aborted" >&2; exit 1 ;;
+	esac
+	;;
+esac
+
+clone() { [ -d "$ws/$1" ] || as_user "git clone $url/$1.git $ws/$1"; }
+clone dotfiles
+clone posix-shell-scripts-collection
+
+for r in dotfiles posix-shell-scripts-collection; do
+	as_user "cd $ws/$r && make install"
+done
+
+# shell entry block from the dotfiles README
+grep -q icaro-dotfiles "/home/$user/.profile" 2>/dev/null || as_user 'cat >> $HOME/.profile' <<'EOF'
+# >>> icaro-dotfiles >>>
+ENV="$HOME/.config/sh/rc.sh"; export ENV
+. "$HOME/.config/sh/env.sh"
+# <<< icaro-dotfiles <<<
+EOF
+
+chsh -s /usr/bin/oksh "$user"
+
+# ==== 4. graphical environment ====
+
 apk add xserver-xorg xinit mesa-dri xrandr xinput xset xrdb xmodmap xsetroot \
-	xdpyinfo setxkbmap xclip feh dbus polkit elogind \
+	xdpyinfo setxkbmap xclip xwallpaper dbus polkit elogind \
 	xdg-desktop-portal xdg-desktop-portal-gtk pipewire pipewire-alsa \
-	alsa-utils networkmanager cronie
+	alsa-utils xdg-utils mpv thunar luakit slop gvfs thunar-volman udisks
 
-# tools
-apk add oksh git github-cli neovim fzf fd eza bat ripgrep zoxide \
-	tree-sitter-cli file lsof tree curl wget htop inotify-tools fdupes rsync \
-	7zip zip unzip xz unrar ntfs-3g w3m exiftool chafa ffmpeg tesseract yt-dlp \
-	smartmontools xxd mpv zathura thunar kitty alacritty go texlab stylua \
-    gvfs thunar-volman udisks
+# st, sowm and scrot's build deps
+apk add clang gmake pkgconf linux-headers \
+	libx11-devel libxft-devel libxinerama-devel imlib2-devel \
+	libxcomposite-devel libxfixes-devel libxrandr-devel
 
-# build deps
-apk add clang llvm bmake gmake cmake ninja autoconf automake libtool pkgconf \
-	linux-headers libx11-devel libxft-devel libxinerama-devel freetype-devel \
-	fontconfig-devel imlib2-devel ncurses-devel libvterm-devel \
-	libxcomposite-devel libxfixes-devel libxrandr-devel libexif-devel
+clone st
+clone sowm
 
-# java (sdkman's JDKs are glibc builds, they don't run on musl)
-apk add java-jdk-openjdk21-default maven
-
-# VMs
-# nftables: without a firewall backend virtnetworkd exits right after starting
-apk add qemu-system-x86_64 qemu-img qemu-edk2-firmware libvirt libvirt-dinit \
-	virt-manager nftables
-usermod -a -G libvirt "$user"
-
-# home over NFSv3 (all OpenBSD's client speaks) to VMs on libvirt's default network
-apk add nfs-utils-server nfs-utils-server-dinit
-mkdir -p /etc/exports.d
-echo "/home/$user 192.168.122.0/24(rw,sync,no_subtree_check,root_squash)" \
-	> /etc/exports.d/vm-home.exports
-# rpcbind is a process service: dinit calls it up once forked, maybe before it
-# listens, and an nfsd started then never registers (mounts fail with "Program
-# not registered"). The override in /etc/dinit.d (searched before /usr/lib)
-# is the package's own service, waiting for rpcbind to answer first.
-mkdir -p /usr/local/lib
-cat > /usr/local/lib/dinit-nfs-server-wait <<'EOF'
-#!/bin/sh
-n=0
-until rpcinfo -p >/dev/null 2>&1; do
-	n=$((n + 1))
-	[ $n -le 30 ] || { echo "rpcbind isn't answering" >&2; exit 1; }
-	sleep 1
+# /usr/local: build as user, install as root
+for r in st sowm; do
+	as_user "cd $ws/$r && make"
+	(cd "$ws/$r" && make install)
 done
-exec /usr/lib/dinit-nfs-server start
-EOF
-chmod 755 /usr/local/lib/dinit-nfs-server-wait
-sed 's|^command = /usr/lib/dinit-nfs-server start$|command = /usr/local/lib/dinit-nfs-server-wait|' \
-	/usr/lib/dinit.d/nfs-server > /etc/dinit.d/nfs-server
-grep -q dinit-nfs-server-wait /etc/dinit.d/nfs-server ||
-	echo "warning: /usr/lib/dinit.d/nfs-server changed; nfs-server may start before rpcbind" >&2
 
-# sshd only for the VMs: fangorn opens media on this screen through it (the key
-# fangorn rebuild authorizes can run nothing but `fangorn open-here`). It
-# listens on libvirt's bridge alone, which only exists once virtnetworkd has
-# started the default network: the override waits for the address.
-mkdir -p /etc/ssh/sshd_config.d
-cat > /etc/ssh/sshd_config.d/vm.conf <<EOF
-ListenAddress 192.168.122.1
-AllowUsers $user@192.168.122.10
-PermitRootLogin no
-PasswordAuthentication no
-KbdInteractiveAuthentication no
-AllowTcpForwarding no
-AllowAgentForwarding no
-X11Forwarding no
-EOF
-cat > /usr/local/lib/dinit-sshd-wait <<'EOF'
-#!/bin/sh
-n=0
-until ip -4 addr show | grep -q 'inet 192\.168\.122\.1/'; do
-	n=$((n + 1))
-	[ $n -le 60 ] || { echo "libvirt's bridge has no 192.168.122.1" >&2; exit 1; }
-	sleep 1
-done
-exec /usr/bin/sshd -D
-EOF
-chmod 755 /usr/local/lib/dinit-sshd-wait
-sed 's|^command = /usr/bin/sshd -D$|command = /usr/local/lib/dinit-sshd-wait|' \
-	/usr/lib/dinit.d/sshd > /etc/dinit.d/sshd
-echo 'waits-for: virtnetworkd' >> /etc/dinit.d/sshd
-grep -q dinit-sshd-wait /etc/dinit.d/sshd ||
-	echo "warning: /usr/lib/dinit.d/sshd changed; sshd may start before libvirt's bridge" >&2
+# checked as user so a copy in ~/.local/share/fonts counts
+if ! as_user 'fc-list : family | grep -q CozetteVector'; then
+	mkdir -p /usr/local/share/fonts/cozette
+	for f in CozetteVector.ttf CozetteVectorBold.ttf LICENSE; do
+		curl -fL -o "/usr/local/share/fonts/cozette/$f" \
+			"https://github.com/slavfox/Cozette/releases/download/v.1.30.0/$f"
+	done
+	fc-cache -f
+fi
 
-# no dhcpcd: it conflicts with NetworkManager
-for s in networkmanager crond syslog-ng virtqemud virtnetworkd virtstoraged nfs-server sshd; do
-	[ -e "/etc/dinit.d/boot.d/$s" ] || dinitctl -o enable "$s"
-done
-# enabled by default in /usr/lib/dinit.d/boot.d
-# dinitctl -o enable elogind
+# build scrot from its release tarball into ~/.local (not in apk)
+[ -x "/home/$user/.local/bin/scrot" ] || as_user 'd=$(mktemp -d) && cd "$d" &&
+	curl -fsSL https://github.com/resurrecting-open-source-projects/scrot/releases/download/2.0.0/scrot-2.0.0.tar.gz |
+	tar -xz --strip-components=1 && ./configure --prefix=$HOME/.local && make install; s=$?; rm -rf "$d"; exit $s'
 
+# flatpaks
 apk add flatpak
+
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 flatpak install -y --system flathub \
 	io.github.ungoogled_software.ungoogled_chromium \
@@ -156,97 +163,12 @@ flatpak install -y --system flathub \
 flatpak install -y --system flathub com.teamspeak.TeamSpeak ||
 	echo "warning: TeamSpeak not installed; rerun outside the chroot" >&2
 
-# checked as user so a copy in ~/.local/share/fonts counts
-if ! as_user 'fc-list : family | grep -q CozetteVector'; then
-	mkdir -p /usr/local/share/fonts/cozette
-	for f in CozetteVector.ttf CozetteVectorBold.ttf LICENSE; do
-		curl -fL -o "/usr/local/share/fonts/cozette/$f" \
-			"https://github.com/slavfox/Cozette/releases/download/v.1.30.0/$f"
-	done
-	fc-cache -f
-fi
+# ==== 5. report ====
 
-as_user "mkdir -p $ws"
-clone() { [ -d "$ws/$2" ] || as_user "git clone git@github.com:IcaroPablo/$1.git $ws/$2"; }
-clone st st
-clone sowm smawm	# still named sowm on GitHub
-clone dvtm dvtm
-clone dotfiles dotfiles
-clone posix-shell-scripts-collection posix-shell-scripts-collection
-
-# /usr/local: build as user, install as root
-for r in st smawm; do
-	as_user "cd $ws/$r && make"
-	(cd "$ws/$r" && make install)
-done
-
-for r in dvtm dotfiles posix-shell-scripts-collection; do
-	as_user "cd $ws/$r && make install"
-done
-
-# shell entry block from the dotfiles README
-grep -q icaro-dotfiles "/home/$user/.profile" 2>/dev/null || as_user 'cat >> $HOME/.profile' <<'EOF'
-# >>> icaro-dotfiles >>>
-ENV="$HOME/.config/sh/rc.sh"; export ENV
-. "$HOME/.config/sh/env.sh"
-# <<< icaro-dotfiles <<<
-EOF
-
-# not in apk: built from release tarballs into ~/.local
-build() {
-	has "$1" && return
-	d=$(as_user 'mktemp -d')
-	as_user "curl -fsSL $2 | tar -xz -C $d --strip-components=1 && cd $d && $3"
-	rm -rf "$d"
-}
-build scrot https://github.com/resurrecting-open-source-projects/scrot/releases/download/2.0.0/scrot-2.0.0.tar.gz \
-	'./configure --prefix=$HOME/.local && make install'
-build nsxiv https://codeberg.org/nsxiv/nsxiv/archive/v34.tar.gz \
-	'make PREFIX=$HOME/.local install'
-
-# no musl release; its build assumes gcc and static libstdc++, patched for clang/libc++
-has lua-language-server || doas -u "$user" sh -e <<'EOF'
-l=$HOME/.local/share/lua-language-server
-rm -rf "$l" && mkdir -p "$l" "$HOME/.local/bin" && cd "$l"
-curl -fsSL -o src.zip https://github.com/LuaLS/lua-language-server/releases/download/3.19.1/lua-language-server-3.19.1-submodules.zip
-unzip -q src.zip && rm src.zip
-cd 3rd/luamake
-sed -e 's/^cc = gcc/cc = cc/' -e 's/ -static-libgcc//g' -e 's/ -lstdc++fs//g' \
-	-e 's/-Wl,-Bstatic -lstdc++ -Wl,-Bdynamic/-lstdc++/' \
-	compile/ninja/linux.ninja > compile/ninja/chimera.ninja
-ninja -f compile/ninja/chimera.ninja
-cd ../..
-3rd/luamake/luamake -compiler clang -crt dynamic init
-sed -e 's/ -static-libgcc//g' -e 's/ -lstdc++fs//g' \
-	-e 's/-Wl,--push-state,-Bstatic \(-l[^ ]* *\)*-Wl,--pop-state/-lstdc++/g' \
-	build/build.ninja > build/chimera.ninja
-ninja -f build/chimera.ninja
-ln -sf "$l/bin/lua-language-server" "$HOME/.local/bin/lua-language-server"
-EOF
-
-# release binary: go install can't build it (generated sources aren't in git)
-has carapace || as_user "mkdir -p \$HOME/.local/bin && curl -fsSL https://github.com/carapace-sh/carapace-bin/releases/download/v1.8.0/carapace-bin_1.8.0_linux_amd64.tar.gz | tar -xz -C \$HOME/.local/bin carapace"
-
-# GOPATH as in the dotfiles' env.sh; the preview's fallback when chafa is missing
-has pixterm || as_user "GOPATH=\$HOME/.go go install github.com/eliukblau/pixterm/cmd/pixterm@v1.3.3"
-
-chsh -s /usr/bin/oksh "$user"
-
-# ~/.local/bin and ~/.go/bin aren't in PATH until .profile is set up
+# ~/.local/bin isn't in PATH until .profile is set up
 ok=0
 for r in dotfiles posix-shell-scripts-collection; do
-	as_user "PATH=\$HOME/.local/bin:\$HOME/.go/bin:\$PATH; cd $ws/$r && make doctor" || ok=1
+	as_user "PATH=\$HOME/.local/bin:\$PATH; cd $ws/$r && make doctor" || ok=1
 done
-
-# hardware: suggested, not installed
-hw=
-for p in ucode-intel intel-media-driver; do
-	apk info -e "$p" >/dev/null 2>&1 || hw="$hw $p"
-done
-if [ -n "$hw" ]; then
-	echo
-	echo "suggested for this hardware:"
-	echo "  doas apk add$hw"
-fi
 
 exit $ok
