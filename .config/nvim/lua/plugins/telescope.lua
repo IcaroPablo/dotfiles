@@ -15,6 +15,11 @@ return {
     config = function()
         local root = require("core.root")
 
+        -- live_grep has no fallback without rg; find_files falls back to fd or find
+        if vim.fn.executable("rg") == 0 then
+            vim.notify("rg (ripgrep) não encontrado: <leader>g (live_grep) não funciona", vim.log.levels.WARN)
+        end
+
         require("telescope").setup({
             defaults = {
                 path_display = {

@@ -38,7 +38,7 @@ GROUPS = \
 	"NÚCLEO (degradam, mas fazem falta):fd fdfind zoxide readlink realpath make lsof" \
 	"PREVIEW (opcional):w3m exiftool unzip tar chafa ffmpeg" \
 	"X11 (só na máquina gráfica):xwallpaper xsetroot xset xrdb xmodmap setxkbmap xinput smawm" \
-	"EDITOR (só onde o nvim roda; sem ele, vi):nvim tree-sitter" \
+	"EDITOR (só onde o nvim roda; sem ele, vi):nvim tree-sitter rg" \
 	"SHPAD (só no fangorn; dvtm, e o carapace completa no nvim):dvtm carapace" \
 	"COLEÇÃO (outro repositório):create monitor"
 
