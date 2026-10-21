@@ -67,9 +67,10 @@ case "$(mimetype "$first")" in
         send_remote "$@" ||
             if here; then have mpv && mpv "$@" >/dev/null 2>&1 || os_open "$@"
             else have mpv && mpv --vo=tct --really-quiet "$@" || noscreen "$first"; fi ;;
+    # images open in the terminal with sixiv; several start in its thumbnail grid
     image/*)
-        send_remote "$@" ||
-            if here; then have nsxiv && nsxiv -a --thumbnail "$@" || os_open "$@"
-            else for _f in "$@"; do preview "$_f"; done; fi ;;
+        if have sixiv && [ -t 0 ]; then
+            if [ $# -gt 1 ]; then sixiv -t -- "$@"; else sixiv -- "$1"; fi
+        else for _f in "$@"; do preview "$_f"; done; fi ;;
 	*) handlenoextension "$@" ;;
 esac

@@ -218,7 +218,7 @@ case "$(uname)" in
         ;;
 esac
 
-have nsxiv && alias img="nsxiv --thumbnail"
+have sixiv && alias img="sixiv -t"
 have mpv && alias play="mpv --shuffle ."
 
 [ -n "${ZSH_VERSION:-}" ] && setopt PROMPT_SUBST 2>/dev/null
