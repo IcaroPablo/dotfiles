@@ -36,7 +36,7 @@ REQUIRED = git fzf eza file mktemp
 # chama: o nvim abre painel com o create, o xinitrc arruma a tela com o monitor.
 GROUPS = \
 	"NÚCLEO (degradam, mas fazem falta):fd fdfind zoxide readlink realpath make lsof" \
-	"PREVIEW (opcional):w3m exiftool unzip tar chafa pixterm ffmpeg" \
+	"PREVIEW (opcional):w3m exiftool unzip tar chafa ffmpeg" \
 	"X11 (só na máquina gráfica):xwallpaper xsetroot xset xrdb xmodmap setxkbmap xinput smawm" \
 	"EDITOR (só onde o nvim roda; sem ele, vi):nvim tree-sitter" \
 	"SHPAD (só no fangorn; dvtm, e o carapace completa no nvim):dvtm carapace" \

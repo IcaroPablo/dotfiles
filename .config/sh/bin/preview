@@ -12,13 +12,11 @@ command -v mimetype >/dev/null 2>&1 || mimetype() { file --mime-type -bL "$1" 2>
 # one-line human description — the universal fallback (no tool required)
 desc() { have file && file -Lb "$1" || mimetype "$1" || printf '%s\n' "$1"; }
 
-# image no terminal: chafa (símbolos, que o st não tem sixel), pixterm se faltar.
+# image no terminal: chafa (símbolos, que o st não tem sixel).
 # Dentro do fzf, do tamanho do painel; fora, do terminal.
 image() {
     if have chafa; then
         chafa -f symbols ${FZF_PREVIEW_COLUMNS:+-s "${FZF_PREVIEW_COLUMNS}x${FZF_PREVIEW_LINES}"} "$1"
-    elif have pixterm; then
-        pixterm ${FZF_PREVIEW_COLUMNS:+-tc "$FZF_PREVIEW_COLUMNS" -tr "$FZF_PREVIEW_LINES"} "$1"
     else
         desc "$1"
     fi

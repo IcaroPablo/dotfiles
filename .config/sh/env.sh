@@ -27,10 +27,6 @@ export LANG="en_US.UTF-8" LC_MESSAGES="en_US.UTF-8" LC_TIME="pt_PT.UTF-8"
 # [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 # _path_prepend "$HOME/.cargo/bin"
 
-# --- go (guarded) ---
-export GOPATH="$HOME/.go"
-_path_prepend "$GOPATH/bin"
-
 # ------------------------------------------------- per-OS env deltas (real ones)
 case "$(uname)" in
     OpenBSD)
