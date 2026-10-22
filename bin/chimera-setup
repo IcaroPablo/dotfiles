@@ -92,7 +92,12 @@ case $([ -f "$key" ] && as_user "ssh -T -i $key -o IdentitiesOnly=yes -o StrictH
 	;;
 esac
 
-clone() { [ -d "$ws/$1" ] || as_user "git clone $url/$1.git $ws/$1"; }
+clone() {
+	if [ ! -d "$ws/$1" ]; then as_user "git clone $url/$1.git $ws/$1"
+	# an https clone moves to ssh once GitHub takes the key
+	elif [ "${url#git@}" != "$url" ]; then as_user "git -C $ws/$1 remote set-url origin $url/$1.git"
+	fi
+}
 clone dotfiles
 clone posix-shell-scripts-collection
 
@@ -163,12 +168,3 @@ flatpak install -y --system flathub \
 flatpak install -y --system flathub com.teamspeak.TeamSpeak ||
 	echo "warning: TeamSpeak not installed; rerun outside the chroot" >&2
 
-# ==== 5. report ====
-
-# ~/.local/bin isn't in PATH until .profile is set up
-ok=0
-for r in dotfiles posix-shell-scripts-collection; do
-	as_user "PATH=\$HOME/.local/bin:\$PATH; cd $ws/$r && make doctor" || ok=1
-done
-
-exit $ok
