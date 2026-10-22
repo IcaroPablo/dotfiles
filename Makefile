@@ -26,7 +26,7 @@ SET0 = .config/git .config/sh \
 SET1 = .config/ghostty .xinitrc \
 	bin/backuphd bin/bar bin/chimera-setup \
 	bin/fzfmenu bin/monitor \
-	bin/pull-files bin/rec-gif bin/run-program bin/scr-shot bin/scrotocr \
+	bin/pull-files bin/rec-gif bin/run-program bin/scrotocr \
 	bin/wipe-ssd
 SET2 = .config/nvim .config/spdfv .config/vis \
 	bin/igsaved bin/launch_nvim bin/shpad bin/sixiv bin/spdfv
@@ -40,7 +40,7 @@ GROUPS0 = \
 	"ARQUIVO (compress, extract do rc.sh):tar gzip bzip2 xz zip unzip unrar 7z" \
 	"PREVIEW (preview):chafa ffmpeg ffprobe w3m exiftool"
 GROUPS1 = \
-	"X11 (xinitrc, bar, fzfmenu, monitor, scr-shot):xwallpaper xsetroot xset xrdb xmodmap setxkbmap xinput xrandr xdpyinfo smawm st scrot xclip xdg-open" \
+	"X11 (xinitrc, bar, fzfmenu, monitor, as teclas do smawm):xwallpaper xsetroot xset xrdb xmodmap setxkbmap xinput xrandr xdpyinfo smawm st scrot xclip xdg-open" \
 	"IMAGEM E VÍDEO (rec-gif, scrotocr):ffmpeg slop tesseract mogrify" \
 	"DISCO (backuphd, wipe-ssd):rsync doas cryptsetup lsof udisksctl blkdiscard sfdisk mkfs.ext4" \
 	"CELULAR (pull-files):adb"
