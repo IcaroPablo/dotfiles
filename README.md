@@ -48,9 +48,9 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
     - [smawm](https://github.com/IcaroPablo/sowm/tree/smawm)
 
 - Setup my dotfiles
-    >An ordinary git repository plus symlinks. `make install` links each directory under `.config/` into `~/.config`, and `.xinitrc` into `$HOME` — nothing is copied, so whatever a tool writes into its own config (nvim's `nvim-pack-lock.json`, for one) lands back in the repository and shows up in `git status`.
+    >An ordinary git repository plus symlinks: each directory under `.config/` is linked into `~/.config`, `.xinitrc` into `$HOME`, and each script in `bin/` into `~/.local/bin`. Nothing is copied, so whatever a tool writes into its own config (nvim's `nvim-pack-lock.json`, for one) lands back in the repository and shows up in `git status`, and editing a script takes effect at once.
     - `$ git clone https://github.com/IcaroPablo/dotfiles ~/Workspace/dotfiles`
-    - `$ cd ~/Workspace/dotfiles && make install`
+    - `$ cd ~/Workspace/dotfiles && make install SETS="0 1"`
     - add the two lines below to `~/.profile` (`~/.zprofile` for zsh)
 
     ```sh
@@ -60,15 +60,15 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
 
     >Order matters: `env.sh` ends in the tty1 auto-`startx`, which blocks until the X session dies, so exporting `ENV` afterwards would only take effect at logout and every terminal inside X would come up with no rc at all. For bash and zsh, put `env.sh` in the profile and `. "$HOME/.config/sh/rc.sh"` in the rc file instead.
 
+    >Configs and scripts come in sets, picked per machine: set 0 is common, set 1 is the graphical host (shire), set 2 is the VM (fangorn). Sets 1 and 2 depend only on set 0, never on each other. `SETS` defaults to all three; `make install` also removes this repository's links to whatever is outside the chosen sets, and `make list` shows what a choice would link.
+
+    >`make install` refuses to clobber: anything already sitting where a link belongs is reported and skipped, the rest still install, and the target exits non-zero. `FORCE=1` displaces the occupant into `~/.local/share/dotfiles/displaced` — dated, not deleted — rather than overwriting it. That is not theoretical: `bin/compress` shares its name with POSIX `compress(1)`. `make uninstall` removes only links that point back at the repository, found by scanning the targets, so the link of a file deleted from here goes too. `make doctor SETS=...` reports which links are in place, whether the shell is wired, and which tools the chosen sets need.
+
     >The Makefile is POSIX make, so it runs under bmake and OpenBSD's make as well as GNU make — no `wildcard`, `notdir` or `CURDIR`, and the lists come from shell globs. Use `cd` rather than `make -C`: OpenBSD's make has no `-C`.
 
-    >`make install` refuses to clobber: anything already sitting where a link belongs is reported and skipped, the rest still install, and the target exits non-zero. `FORCE=1` displaces the occupant into `~/.local/share/dotfiles/displaced` — dated, not deleted — rather than overwriting it. `make uninstall` removes only links that point back at the repository. `make doctor` reports which links are in place, whether the shell is wired, and which tools this configuration needs are missing — it checks only what this repository's own code invokes; the scripts collection has its own `make doctor` for its own dependencies.
-
-- Install my [shell scripts collection](https://github.com/IcaroPablo/posix-shell-scripts-collection)
-
 - Properly configure rc.local e rc.shutdown to mount/umount encrypted discs using the following reference scripts
-    - [mount_encrypted](https://github.com/IcaroPablo/posix-shell-scripts-collection/blob/main/bin/mount_encrypted)
-    - [umount_encrypted](https://github.com/IcaroPablo/posix-shell-scripts-collection/blob/main/bin/umount_encrypted)
+    - [mount_encrypted](bin/mount_encrypted)
+    - [umount_encrypted](bin/umount_encrypted)
 
 - Properly configure autohotplug
 
