@@ -164,7 +164,69 @@ dvtm() {
     fi
 }
 
-alias a="create"
+# ( ) bodies keep exit, traps and variables inside
+findfile() {
+    if have fd; then fd "$1"; elif have fdfind; then fdfind "$1"; else find . -iname "*$1*"; fi
+}
+simplegrep() { grep -nRIi -- "$1" .; }
+
+trash() { [ "$#" -gt 0 ] || return 0; mkdir -p -- "$HOME/.trash" && mv -- "$@" "$HOME/.trash"; }
+shredtrash() (
+    clear 2>/dev/null
+    printf '\nempty %s? [y/N] ' "$HOME/.trash"
+    read -r ans && case $ans in [yY]) rm -rf -- "$HOME/.trash" && mkdir -p -- "$HOME/.trash" ;; esac
+)
+delete() (
+    [ "$#" -gt 0 ] || exit 0
+    clear 2>/dev/null
+    printf '\n\t%s' "$@"
+    printf '\n\ndelete? [y/N] '
+    read -r ans && case $ans in [yY]) rm -rf -- "$@" ;; esac
+)
+
+# the names in this folder, one per line, edited in $EDITOR
+bulkrename() (
+    old=$(mktemp) && new=$(mktemp) || exit 1
+    trap 'rm -f "$old" "$new"' EXIT
+    ls > "$old"
+    cp -- "$old" "$new"
+    "${EDITOR:-vi}" "$new"
+    [ "$(wc -l < "$old")" -eq "$(wc -l < "$new")" ] ||
+        { echo "bulkrename: line count changed, aborting" >&2; exit 1; }
+    paste "$old" "$new" | while IFS="$(printf '\t')" read -r src dst; do
+        [ "$src" = "$dst" ] || [ -e "$dst" ] || mv -- "$src" "$dst"
+    done
+)
+
+# shadows POSIX compress(1) at the prompt
+compress() (
+    out=$1; shift
+    case $out in
+        *.tar.bz2|*.tbz2) tar cjvf "$out" "$@" ;;
+        *.tar.gz|*.tgz)   tar czvf "$out" "$@" ;;
+        *.tar.xz|*.txz)   tar cJvf "$out" "$@" ;;
+        *.tar)            tar cvf  "$out" "$@" ;;
+        *.zip)            zip -r "$out" "$@" ;;
+        *.rar)            rar a "$out" "$@" ;;
+        *.7z)             7z a "$out" "$@" ;;
+        *) echo "compress: unknown archive type: $out" >&2; exit 1 ;;
+    esac
+)
+extract() {
+    case $1 in
+        *.tar.bz|*.tar.bz2|*.tbz|*.tbz2) tar xjvf "$1" ;;
+        *.tar.gz|*.tgz)                  tar xzvf "$1" ;;
+        *.tar.xz|*.txz)                  tar xJvf "$1" ;;
+        *.tar)                           tar xvf  "$1" ;;
+        *.zip)                           unzip "$1" ;;
+        *.rar)                           unrar x "$1" ;;
+        *.7z)                            7z x "$1" ;;
+        *.gz)                            gunzip "$1" ;;
+        *.bz2)                           bunzip2 "$1" ;;
+        *) echo "extract: unknown archive type: $1" >&2; return 1 ;;
+    esac
+}
+
 alias doas="${DOAS} "
 alias ea="e -a"
 alias f="findfile"

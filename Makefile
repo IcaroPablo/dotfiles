@@ -22,8 +22,7 @@ DISPLACED = $(HOME_DIR)/.local/share/dotfiles/displaced
 
 SETS = 0 1 2
 SET0 = .config/git .config/sh \
-	bin/bulkrename bin/compress bin/create bin/delete bin/extract bin/findfile \
-	bin/openfile bin/preview bin/shredtrash bin/simplegrep bin/trash
+	bin/openfile bin/preview
 SET1 = .config/ghostty .xinitrc \
 	bin/backuphd bin/bar bin/chimera-setup \
 	bin/fix_boot_entry bin/fzfmenu bin/monitor \
@@ -38,8 +37,8 @@ REQUIRED = git fzf eza file mktemp
 
 # label:tools, one list per set
 GROUPS0 = \
-	"NÚCLEO (degradam, mas fazem falta; findfile):fd fdfind zoxide readlink realpath make lsof" \
-	"ARQUIVO (compress, extract):tar gzip bzip2 xz zip unzip unrar 7z" \
+	"NÚCLEO (degradam, mas fazem falta; rc.sh):fd fdfind zoxide readlink realpath make lsof" \
+	"ARQUIVO (compress, extract do rc.sh):tar gzip bzip2 xz zip unzip unrar 7z" \
 	"PREVIEW (preview):chafa ffmpeg ffprobe w3m exiftool"
 GROUPS1 = \
 	"X11 (xinitrc, bar, fzfmenu, monitor, scr_shot):xwallpaper xsetroot xset xrdb xmodmap setxkbmap xinput xrandr xdpyinfo smawm st scrot xclip xdg-open" \
@@ -112,7 +111,7 @@ doctor:
 	exit $$bad
 
 # Doesn't trample what's there: the target is the real ~/.config, and a clash
-# is reported and skipped (compress here shares its name with POSIX compress).
+# is reported and skipped.
 # FORCE=1 displaces the occupant, dated, instead of deleting it.
 install:
 	@src=`pwd`; bad=0; $(PICK); \
