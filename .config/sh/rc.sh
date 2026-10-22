@@ -13,6 +13,8 @@ command -v have >/dev/null 2>&1 || have() { command -v "$1" >/dev/null 2>&1; }
 if have doas; then DOAS='doas'; else DOAS='sudo'; fi
 
 set -o vi 2>/dev/null || true
+# ksh-family shells keep no history file unless HISTFILE is set
+: "${HISTFILE:=$HOME/.sh_history}" "${HISTSIZE:=10000}"
 ulimit -c 0 2>/dev/null || true
 
 [ -n "${INITIAL_FOLDER:-}" ] && cd "$INITIAL_FOLDER"
