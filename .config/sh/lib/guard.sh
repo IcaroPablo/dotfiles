@@ -1,15 +1,36 @@
-# lib/guard.sh — portable helpers shared by rc.sh and openfile.
-# POSIX sh. Meant to be sourced, not executed. Safe to source more than once.
+# helpers sourced by rc.sh and the scripts in bin/
 
 : "${CLIPFILE:=${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/nav-clipboard}"
 export CLIPFILE
 
-# have <cmd>: succeed if <cmd> is an executable in PATH (or a shell builtin).
 have() { command -v "$1" >/dev/null 2>&1; }
 
-# abspath <path>: print the absolute, symlink-resolved path of <path>.
-# Prefers realpath / `readlink -f` when present; falls back to a POSIX method
-# that resolves the directory and keeps the basename (BSD without -f).
+# without file: by extension, else text unless the first 4K have a NUL
+mimetype() {
+    if have file; then file --mime-type -bL "$1" 2>/dev/null; return; fi
+    [ -e "$1" ] || return 1
+    [ -d "$1" ] && { echo inode/directory; return; }
+    [ -s "$1" ] || { echo inode/x-empty; return; }
+    _mt_n=$(abspath "$1" | tr '[:upper:]' '[:lower:]')
+    _mt_e=${_mt_n##*.}
+    case "$_mt_n" in
+        *.jpg|*.jpeg) echo image/jpeg ;;
+        *.png|*.gif|*.bmp|*.tiff|*.webp) echo "image/$_mt_e" ;;
+        *.djvu) echo image/vnd.djvu ;;
+        *.pdf) echo application/pdf ;;
+        *.epub) echo application/epub+zip ;;
+        *.mp4|*.m4v|*.mkv|*.webm|*.mov|*.avi|*.wmv|*.flv|*.mpg|*.mpeg|*.ogv|*.3gp)
+            echo "video/$_mt_e" ;;
+        *.wav|*.mp3|*.flac|*.m4a|*.ogg|*.oga|*.opus) echo "audio/$_mt_e" ;;
+        *)
+            if [ "$(dd if="$1" bs=4096 count=1 2>/dev/null | tr -d '\000' | wc -c)" = \
+                "$(dd if="$1" bs=4096 count=1 2>/dev/null | wc -c)" ]; then echo text/plain
+            else echo application/octet-stream; fi ;;
+    esac
+    unset _mt_n _mt_e
+}
+
+# without realpath or readlink -f: resolve the folder, keep the name
 abspath() {
     if have realpath; then
         realpath "$1" 2>/dev/null && return 0

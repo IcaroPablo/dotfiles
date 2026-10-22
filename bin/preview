@@ -1,18 +1,10 @@
 #!/bin/sh
-#
-# preview <file> — best-effort preview of <file>, usado pelo fzf do `sel`. Fora
-# do eza, toda ferramenta externa é opcional: faltando, o ramo cai numa descrição
-# de uma linha em vez de dar erro.
+# preview <file>, for fzf; every tool is optional
 
-have() { command -v "$1" >/dev/null 2>&1; }
-# --mime-type: the one form macOS, Linux and OpenBSD's file all report alike
-mimetype() { file --mime-type -bL "$1" 2>/dev/null; }
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" || exit 1
 
-# one-line human description — the universal fallback (no tool required)
 desc() { have file && file -Lb "$1" || mimetype "$1" || printf '%s\n' "$1"; }
 
-# chafa symbols, sized to fzf's preview pane inside fzf and to the terminal
-# outside it; sixel images are sixiv's job
 image() {
     if have chafa; then
         chafa -f symbols ${FZF_PREVIEW_COLUMNS:+-s "${FZF_PREVIEW_COLUMNS}x${FZF_PREVIEW_LINES}"} "$1"
@@ -21,12 +13,18 @@ image() {
     fi
 }
 
-# vídeo: grade 2x2 com quadros a 10, 35, 60 e 85% da duração, mostrada pelo image
+meta() {
+    if have exiftool; then exiftool "$1"
+    elif have ffprobe; then ffprobe -hide_banner "$1" 2>&1
+    else desc "$1"; fi
+}
+
+# 2x2 grid of frames at 10, 35, 60 and 85%
 video() {
-    have ffmpeg && have ffprobe || { desc "$1"; return; }
+    have ffmpeg && have ffprobe && have chafa || { meta "$1"; return; }
     _vd=$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$1" 2>/dev/null)
     _vf="$1"
-    _vt=$(mktemp) || { desc "$_vf"; return; }
+    _vt=$(mktemp) || { meta "$_vf"; return; }
     trap 'rm -f "$_vt"' EXIT
     set --
     for _vs in $(awk -v d="$_vd" 'BEGIN { if (d > 0) print d*.10, d*.35, d*.60, d*.85 }'); do
@@ -37,21 +35,22 @@ video() {
         -frames:v 1 -update 1 -f image2 -c:v png "$_vt" 2>/dev/null && [ -s "$_vt" ]; then
         image "$_vt"
     else
-        desc "$_vf"
+        meta "$_vf"
     fi
 }
 
 handlenoextension() {
     case "$(mimetype "$1")" in
         text/*) cat "$1" ;;
-        inode/directory) eza -1 --group-directories-first --no-quotes --icons always -a "$1" ;;
+        inode/directory)
+            if have eza; then eza -1 --group-directories-first --no-quotes --icons always -a "$1"
+            else ls -1A "$1"; fi ;;
         *) desc "$1" ;;
     esac
 }
 
-# a link previews as what it points to (foo -> bar.jpg is an image)
 name=$1
-[ -L "$1" ] && { name=$(realpath "$1" 2>/dev/null || readlink -f "$1" 2>/dev/null) || name=$1; }
+[ -L "$1" ] && name=$(abspath "$1")
 
 case "$(printf "%s\n" "$name" | awk '{print tolower($0)}')" in
 	*.tgz|*.tar.gz) have tar && tar tzf "$1" || desc "$1" ;;
@@ -75,7 +74,7 @@ case "$(printf "%s\n" "$name" | awk '{print tolower($0)}')" in
 		have ssconvert && ssconvert --export-type=Gnumeric_stf:stf_csv "$1" "fd://1" || desc "$1"
 		;;
 	*.wav|*.mp3|*.flac|*.m4a|*.wma|*.ape|*.ac3|*.og[agx]|*.spx|*.opus|*.as[fx]|*.mka)
-		have exiftool && exiftool "$1" || desc "$1"
+		meta "$1"
 		;;
 	*.jpg|*.jpeg|*.png|*.gif|*.bmp|*.tiff|*.webp)
 		image "$1"

@@ -1,9 +1,7 @@
 #!/bin/sh
 
-. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" 2>/dev/null || true
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" || exit 1
 
-# open each file with the platform's handler, detached; setsid keeps it past
-# the terminal
 os_open() {
     case "$(uname)" in
         Darwin) open "$@" ;;
@@ -17,15 +15,9 @@ os_open() {
     esac
 }
 
-# --mime-type: the one form macOS, Linux and OpenBSD's file all report alike
-mimetype() { file --mime-type -bL "$1" 2>/dev/null; }
-
-# ~/.config/openfile/remote (sh), written by fangorn rebuild na VM: mídia sob
-# $root abre na tela de outra máquina, por ssh ($host, com $key, conferindo $known)
+# written by fangorn rebuild: media under $root plays on the host's screen
 remote="${XDG_CONFIG_HOME:-$HOME/.config}/openfile/remote"
 
-# manda os arquivos para a tela remota; falha calado se não há remote, se algum
-# está fora de $root ou se a máquina não responde, e quem chamou se vira aqui
 send_remote() {
     [ -f "$remote" ] || return 1
     . "$remote"
@@ -46,14 +38,13 @@ send_remote() {
         "$host" 2>/dev/null
 }
 
-# sem tela aqui (por ssh, sem X): o que der, no terminal
-here() { [ -n "${DISPLAY:-}" ]; }
+here() { [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] || [ "$(uname)" = Darwin ]; }
 noscreen() { printf 'openfile: sem tela aqui para %s\n' "$1" >&2; return 1; }
 
 handlenoextension() {
     case "$(mimetype "$1")" in
         inode/directory) echo "$1" ;;
-        *) os_open "$@" ;;
+        *) here && os_open "$@" || for _f in "$@"; do preview "$_f"; done ;;
     esac
 }
 
@@ -61,24 +52,23 @@ first="$1"
 
 case "$(mimetype "$first")" in
     inode/x-empty|text/*|application/json|*shellscript|application/x-empty|application/octet-stream)
-        if have nvim; then launch_nvim "$@"; else vi "$@"; fi ;;
-    # documents open only in the terminal, with spdfv (sixel); never sent to
-    # another screen. file calls DjVu image/, hence before image/*
+        if have nvim && have launch_nvim; then launch_nvim "$@"
+        else ${VISUAL:-${EDITOR:-vi}} "$@"; fi ;;
+    # before image/*: file calls DjVu an image
     application/pdf|image/vnd.djvu*|application/vnd.djvu*|application/epub*)
-        have spdfv && [ -t 0 ] || {
-            printf 'openfile: documents open only in a terminal with spdfv: %s\n' "$first" >&2
-            exit 1; }
-        for _f in "$@"; do spdfv "$_f"; done ;;
+        if have spdfv && [ -t 0 ]; then for _f in "$@"; do spdfv "$_f"; done
+        elif here; then os_open "$@"
+        else noscreen "$first"; fi ;;
     audio/*|video/x-ms-asf)
-        send_remote "$@" || { have mpv && mpv --shuffle --no-audio-display "$@" || os_open "$@"; } ;;
+        send_remote "$@" || { have mpv && mpv --shuffle --no-audio-display "$@"; } ||
+            { here && os_open "$@"; } || noscreen "$first" ;;
     video/*)
         send_remote "$@" ||
             if here; then have mpv && mpv "$@" >/dev/null 2>&1 || os_open "$@"
             else have mpv && mpv --vo=tct --really-quiet "$@" || noscreen "$first"; fi ;;
-    # images open in the terminal with sixiv; several start in its thumbnail grid
     image/*)
         if have sixiv && [ -t 0 ]; then
             if [ $# -gt 1 ]; then sixiv -t -- "$@"; else sixiv -- "$1"; fi
-        else for _f in "$@"; do preview "$_f"; done; fi ;;
+        else here && os_open "$@" || for _f in "$@"; do preview "$_f"; done; fi ;;
 	*) handlenoextension "$@" ;;
 esac
