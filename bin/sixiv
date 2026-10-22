@@ -1,0 +1,399 @@
+#!/bin/sh
+# requires a sixel terminal (st with the sixel patch, foot, xterm -ti vt340)
+#
+# sixiv [-t] [-o] image...    one image: every image in its folder, from it on
+# sixiv [-t] [-o] folder      every image in the folder
+#
+#   -t  start in the thumbnail grid
+#   -o  on quit, print the marked files, one per line: cp $(sixiv -o *) dir/
+#
+#   n space, J        next image          p b, K            previous image
+#   g G               first/last          [n]Enter, [n]g    image n
+#   + -               zoom                = w               100% / fit
+#   h j k l, arrows   pan                 t                 thumbnail grid
+#   m                 mark / unmark       r                 redraw
+#   q                 quit
+#
+# In the grid, h j k l and the arrows move, n p (J K, space b) turn the page,
+# Enter or t opens the image, [n]g and G jump, m marks.
+#
+# Same idea as spdfv: ffmpeg decodes, crops and scales the image into a QOI
+# no bigger than the screen (turning photos by their EXIF tag on the way),
+# and chafa encodes the sixel. Each redraw decodes the image again; only the
+# thumbnails and the animations are cached. An animation shows its first frame
+# at once, while the rest are encoded in the background, and then plays from
+# the cache: replaying a frame is a cat.
+set -u
+
+usage() { echo "usage: sixiv [-t] [-o] image... | folder" >&2; exit 1; }
+need() {
+    for _t; do
+        command -v "$_t" >/dev/null 2>&1 || { echo "sixiv: $_t not found" >&2; exit 1; }
+    done
+}
+
+grid=false out=false
+while getopts to o; do
+    case $o in
+    t) grid=true ;;
+    o) out=true ;;
+    *) usage ;;
+    esac
+done
+shift $((OPTIND - 1))
+[ $# -gt 0 ] || usage
+need chafa ffmpeg ffprobe python3
+
+tmp=$(mktemp -d) || exit 1
+list=$tmp/list
+
+# image files by extension: listing a folder can't afford a mimetype per file
+images() {
+    awk '{ e = tolower($0); sub(/.*\./, "", e) }
+        e ~ /^(jpe?g|png|gif|webp|avif|jxl|heic|heif|bmp|tiff?|qoi|svg|ppm|pgm|pbm|pam|tga|xpm|xbm|jp2)$/'
+}
+# images in folder $1, given with its trailing slash (empty: the current one)
+infolder() { for _f in "$1"*; do [ -f "$_f" ] && printf '%s\n' "$_f"; done | images; }
+
+i=1
+if [ $# -eq 1 ] && [ -d "$1" ]; then
+    infolder "${1%/}/" >"$list"
+elif [ $# -eq 1 ]; then
+    [ -r "$1" ] || { echo "sixiv: can't read $1" >&2; rm -rf "$tmp"; exit 1; }
+    case $1 in */*) d=${1%/*}/ ;; *) d= ;; esac
+    infolder "$d" >"$list"
+    # not in the listing (an extension it doesn't know): just that file
+    i=$(F="$d${1##*/}" awk '$0 == ENVIRON["F"] { print NR; exit }' "$list")
+    [ -n "$i" ] || { printf '%s\n' "$1" >"$list"; i=1; }
+else
+    printf '%s\n' "$@" >"$list"
+fi
+total=$(($(wc -l <"$list")))
+[ "$total" -gt 0 ] || { echo "sixiv: no images in $1" >&2; rm -rf "$tmp"; exit 1; }
+
+nth() { sed -n "$1{p;q;}" "$list"; }
+
+marks=' '
+marked() { case $marks in *" $1 "*) return 0 ;; esac; return 1; }
+toggle() {
+    if marked "$1"; then marks=$(echo "$marks" | sed "s/ $1 / /")
+    else marks="$marks$1 "; fi
+}
+printmarks() { for _k in $(printf '%s\n' $marks | sort -n); do nth "$_k"; done; }
+
+# The screen is the terminal, not stdout: with -o, stdout is for the marked
+# files, and is usually a pipe or a $(...). The stty that set modes get
+# >/dev/null: BSD stty warns when stdout is a terminal other than stdin, and
+# /dev/tty is one.
+exec 3>&1 >/dev/tty </dev/tty || exit 1
+old=$(stty -g)
+trap 'stty "$old" >/dev/null; [ -n "${alt:-}" ] && printf "\033[?25h\033[?1049l"
+    [ -n "${apid:-}" ] && kill "$apid" 2>/dev/null; wait
+    $out && printmarks >&3; rm -rf "$tmp"' EXIT
+trap 'exit 1' INT TERM HUP
+printf '\033[?1049h\033[?25l'; alt=1
+stty -icanon -echo min 1 >/dev/null
+
+# Text area size in cells and in pixels. st doesn't answer the CSI 14t/16t
+# queries (chafa guesses wrong without them), but it fills the pixels in
+# TIOCGWINSZ, and stty only shows rows and columns.
+geom() {
+    set -- $(python3 -c 'import fcntl,termios,struct
+print(*struct.unpack("4H",fcntl.ioctl(0,termios.TIOCGWINSZ,bytes(8))))')
+    rows=$1 cols=$2 W=$3
+    cw=$(($3 / cols)) ch=$(($4 / rows))
+    H=$(((rows - 1) * ch))  # whole cells: chafa adds no margin
+}
+
+sixel() { chafa -f sixels --probe=off --exact-size=on --polite=on "$1"; }
+
+status() {
+    _m=' '; marked "$i" && _m='*'
+    printf '\033[%d;1H\033[7m%s%s  %d/%d  %s \033[K\033[m' \
+        "$rows" "$_m" "$(nth "$i" | sed 's|.*/||')" "$i" "$total" "$1"
+}
+
+# width and height of image $i as shown (a photo turned by EXIF swaps them),
+# and nf, its frames up to 2: more than one is an animation
+dims() {
+    _d=$tmp/$i.dim
+    [ -s "$_d" ] || ffprobe -v error -select_streams v:0 -read_intervals '%+#2' \
+        -show_entries frame=width,height:frame_side_data=rotation -of default=nw=1 \
+        "file:$f" </dev/null 2>/dev/null | awk -F= '
+        $1 == "width" { nf++; if (!w) w = $2 } $1 == "height" && !h { h = $2 }
+        $1 == "rotation" { r = $2 }
+        END { if (w) print (r % 180 ? h " " w : w " " h), nf }' >"$_d"
+    read -r iw ih nf <"$_d"
+}
+
+anim=false      # playing the animation in $ad, now on frame fi
+apid=           # the background job filling $ad
+
+# Encodes every frame of image $i, as the view shows it now ($1: the ffmpeg
+# filter), into $ad/N.six, and the frame delays into $tmp/$i.delay as
+# "seconds tenths". It only writes files: the screen keeps a single writer,
+# the main loop. ffprobe and ffmpeg run in the background and are waited for,
+# so that a TERM (stopanim) gets to them; a chafa takes ~50 ms.
+startanim() {
+    mkdir -p "$ad"
+    (
+        trap 'kill $c 2>/dev/null; exit 1' TERM
+        if [ ! -s "$tmp/$i.delay" ]; then
+            ffprobe -v error -select_streams v:0 -show_entries frame=duration_time \
+                -of csv=p=0 "file:$f" >"$ad/delay" & c=$!; wait $c
+            # under 20 ms is 100 ms, as in browsers; N/A too
+            awk '{ d = $1 + 0; if (d < 0.02) d = 0.1
+                printf "%.3f %d\n", d, int(d * 10 + 0.5) }' "$ad/delay" >"$tmp/$i.delay"
+        fi
+        ffmpeg -nostdin -v error -y -i "file:$f" -fps_mode passthrough -vf "$1" \
+            -compression_level 1 "$ad/%d.png" & c=$!
+        wait $c || { : >"$ad/fail"; exit 1; }
+        k=1
+        while [ -f "$ad/$k.png" ]; do
+            # without the newline chafa puts after the image, which would scroll
+            printf '%s' "$(sixel "$ad/$k.png")" >"$ad/$k.tmp" &&
+                mv "$ad/$k.tmp" "$ad/$k.six"
+            rm -f "$ad/$k.png"
+            k=$((k + 1))
+        done
+        echo $((k - 1)) >"$ad/n"
+        : >"$ad/done"
+    ) </dev/null >/dev/null 2>&1 &
+    apid=$!
+}
+
+# Stops the encoder; frames it didn't finish are thrown away.
+stopanim() {
+    anim=false
+    [ -n "$apid" ] || return 0
+    kill "$apid" 2>/dev/null; wait "$apid" 2>/dev/null
+    [ -f "$ad/done" ] || rm -rf "$ad"
+    apid=
+}
+
+# the next frame, if it's encoded yet; at the end, back to the first
+advance() {
+    _n=$((fi + 1))
+    if [ -f "$ad/done" ]; then
+        _last=$(cat "$ad/n")
+        [ "$_last" -gt 1 ] || { anim=false; return; }
+        [ "$_n" -gt "$_last" ] && _n=1
+    fi
+    if [ -f "$ad/$_n.six" ]; then
+        printf '%s' "$at"; cat "$ad/$_n.six"; fi=$_n
+    elif [ -f "$ad/fail" ]; then
+        anim=false
+    fi
+}
+
+zoom=0          # % of the image's own size; 0 = fit (never above 100%)
+cx=-1 cy=-1     # view center, in image pixels; -1 = middle of the image
+dx=0 dy=0       # pending pan, in screen pixels
+act=            # pending zoom key: + - = w
+last=           # what's on screen, to skip redrawing the same picture
+
+# The view: a crop of the image, scaled, centered on the screen.
+view() {
+    geom
+    f=$(nth "$i")
+    if ! dims; then
+        stopanim
+        printf '\033[2J\033[%d;1H  ffmpeg cannot read this file' $((rows / 2))
+        last= act= dx=0 dy=0; status '?'; return
+    fi
+    # The zoom steps, the clamping and the crop in image pixels, all in awk:
+    # sh has no fractions. The crop happens before the scale, so zooming into
+    # a large photo never makes a picture bigger than the screen.
+    set -- $(awk -v iw="$iw" -v ih="$ih" -v W="$W" -v H="$H" -v z="$zoom" \
+        -v act="$act" -v cx="$cx" -v cy="$cy" -v dx="$dx" -v dy="$dy" '
+    function fit(f) { f = W / iw; if (H / ih < f) f = H / ih; return f > 1 ? 1 : f }
+    function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v }
+    BEGIN {
+        s = z > 0 ? z / 100 : fit()
+        n = split("5 10 15 25 33 50 67 75 100 150 200 300 400 600 800 1200 1600", L, " ")
+        if (act == "+") { for (k = 1; k <= n; k++) if (L[k] / 100 > s * 1.001) { z = L[k]; break } }
+        else if (act == "-") { for (k = n; k >= 1; k--) if (L[k] / 100 < s * 0.999) { z = L[k]; break } }
+        else if (act == "=") z = 100
+        else if (act == "w") z = 0
+        s = z > 0 ? z / 100 : fit()
+        if (cx < 0) { cx = iw / 2; cy = ih / 2 }
+        cx += dx / s; cy += dy / s
+        cw = int(iw * s + 0.5); if (cw > W) cw = W; if (cw < 1) cw = 1
+        ch = int(ih * s + 0.5); if (ch > H) ch = H; if (ch < 1) ch = 1
+        sw = clamp(int(cw / s + 0.5), 1, iw); sh = clamp(int(ch / s + 0.5), 1, ih)
+        cx = clamp(cx, sw / 2, iw - sw / 2); cy = clamp(cy, sh / 2, ih - sh / 2)
+        sx = clamp(int(cx - sw / 2 + 0.5), 0, iw - sw)
+        sy = clamp(int(cy - sh / 2 + 0.5), 0, ih - sh)
+        print z, int(s * 100 + 0.5), cw, ch, sw, sh, sx, sy, \
+            int((W - cw) / 2), int((H - ch) / 2), cx, cy
+    }')
+    zoom=$1 pct=$2 cx=${11} cy=${12} act= dx=0 dy=0
+    _z=$pct%; [ "$zoom" -eq 0 ] && _z="$pct% fit"
+    [ "$nf" -gt 1 ] && _z="$_z  anim"
+    _now="$i $W $H $*"
+    if [ "$_now" != "$last" ]; then
+        stopanim
+        # Only the image goes into the sixel, not the black around it: chafa
+        # and the terminal would spend most of a frame on black. It's centered
+        # by placing the cursor, so to the nearest cell.
+        vf="crop=$5:$6:$7:$8,scale=$3:$4,format=rgb24"
+        at=$(printf '\033[%d;%dH' $((${10} / ch + 1)) $(($9 / cw + 1)))
+        if ffmpeg -nostdin -v error -y -i "file:$f" -frames:v 1 -vf "$vf" \
+            "$tmp/view.qoi" </dev/null 2>/dev/null; then
+            # $(...) eats the newline chafa puts after the image, which would scroll
+            printf '\033[2J%s%s' "$at" "$(sixel "$tmp/view.qoi")"
+            last=$_now
+            if [ "$nf" -gt 1 ]; then
+                # one cache per image and view: zooming back finds it there
+                ad=$tmp/a$(echo "$_now" | cksum | cut -d' ' -f1) fi=1 anim=true
+                [ -f "$ad/done" ] || startanim "$vf"
+            fi
+        else
+            printf '\033[2J\033[%d;1H  ffmpeg cannot read this file' $((rows / 2))
+            last=
+        fi
+    fi
+    status "${iw}x$ih  $_z"
+}
+
+# Grid layout: C columns of tc cells, R rows of tr cells plus a label line.
+# Thumbnails fit in a tbw x tbh pixel box, a multiple of the 6-pixel sixel
+# band, so the image never spills onto its label.
+gridgeom() {
+    geom
+    C=$((W / 240)); [ "$C" -lt 1 ] && C=1
+    tc=$((cols / C))
+    tbw=$(((tc - 1) * cw))
+    tr=$(((tbw * 3 / 4 + ch - 1) / ch))
+    R=$(((rows - 1) / (tr + 1)))
+    [ "$R" -lt 1 ] && R=1 tr=$((rows - 2))
+    tbh=$((tr * ch / 6 * 6))
+    per=$((C * R))
+}
+
+# thumbnail of image $1, made once per box size; prints its path
+thumb() {
+    _t=$tmp/t$1-${tbw}x$tbh.qoi
+    [ -f "$_t" ] || ffmpeg -nostdin -v error -y -i "file:$(nth "$1")" -frames:v 1 \
+        -vf "scale=$tbw:$tbh:force_original_aspect_ratio=decrease,format=rgb24" \
+        "$_t" </dev/null 2>/dev/null || return 1
+    echo "$_t"
+}
+
+# cell of image $1: its label, and with $2 = img the thumbnail too
+cell() {
+    _o=$(($1 - first))
+    _r=$((1 + _o / C * (tr + 1))) _c=$((1 + _o % C * tc))
+    if [ "${2:-}" = img ]; then
+        if _t=$(thumb "$1"); then printf '\033[%d;%dH%s' "$_r" "$_c" "$(sixel "$_t")"
+        else printf '\033[%d;%dH?' "$_r" "$_c"; fi
+    fi
+    _m=' '; marked "$1" && _m='*'
+    _v=; [ "$1" -eq "$i" ] && _v='\033[7m'
+    printf "\\033[%d;%dH$_v%s\\033[m" $((_r + tr)) "$_c" "$(nth "$1" |
+        awk -v m=$((tc - 1)) -v k="$_m" '{ sub(/.*\//, ""); s = k $0
+            if (length(s) > m) s = substr(s, 1, m - 1) "~"; printf "%-" m "s", s }')"
+}
+
+# the whole page of the grid that holds image $i
+griddraw() {
+    gridgeom
+    first=$(((i - 1) / per * per + 1))
+    printf '\033[2J'
+    _k=$first
+    while [ "$_k" -lt $((first + per)) ] && [ "$_k" -le "$total" ]; do
+        cell "$_k" img
+        _k=$((_k + 1))
+    done
+    status grid
+}
+
+go() {
+    _n=$1
+    [ "$_n" -lt 1 ] && _n=1
+    [ "$_n" -gt "$total" ] && _n=$total
+    [ "$_n" -eq "$i" ] && return 1
+    i=$_n zoom=0 cx=-1 cy=-1
+}
+
+# One byte into _k, "" when the read times out. The dot keeps $(...) from
+# eating a newline: Enter is "$nl", not "".
+readkey() { _k=$(dd bs=1 count=1 2>/dev/null; echo .); _k=${_k%.}; }
+# how the next read waits: at least $1 bytes, at most $2 tenths of a second
+ttymode() { [ "$*" = "${tm:-}" ] || { stty min "$1" time "$2" >/dev/null; tm="$*"; }; }
+esc=$(printf '\033') nl='
+'
+
+num=
+if $grid; then griddraw; else view; fi
+while :; do
+    if $anim; then
+        # The current frame's delay is spent waiting for a key: in the read
+        # itself when it's 0.2 s or more (a key cuts it short), in a sleep
+        # when it's shorter than the read's timer can count.
+        set -- $(sed -n "${fi}p" "$tmp/$i.delay" 2>/dev/null) 0.1 1
+        if [ "$2" -ge 2 ]; then ttymode 0 "$2"; else sleep "$1"; ttymode 0 0; fi
+        readkey
+        [ -n "$_k" ] || { advance; continue; }
+    else
+        ttymode 1 0
+        readkey
+        [ -n "$_k" ] || exit 1  # nothing to block on: the terminal is gone
+    fi
+    k=$_k
+    if [ "$k" = "$esc" ]; then
+        ttymode 0 1
+        readkey; k=$_k; readkey; k=$k$_k
+        case $k in '['[56]) readkey; k=$k$_k ;; esac
+    fi
+    case $k in
+    [0-9]) num=$num$k; continue ;;
+    q) exit 0 ;;
+    r) printf '\033[2J'; last= ;;
+    esac
+    if $grid; then
+        o=$i
+        case $k in
+        h|'[D') go $((i - 1)) ;;
+        l|'[C') go $((i + 1)) ;;
+        k|'[A') go $((i - C)) ;;
+        j|'[B') go $((i + C)) ;;
+        n|J|' '|'[6~') go $((i + per)) ;;
+        p|K|b|'[5~') go $((i - per)) ;;
+        g) go "${num:-1}" ;;
+        G) go "$total" ;;
+        "$nl") if [ -n "$num" ]; then go "$num"; else grid=false; fi ;;
+        t) grid=false ;;
+        m) toggle "$i" ;;
+        r) ;;
+        *) num=; continue ;;
+        esac
+        num=
+        if ! $grid; then printf '\033[2J'; last=; view; continue; fi
+        # same page: only the two labels change; no sixel is drawn again
+        if [ "$k" != r ] && [ $(((i - 1) / per * per + 1)) -eq "$first" ]; then
+            cell "$o"; cell "$i"; status grid
+        else
+            griddraw
+        fi
+        continue
+    fi
+    case $k in
+    "$nl") [ -n "$num" ] || continue; go "$num" ;;
+    g) go "${num:-1}" ;;
+    G) go "$total" ;;
+    n|' '|J|'[6~') go $((i + 1)) ;;
+    p|b|K|'[5~') go $((i - 1)) ;;
+    h|'[D') dx=$((-W / 10)) ;;
+    l|'[C') dx=$((W / 10)) ;;
+    k|'[A') dy=$((-H / 10)) ;;
+    j|'[B') dy=$((H / 10)) ;;
+    +|-|=|w) act=$k ;;
+    m) toggle "$i" ;;
+    t) stopanim; grid=true; griddraw; num=; continue ;;
+    r) ;;
+    *) num=; continue ;;
+    esac
+    num=
+    view
+done
