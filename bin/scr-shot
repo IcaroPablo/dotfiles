@@ -11,7 +11,7 @@ case "$(uname)" in
         if have scrot; then
             scrot -f -s -q 100 -e 'xclip -selection clipboard -target image/png -i $f && rm $f'
         else
-            echo "scr_shot: scrot not found" >&2
+            echo "scr-shot: scrot not found" >&2
             exit 1
         fi
         ;;

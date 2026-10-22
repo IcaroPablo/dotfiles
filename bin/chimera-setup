@@ -134,7 +134,7 @@ add xserver-xorg xinit mesa-dri xrandr xinput xset xrdb xmodmap xsetroot \
 	xdpyinfo setxkbmap xclip xwallpaper dbus polkit elogind \
 	xdg-desktop-portal xdg-desktop-portal-gtk pipewire pipewire-alsa \
 	alsa-utils xdg-utils mpv thunar luakit gvfs thunar-volman udisks
-# rec_gif's region picker
+# rec-gif's region picker
 has_set 1 && add slop
 
 # st, sowm and scrot's build deps
