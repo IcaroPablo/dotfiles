@@ -51,14 +51,14 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
     >An ordinary git repository plus symlinks: each directory under `.config/` is linked into `~/.config`, `.xinitrc` into `$HOME`, and each script in `bin/` into `~/.local/bin`. Nothing is copied, so whatever a tool writes into its own config (nvim's `nvim-pack-lock.json`, for one) lands back in the repository and shows up in `git status`, and editing a script takes effect at once.
     - `$ git clone https://github.com/IcaroPablo/dotfiles ~/Workspace/dotfiles`
     - `$ cd ~/Workspace/dotfiles && make install SETS="0 1"`
-    - add the two lines below to `~/.profile` (`~/.zprofile` for zsh)
+    - add the two lines below to `~/.profile`
 
     ```sh
     ENV="$HOME/.config/sh/rc.sh"; export ENV      # ksh/sh only
     . "$HOME/.config/sh/env.sh"
     ```
 
-    >Order matters: `env.sh` ends in the tty1 auto-`startx`, which blocks until the X session dies, so exporting `ENV` afterwards would only take effect at logout and every terminal inside X would come up with no rc at all. For bash and zsh, put `env.sh` in the profile and `. "$HOME/.config/sh/rc.sh"` in the rc file instead.
+    >Order matters: `env.sh` ends in the tty1 auto-`startx`, which blocks until the X session dies, so exporting `ENV` afterwards would only take effect at logout and every terminal inside X would come up with no rc at all. For bash, put `env.sh` in the profile and `. "$HOME/.config/sh/rc.sh"` in the rc file instead.
 
     >Configs and scripts come in sets, picked per machine: set 0 is common, set 1 is the graphical host (shire), set 2 is the VM (fangorn). Sets 1 and 2 depend only on set 0, never on each other. `SETS` defaults to all three; `make install` also removes this repository's links to whatever is outside the chosen sets, and `make list` shows what a choice would link.
 

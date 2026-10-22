@@ -12,21 +12,18 @@ command -v have >/dev/null 2>&1 || have() { command -v "$1" >/dev/null 2>&1; }
 
 if have doas; then DOAS='doas'; else DOAS='sudo'; fi
 
-# root through doas/sudo/su: append the invoking user's bin dirs, after the system's
+# root through doas/sudo/su: the invoking user's ~/.local/bin, after the system's
 if [ "$(id -u)" -eq 0 ]; then
     _ru="${DOAS_USER:-${SUDO_USER:-$(logname 2>/dev/null)}}"
     case "$_ru" in
         ''|root|*[!A-Za-z0-9._-]*) : ;;
-        *)  eval "_rh=~$_ru"
-            for _rd in "$_rh/.local/bin"; do
-                case ":$PATH:" in
-                    *":$_rd:"*) : ;;
-                    *) [ -d "$_rd" ] && PATH="$PATH:$_rd" ;;
-                esac
-            done
-            export PATH ;;
+        *)  eval "_rd=~$_ru/.local/bin"
+            case ":$PATH:" in
+                *":$_rd:"*) : ;;
+                *) [ -d "$_rd" ] && PATH="$PATH:$_rd" && export PATH ;;
+            esac ;;
     esac
-    unset _ru _rh _rd
+    unset _ru _rd
 fi
 
 set -o vi 2>/dev/null || true
@@ -115,17 +112,21 @@ see() { tee /dev/tty; }
 p() { [ -s "$CLIPFILE" ] || return; while IFS= read -r _e; do cp -Rv -- "$_e" .; done < "$CLIPFILE"; unset _e; }
 m() { [ -s "$CLIPFILE" ] || return; while IFS= read -r _e; do mv -v -- "$_e" .; done < "$CLIPFILE"; : > "$CLIPFILE"; unset _e; }
 
-# único selecionador. sem argumento só enche o clipboard, para p e m; com
-# argumento, o primeiro é um comando e a seleção vira o final dos args dele
+# the one picker: alone it fills $CLIPFILE for p and m; with arguments, the
+# first is a command run with the selection appended
 sel() {
-    # sem fzf não há seleção nenhuma, e sem eza o corte do ícone (${_sel_l#* })
-    # comeria o começo dos nomes — recusar é mais honesto que listar errado
-    have fzf && have eza || { printf 'sel: precisa de fzf e eza\n' >&2; return 1; }
+    have fzf || { printf 'sel: needs fzf\n' >&2; return 1; }
 
     if [ -n "$1" ]; then _sel_cmd="$1"; shift; else _sel_cmd=""; fi
-    _sel_ls='eza -1 --group-directories-first --no-quotes --icons always --color always'
+    # eza's lines start with an icon and a space, cut before use
+    if have eza; then
+        _sel_ls='eza -1 --group-directories-first --no-quotes --icons always --color always'
+        _sel_all="$_sel_ls -a" _sel_pv='p={}; preview "${p#* }"'
+    else
+        _sel_ls='ls -1' _sel_all='ls -1A' _sel_pv='preview {}'
+    fi
 
-    _sel_out="$(eza -1 --group-directories-first --no-quotes --icons always --color always | fzf \
+    _sel_out="$($_sel_ls | fzf \
         --ansi \
         --multi \
         --prompt="$(pwd)/" \
@@ -136,7 +137,7 @@ sel() {
         --bind 'alt-j:jump,jump:toggle' \
         --bind 'alt-g:first' \
         --bind 'alt-G:last' \
-        --bind "alt-h:reload($_sel_ls -a)" \
+        --bind "alt-h:reload($_sel_all)" \
         --bind "alt-H:reload($_sel_ls)" \
         --bind 'ctrl-l:accept' \
         --height 100% \
@@ -144,38 +145,25 @@ sel() {
         --border=sharp \
         --info=inline \
         --reverse \
-        --preview 'p={}; preview "${p#* }"')" || return
+        --preview "$_sel_pv")" || return
     [ -n "$_sel_out" ] || return 1
 
-    # o ícone do eza é um glifo mais um espaço; ${x#* } corta por byte e não por
-    # caractere, então não depende do locale
-    while IFS= read -r _sel_l; do abspath "${_sel_l#* }"; done > "$CLIPFILE" <<EOF
+    while IFS= read -r _sel_l; do
+        have eza && _sel_l=${_sel_l#* }
+        abspath "$_sel_l"
+    done > "$CLIPFILE" <<EOF
 $_sel_out
 EOF
 
     while IFS= read -r _sel_e; do set -- "$@" "$_sel_e"; done < "$CLIPFILE"
     [ -n "$_sel_cmd" ] && "$_sel_cmd" "$@"
-    unset _sel_cmd _sel_ls _sel_out _sel_l _sel_e
+    unset _sel_cmd _sel_ls _sel_all _sel_pv _sel_out _sel_l _sel_e
 }
 
-# o -c cria o fifo de comandos e exporta DVTM_CMD_FIFO aos painéis: é por ele que
-# o nvim pede um painel novo
-#
-# DVTM_OUTER_TERM é o TERM que o dvtm usa para pintar no terminal de verdade --
-# só faz sentido por máquina, então mora no rc local (.zshrc, .kshrc), não aqui.
-# Serve para apontar o dvtm a uma descrição com RGB, que é a única coisa que faz
-# o ncurses mandar cor de 24 bits. Vazio, e nada muda.
-#
-# Não confundir com DVTM_TERM, que é do próprio dvtm e diz o TERM dos painéis.
-# Este é o de fora; aquele é o de dentro.
-#
-# env, e não "TERM=... dvtm": a segunda forma faz o próprio shell tentar carregar
-# a descrição, e um ncurses antigo pode não conseguir lê-la -- o da Apple não
-# consegue ler as de cor direta.
-# Painel novo no cwd do painel focado é Ctrl+g C, do próprio dvtm: o create dele
-# aceita um terceiro argumento de diretório, e "$CWD" resolve para o cwd do
-# painel selecionado. Não precisa de função aqui.
-dvtm() {
+# -c makes the command fifo nvim opens panes through. DVTM_OUTER_TERM, set per
+# machine, names an outer terminfo with RGB, which gets 24-bit colour out of
+# ncurses; passed through env, so this shell never has to read it
+have dvtm && dvtm() {
     if [ -n "$DVTM_OUTER_TERM" ]; then
         env TERM="$DVTM_OUTER_TERM" dvtm -c "${TMPDIR:-/tmp}/dvtm.$$.cmd" "$@"
     else
@@ -292,24 +280,19 @@ case "$(uname)" in
         have ntpctl && alias chkclock="ntpctl -s all"
         have systat && alias sensors="systat -s 1 sensors"
         ;;
-    Linux)
-        have flatpak && alias fr='flatpak run "$(flatpak list --columns=application | fzf)"'
-        have systemctl && alias sysls="systemctl --type=service --state=running"
-        ;;
 esac
 
 have sixiv && alias img="sixiv -t"
 have mpv && alias play="mpv --shuffle ."
 
-[ -n "${ZSH_VERSION:-}" ] && setopt PROMPT_SUBST 2>/dev/null
-if [ -n "${ZSH_VERSION:-}" ]; then _m1='%{'; _m2='%}'
-elif [ -n "${BASH_VERSION:-}" ]; then _m1='\['; _m2='\]'
-else _m1=''; _m2=''; fi
-# FreeBSD sh (root's on Chimera; unlike dash, it has bind) wants \w and \[ \] in PS1
-_cwd='${PWD}'
-if [ -z "${KSH_VERSION:-}${BASH_VERSION:-}${ZSH_VERSION:-}" ]; then
+# \[ \] keep the colour codes out of the prompt's width. ksh and bash know them;
+# so does FreeBSD sh (root's on Chimera; unlike dash, it has bind), which needs
+# \w as well: it leaves ${PWD} in PS1 unexpanded
+_cwd='${PWD}' _m1='' _m2=''
+if [ -n "${KSH_VERSION:-}${BASH_VERSION:-}" ]; then _m1='\[' _m2='\]'
+else
     case "$(command -V bind 2>/dev/null)" in
-        *builtin*) _cwd='\w'; _m1='\['; _m2='\]' ;;
+        *builtin*) _cwd='\w' _m1='\[' _m2='\]' ;;
     esac
 fi
 if [ -n "${SSH_CONNECTION:-}" ]; then

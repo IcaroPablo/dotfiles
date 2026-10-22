@@ -80,7 +80,7 @@ doctor:
 		else printf '  \342\234\227 %s\n' "$$rel"; fi; \
 	done; printf '\n'; \
 	printf 'shell\n'; found=0; \
-	for f in "$(HOME_DIR)/.profile" "$(HOME_DIR)/.zprofile" "$(HOME_DIR)/.bash_profile"; do \
+	for f in "$(HOME_DIR)/.profile" "$(HOME_DIR)/.bash_profile"; do \
 		[ -f "$$f" ] || continue; \
 		if grep -q 'config/sh/env.sh' "$$f" 2>/dev/null; then \
 			printf '  \342\234\223 %s carrega o env.sh\n' "$$f"; found=1; \
