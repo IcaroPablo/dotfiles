@@ -1,0 +1,18 @@
+#!/bin/sh
+# Inside an nvim's terminal ($NVIM set), opens the files in that nvim instead of
+# a nested one; anywhere else it's plain nvim.
+
+abspath() {
+	realpath "$1" 2>/dev/null && return
+	readlink -f "$1" 2>/dev/null && return
+	# a file not created yet: resolve its folder, keep the name
+	d=$(CDPATH= cd -- "$(dirname -- "$1")" 2>/dev/null && pwd -P) || { printf '%s\n' "$1"; return; }
+	printf '%s\n' "${d%/}/$(basename -- "$1")"
+}
+
+if [ -n "$NVIM" ] && [ "$#" -gt 0 ]; then
+	n=$#
+	while [ "$n" -gt 0 ]; do set -- "$@" "$(abspath "$1")"; shift; n=$((n - 1)); done
+	exec nvim --server "$NVIM" --remote "$@"
+fi
+exec nvim "$@"
