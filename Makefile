@@ -1,60 +1,86 @@
-# dotfiles — a configuração ligada à máquina por symlinks.
+# dotfiles — configs and scripts, linked into place by symlinks.
 #
-#   make install     liga em ~/.config e no $HOME
-#   make uninstall   remove só os links que apontam para cá
-#   make list        mostra o que seria ligado
+#   make install     links the SETS into ~/.config, $HOME and ~/.local/bin
+#   make uninstall   removes only the links that point here
+#   make list        shows what SETS would link
+#   make doctor      the links, the shell block, and the tools SETS needs
 #
-# São symlinks, não cópias: o que uma ferramenta escreve na própria config — o
-# nvim-pack-lock.json, por exemplo — cai dentro do repositório e aparece no
-# `git status`, sem passo de sincronia nenhum.
+# SETS="0 1" (default: all) picks the sets: 0 common, 1 shire, 2 fangorn; 1
+# and 2 depend only on 0. install removes our links to what is outside them.
 #
-# O bloco do shell não entra aqui. São duas linhas no ~/.profile, estão no
-# README, e injetar texto em arquivo alheio é o que um Makefile faz pior.
-#
-# POSIX make, e portanto também bmake e o make do OpenBSD: nada de wildcard,
-# notdir, addprefix ou CURDIR, que são função do GNU make e não existem lá. As
-# listas saem do shell, com glob, e a raiz sai de `pwd` — por isso `cd` no
-# repositório antes, e não `make -C`, que o make do OpenBSD não tem.
-#
-# A lista é a árvore: diretório novo em .config/ entra sozinho, sem manifesto.
-# O .xinitrc é à parte porque o startx do OpenBSD só lê o ~/.xinitrc, nunca o
-# $XDG_CONFIG_HOME/xinitrc.
+# POSIX make, so also bmake and OpenBSD's make: no wildcard, notdir, addprefix
+# or CURDIR; lists come from shell globs and the root from `pwd`. `cd` here
+# first, not `make -C`, which OpenBSD's make lacks. .xinitrc sits in $HOME
+# because OpenBSD's startx reads only ~/.xinitrc.
 
 HOME_DIR ?= $(HOME)
+BINDIR ?= $(HOME_DIR)/.local/bin
 
-# Deslocados por FORCE=1. Fora do ~/.config de propósito: ferramenta que varre o
-# próprio diretório de configuração não deve topar com cópia velha lá dentro.
+# Displaced by FORCE=1. Outside ~/.config and the PATH on purpose: neither is a
+# place for stale copies.
 DISPLACED = $(HOME_DIR)/.local/share/dotfiles/displaced
 
-# O que esta configuração chama, e nada além disso: os utilitários avulsos têm
-# as dependências deles, no doctor do repositório da coleção. Cada repositório
-# responde pelo que o próprio código invoca.
+SETS = 0 1 2
+SET0 = .config/git .config/sh \
+	bin/bulkrename bin/compress bin/create bin/delete bin/extract bin/findfile \
+	bin/openfile bin/preview bin/shredtrash bin/simplegrep bin/trash
+SET1 = .config/ghostty .xinitrc \
+	bin/backuphd bin/bar bin/chimera-setup \
+	bin/fix_boot_entry bin/fzfmenu bin/monitor \
+	bin/pull-files bin/rec_gif bin/run-program bin/scr_shot bin/scrotocr \
+	bin/wipe-ssd
+SET2 = .config/nvim .config/spdfv .config/vis \
+	bin/igsaved bin/launch_nvim bin/mount_encrypted bin/shpad bin/sixiv \
+	bin/spdfv bin/umount_encrypted
+
+# Missing, these fail the doctor; the groups below only inform.
 REQUIRED = git fzf eza file mktemp
 
-# label:ferramentas. Grupo opcional só informa; nada aqui derruba o resultado.
-# O create e o monitor são da coleção, mas entram porque é este código que os
-# chama: o nvim abre painel com o create, o xinitrc arruma a tela com o monitor.
-# launch_nvim and preview too: openfile opens text with launch_nvim, and sel
-# and openfile show files with preview.
-GROUPS = \
-	"NÚCLEO (degradam, mas fazem falta):fd fdfind zoxide readlink realpath make lsof" \
-	"X11 (só na máquina gráfica):xwallpaper xsetroot xset xrdb xmodmap setxkbmap xinput smawm xdg-open" \
-	"EDITOR (só onde o nvim roda; sem ele, vi):nvim tree-sitter rg" \
-	"SHPAD (só no fangorn; dvtm, e o carapace completa no nvim):dvtm carapace" \
-	"COLEÇÃO (outro repositório):create monitor launch_nvim preview"
+# label:tools, one list per set
+GROUPS0 = \
+	"NÚCLEO (degradam, mas fazem falta; findfile):fd fdfind zoxide readlink realpath make lsof" \
+	"ARQUIVO (compress, extract):tar gzip bzip2 xz zip unzip unrar 7z" \
+	"PREVIEW (preview):chafa ffmpeg ffprobe w3m exiftool"
+GROUPS1 = \
+	"X11 (xinitrc, bar, fzfmenu, monitor, scr_shot):xwallpaper xsetroot xset xrdb xmodmap setxkbmap xinput xrandr xdpyinfo smawm st scrot xclip xdg-open" \
+	"IMAGEM E VÍDEO (rec_gif, scrotocr):ffmpeg slop tesseract mogrify" \
+	"DISCO (backuphd, wipe-ssd):rsync doas cryptsetup lsof udisksctl blkdiscard sfdisk mkfs.ext4" \
+	"CELULAR (pull-files):adb" \
+	"SISTEMA (fix_boot_entry):efibootmgr"
+GROUPS2 = \
+	"EDITOR (nvim, launch_nvim):nvim tree-sitter rg" \
+	"SHPAD (dvtm, e o carapace completa no nvim):dvtm carapace" \
+	"IMAGEM (sixiv, igsaved):ffmpeg ffprobe chafa python3 less" \
+	"DOCUMENTO (spdfv):pdfinfo pdftoppm ddjvu djvused mutool magick convert chafa python3" \
+	"DISCO (mount_encrypted, umount_encrypted):doas bioctl"
+
+# $pick: what SETS links; warns about files in no set. dest: where a file links.
+PICK = all=" $(SET0) $(SET1) $(SET2) "; \
+	for s in .config/* .xinitrc bin/*; do \
+		case "$$all" in *" $$s "*) ;; *) echo "  ? $$s is in no set" >&2 ;; esac; \
+	done; \
+	pick=; for k in $(SETS); do case $$k in \
+		0) pick="$$pick $(SET0)" ;; 1) pick="$$pick $(SET1)" ;; 2) pick="$$pick $(SET2)" ;; \
+		*) echo "no set $$k" >&2; exit 1 ;; \
+	esac; done; \
+	dest() { case $$1 in bin/*) echo "$(BINDIR)/`basename "$$1"`" ;; *) echo "$(HOME_DIR)/$$1" ;; esac; }
+
+# every link of ours, wherever install may have put one
+OURS = for d in "$(HOME_DIR)"/.config/* "$(HOME_DIR)"/.xinitrc "$(BINDIR)"/*; do \
+		[ -L "$$d" ] || continue; t=`readlink "$$d"`; \
+		case "$$t" in "$$src"/*) rel=`echo "$$t" | sed "s|^$$src/||"` ;; *) continue ;; esac
 
 .PHONY: all install uninstall list doctor
 
 all:
-	@echo "make install | make uninstall | make list | make doctor"
+	@echo "make install | make uninstall | make list | make doctor   [SETS=\"0 1 2\"]"
 
 doctor:
-	@src=`pwd`; echo "dotfiles :: doctor (`uname`)"; echo ""; \
-	printf 'symlinks\n'; \
-	for s in "$$src"/.config/* "$$src"/.xinitrc; do \
-		rel=$${s#$$src/}; d="$(HOME_DIR)/$$rel"; \
-		if [ -L "$$d" ] && [ "`readlink "$$d"`" = "$$s" ]; then \
-			printf '  \342\234\223 %s\n' "$$rel"; \
+	@src=`pwd`; $(PICK); echo "dotfiles :: doctor (`uname`, sets $(SETS))"; echo ""; \
+	printf 'links\n'; \
+	for rel in $$pick; do \
+		d=`dest "$$rel"`; \
+		if [ "`readlink "$$d"`" = "$$src/$$rel" ]; then printf '  \342\234\223 %s\n' "$$rel"; \
 		else printf '  \342\234\227 %s\n' "$$rel"; fi; \
 	done; printf '\n'; \
 	printf 'shell\n'; found=0; \
@@ -71,28 +97,36 @@ doctor:
 		if command -v "$$t" >/dev/null 2>&1; then printf '\342\234\223 %s  ' "$$t"; \
 		else printf '\342\234\227 %s  ' "$$t"; bad=1; fi; \
 	done; printf '\n\n'; \
-	for g in $(GROUPS); do \
+	show() { for g in "$$@"; do \
 		printf '%s\n  ' "$${g%%:*}"; \
 		for t in $${g#*:}; do \
 			if command -v "$$t" >/dev/null 2>&1; then printf '\342\234\223 %s  ' "$$t"; \
 			else printf '\342\234\227 %s  ' "$$t"; fi; \
 		done; printf '\n\n'; \
+	done; }; \
+	for k in $(SETS); do \
+		echo "== SET $$k"; echo ""; \
+		case $$k in 0) show $(GROUPS0) ;; 1) show $(GROUPS1) ;; 2) show $(GROUPS2) ;; esac; \
 	done; \
 	if [ $$bad = 0 ]; then echo "obrigatórios presentes."; else echo "falta obrigatório."; fi; \
 	exit $$bad
 
-# Não atropela o que já está lá: o alvo é o ~/.config de verdade, e apagar a
-# configuração alheia do nvim é bem pior do que sombrear um comando.
+# Doesn't trample what's there: the target is the real ~/.config, and a clash
+# is reported and skipped (compress here shares its name with POSIX compress).
+# FORCE=1 displaces the occupant, dated, instead of deleting it.
 install:
-	@src=`pwd`; bad=0; \
-	for s in "$$src"/.config/* "$$src"/.xinitrc; do \
-		rel=$${s#$$src/}; d="$(HOME_DIR)/$$rel"; \
+	@src=`pwd`; bad=0; $(PICK); \
+	$(OURS); \
+		case " $$pick " in *" $$rel "*) ;; *) rm -f "$$d" && echo "  - $$rel" ;; esac; \
+	done; \
+	for rel in $$pick; do \
+		s="$$src/$$rel"; d=`dest "$$rel"`; \
 		if [ -L "$$d" ] && [ "`readlink "$$d"`" = "$$s" ]; then \
 			echo "  = $$rel"; continue; \
 		fi; \
 		if [ -e "$$d" ] || [ -L "$$d" ]; then \
 			if [ -z "$(FORCE)" ]; then \
-				echo "  ! $$rel já existe e não é nosso (FORCE=1 para deslocar)"; \
+				echo "  ! $$rel: `echo "$$d" | sed "s|^$(HOME_DIR)|~|"` já existe e não é nosso (FORCE=1 para deslocar)"; \
 				bad=1; continue; \
 			fi; \
 			mkdir -p "$(DISPLACED)" || { bad=1; continue; }; \
@@ -104,16 +138,12 @@ install:
 		ln -sfn "$$s" "$$d" && echo "  + $$rel"; \
 	done; exit $$bad
 
-# Varre os destinos atrás de link que aponte para cá, em vez de percorrer a
-# lista: assim o link de um diretório que já saiu do repositório sai junto.
+# Scans the targets for links pointing here rather than walking the sets, so
+# the link of a file already deleted from the repository goes too.
 uninstall:
 	@src=`pwd`; \
-	for d in "$(HOME_DIR)"/.config/* "$(HOME_DIR)"/.xinitrc; do \
-		[ -L "$$d" ] || continue; \
-		t=`readlink "$$d"`; \
-		case "$$t" in \
-			"$$src"/*) rm -f "$$d" && echo "  - `basename "$$d"`" ;; \
-		esac; \
+	$(OURS); \
+		rm -f "$$d" && echo "  - $$rel"; \
 	done; \
 	if [ -d "$(DISPLACED)" ] && [ -n "`ls -A "$(DISPLACED)" 2>/dev/null`" ]; then \
 		echo ""; \
@@ -122,4 +152,4 @@ uninstall:
 	fi
 
 list:
-	@for s in .config/* .xinitrc; do echo "  $$s"; done
+	@$(PICK); for rel in $$pick; do echo "  $$rel -> `dest $$rel`"; done
