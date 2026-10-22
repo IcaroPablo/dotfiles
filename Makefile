@@ -5,6 +5,9 @@
 #   make uninstall   remove só os links que apontam para cá
 #   make list        mostra o que seria instalado
 #
+# SETS="0 1" (default: all) picks the sets; install removes our links to
+# scripts outside them. 1 and 2 only depend on 0.
+#
 # São symlinks, não cópias: editar aqui vale na hora, sem reinstalar.
 #
 # POSIX make, e portanto também bmake e o make do OpenBSD: nada de wildcard,
@@ -20,6 +23,15 @@ BINDIR = $(PREFIX)/bin
 # arquivo deslocado — ficaria no caminho de busca e o uninstall não o levaria.
 DISPLACED = $(PREFIX)/share/posix-shell-scripts-collection/displaced
 
+SETS = 0 1 2
+SET0 = bulkrename compress create delete extract findfile preview shredtrash \
+	simplegrep trash
+# shire
+SET1 = backuphd chimera-setup fix_boot_entry \
+	fzfmenu monitor pull-files rec_gif run-program scr_shot scrotocr wipe-ssd
+# fangorn
+SET2 = igsaved launch_nvim mount_encrypted sixiv spdfv umount_encrypted
+
 # O que os scripts daqui chamam, e nada além disso: a configuração de shell tem
 # as dependências dela, no doctor do repositório de dotfiles. Cada repositório
 # responde pelo que o próprio código invoca.
@@ -27,14 +39,33 @@ REQUIRED = fzf mktemp
 
 # label:ferramentas — o doctor percorre esta lista. Grupo opcional só informa;
 # nenhum deles derruba o resultado, porque script que não se usa não faz falta.
-GROUPS = \
-	"ARQUIVO (compress, extract):tar gzip xz zip unzip unrar 7z" \
-	"X11 (fzfmenu, monitor, scr_shot):xrandr xdpyinfo st scrot xclip" \
-	"IMAGEM E VÍDEO (rec_gif, scrotocr):ffmpeg tesseract" \
-	"DISCO (sync_external_hd, mount_encrypted):rsync ntfs-3g doas" \
-	"BUSCA (findfile):fd fdfind"
+# One list per set; doctor checks those in SETS.
+GROUPS0 = \
+	"ARQUIVO (compress, extract):tar gzip bzip2 xz zip unzip unrar 7z" \
+	"BUSCA (findfile):fd fdfind" \
+	"PREVIEW (preview):eza file chafa ffmpeg ffprobe w3m exiftool"
+GROUPS1 = \
+	"X11 (fzfmenu, run-program, monitor, scr_shot):xrandr xdpyinfo st scrot xclip" \
+	"IMAGEM E VÍDEO (rec_gif, scrotocr):ffmpeg slop tesseract mogrify" \
+	"DISCO (backuphd, wipe-ssd):rsync doas cryptsetup lsof udisksctl blkdiscard sfdisk mkfs.ext4" \
+	"CELULAR (pull-files):adb" \
+	"SISTEMA (fix_boot_entry):efibootmgr"
+GROUPS2 = \
+	"EDITOR (launch_nvim):nvim" \
+	"IMAGEM (sixiv, igsaved):ffmpeg ffprobe chafa python3 less" \
+	"DOCUMENTO (spdfv):pdfinfo pdftoppm ddjvu djvused mutool magick convert chafa python3" \
+	"DISCO (mount_encrypted, umount_encrypted):doas bioctl"
 
 .PHONY: all install uninstall list doctor
+
+# the scripts in SETS; warns about scripts in no set
+PICK = for n in `ls bin`; do \
+		case " $(SET0) $(SET1) $(SET2) " in *" $$n "*) ;; *) echo "  ? $$n is in no set" >&2 ;; esac; \
+	done; \
+	pick=; for k in $(SETS); do case $$k in \
+		0) pick="$$pick $(SET0)" ;; 1) pick="$$pick $(SET1)" ;; 2) pick="$$pick $(SET2)" ;; \
+		*) echo "no set $$k" >&2; exit 1 ;; \
+	esac; done
 
 all:
 	@echo "make install | make uninstall | make list | make doctor"
@@ -46,12 +77,19 @@ doctor:
 		if command -v "$$t" >/dev/null 2>&1; then printf '\342\234\223 %s  ' "$$t"; \
 		else printf '\342\234\227 %s  ' "$$t"; bad=1; fi; \
 	done; printf '\n\n'; \
-	for g in $(GROUPS); do \
+	show() { for g in "$$@"; do \
 		printf '%s\n  ' "$${g%%:*}"; \
 		for t in $${g#*:}; do \
 			if command -v "$$t" >/dev/null 2>&1; then printf '\342\234\223 %s  ' "$$t"; \
 			else printf '\342\234\227 %s  ' "$$t"; fi; \
 		done; printf '\n\n'; \
+	done; }; \
+	for k in $(SETS); do \
+		echo "== SET $$k"; echo ""; \
+		case $$k in \
+		0) show $(GROUPS0) ;; 1) show $(GROUPS1) ;; 2) show $(GROUPS2) ;; \
+		*) echo "no set $$k" >&2; exit 1 ;; \
+		esac; \
 	done; \
 	if [ $$bad = 0 ]; then echo "obrigatórios presentes."; else echo "falta obrigatório."; fi; \
 	exit $$bad
@@ -61,9 +99,14 @@ doctor:
 # com o compress(1) do POSIX. Conflito é reportado e a instalação segue nos
 # outros; FORCE=1 desloca o ocupante, sem apagar.
 install:
-	@src="`pwd`/bin"; mkdir -p "$(BINDIR)"; bad=0; \
-	for s in "$$src"/*; do \
-		n=`basename "$$s"`; d="$(BINDIR)/$$n"; \
+	@src="`pwd`/bin"; mkdir -p "$(BINDIR)"; bad=0; $(PICK); \
+	for f in "$(BINDIR)"/*; do \
+		[ -L "$$f" ] || continue; n=`basename "$$f"`; \
+		case "`readlink "$$f"`" in "$$src"/*) ;; *) continue ;; esac; \
+		case " $$pick " in *" $$n "*) ;; *) rm -f "$$f" && echo "  - $$n" ;; esac; \
+	done; \
+	for n in $$pick; do \
+		s="$$src/$$n"; d="$(BINDIR)/$$n"; \
 		if [ -L "$$d" ] && [ "`readlink "$$d"`" = "$$s" ]; then \
 			echo "  = $$n"; continue; \
 		fi; \
@@ -101,4 +144,4 @@ uninstall:
 	fi
 
 list:
-	@for s in bin/*; do echo "  `basename "$$s"`"; done
+	@$(PICK); for n in $$pick; do echo "  $$n"; done
