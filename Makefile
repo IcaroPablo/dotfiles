@@ -34,13 +34,14 @@ REQUIRED = git fzf eza file mktemp
 # label:ferramentas. Grupo opcional só informa; nada aqui derruba o resultado.
 # O create e o monitor são da coleção, mas entram porque é este código que os
 # chama: o nvim abre painel com o create, o xinitrc arruma a tela com o monitor.
+# launch_nvim and preview too: openfile opens text with launch_nvim, and sel
+# and openfile show files with preview.
 GROUPS = \
 	"NÚCLEO (degradam, mas fazem falta):fd fdfind zoxide readlink realpath make lsof" \
-	"PREVIEW (opcional):w3m exiftool unzip tar chafa ffmpeg" \
 	"X11 (só na máquina gráfica):xwallpaper xsetroot xset xrdb xmodmap setxkbmap xinput smawm xdg-open" \
 	"EDITOR (só onde o nvim roda; sem ele, vi):nvim tree-sitter rg" \
 	"SHPAD (só no fangorn; dvtm, e o carapace completa no nvim):dvtm carapace" \
-	"COLEÇÃO (outro repositório):create monitor"
+	"COLEÇÃO (outro repositório):create monitor launch_nvim preview"
 
 .PHONY: all install uninstall list doctor
 

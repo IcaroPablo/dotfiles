@@ -1,5 +1,0 @@
-#!/bin/sh
-
-. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh"
-
-for p in "$@"; do abspath "$p"; done
