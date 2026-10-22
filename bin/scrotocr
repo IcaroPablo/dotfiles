@@ -5,10 +5,12 @@
 # no clipboard. O idioma é o primeiro argumento (padrão: eng); `tesseract
 # --list-langs` mostra os instalados.
 
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" || exit 1
+
 lang="${1:-eng}"
 
 for dep in scrot mogrify tesseract xclip; do
-    command -v "$dep" >/dev/null 2>&1 || {
+    have "$dep" || {
         printf 'scrotocr: %s não encontrado\n' "$dep" >&2
         exit 1
     }

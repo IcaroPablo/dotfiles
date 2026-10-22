@@ -26,6 +26,7 @@
 #
 # CHROMIUM_DIR escolhe a instalação.
 set -u
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" || exit 1
 
 die() { echo "igsaved: $*" >&2; exit 1; }
 
@@ -346,7 +347,7 @@ import) [ -r "${2:-}" ] || die "uso: igsaved import arquivo.json"
 *) die "uso: igsaved [sync | import arquivo.json]" ;;
 esac
 
-command -v chafa >/dev/null 2>&1 || die "falta o chafa"
+have chafa || die "falta o chafa"
 py cookies || exit 1
 [ -s "$state/list" ] || py sync || exit 1
 
@@ -366,7 +367,7 @@ total=$(wc -l <"$tmp/queue" | tr -d ' ')
 # Navegador: $BROWSER, senão o Chromium de onde vêm os cookies (logado).
 if [ -n "${BROWSER:-}" ]; then web=$BROWSER
 elif [ "$dir" = "$HOME/.var/app/$app/config/chromium" ]; then web="flatpak run $app"
-elif command -v chromium >/dev/null 2>&1; then web=chromium
+elif have chromium; then web=chromium
 else web=xdg-open; fi
 browse() { $web "$1" </dev/null >/dev/null 2>&1 & }
 

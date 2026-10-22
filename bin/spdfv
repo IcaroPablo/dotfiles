@@ -22,6 +22,7 @@
 # com as chaves dele: default-bg, statusbar-bg, statusbar-fg, recolor,
 # recolor-lightcolor, recolor-darkcolor, recolor-keephue.
 set -u
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" || exit 1
 f=${1:?uso: spdfv documento [página]}
 name=${f##*/}
 [ -r "$f" ] || { echo "spdfv: não consigo ler $f" >&2; exit 1; }
@@ -29,16 +30,16 @@ name=${f##*/}
 # need ferramenta...: sai dizendo qual falta (o host, por exemplo, não tem leitor)
 need() {
     for _t; do
-        command -v "$_t" >/dev/null 2>&1 ||
+        have "$_t" ||
             { echo "spdfv: falta o $_t para abrir $name" >&2; exit 1; }
     done
 }
 need chafa python3
-command -v magick >/dev/null 2>&1 || need convert
+have magick || need convert
 
 # O ImageMagick 7 é `magick`; o 6 (o do OpenBSD) é `convert`, e não tem QOI.
 # QOI é o intermediário mais rápido (~30 ms o recorte); sem ele, PNG cru.
-if command -v magick >/dev/null 2>&1; then im=magick; else im=convert; fi
+if have magick; then im=magick; else im=convert; fi
 if $im -list format 2>/dev/null | grep -q '^ *QOI'; then ext=qoi
 else ext=png; im="$im -define png:compression-level=0"; fi
 

@@ -24,11 +24,12 @@
 # at once, while the rest are encoded in the background, and then plays from
 # the cache: replaying a frame is a cat.
 set -u
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" || exit 1
 
 usage() { echo "usage: sixiv [-t] [-o] image... | folder" >&2; exit 1; }
 need() {
     for _t; do
-        command -v "$_t" >/dev/null 2>&1 || { echo "sixiv: $_t not found" >&2; exit 1; }
+        have "$_t" || { echo "sixiv: $_t not found" >&2; exit 1; }
     done
 }
 

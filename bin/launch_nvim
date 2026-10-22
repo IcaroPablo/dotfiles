@@ -2,13 +2,7 @@
 # Inside an nvim's terminal ($NVIM set), opens the files in that nvim instead of
 # a nested one; anywhere else it's plain nvim.
 
-abspath() {
-	realpath "$1" 2>/dev/null && return
-	readlink -f "$1" 2>/dev/null && return
-	# a file not created yet: resolve its folder, keep the name
-	d=$(CDPATH= cd -- "$(dirname -- "$1")" 2>/dev/null && pwd -P) || { printf '%s\n' "$1"; return; }
-	printf '%s\n' "${d%/}/$(basename -- "$1")"
-}
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" || exit 1
 
 if [ -n "$NVIM" ] && [ "$#" -gt 0 ]; then
 	n=$#

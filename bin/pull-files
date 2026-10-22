@@ -6,6 +6,7 @@
 #   -k  keep files on the phone (don't delete)
 
 set -eu
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" || exit 1
 
 src=/sdcard/Download
 
@@ -23,7 +24,7 @@ done
 shift $((OPTIND - 1))
 dest=${1:-.}
 
-command -v adb >/dev/null 2>&1 || { echo "adb not found in PATH" >&2; exit 1; }
+have adb || { echo "adb not found in PATH" >&2; exit 1; }
 
 if [ -z "${ANDROID_SERIAL:-}" ]; then
 	devices=$(adb devices -l | sed 1d | grep -v '^$' || true)
