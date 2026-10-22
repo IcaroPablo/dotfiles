@@ -17,7 +17,6 @@ _path_prepend() {
 }
 
 _path_prepend "$HOME/.local/bin"
-_path_prepend "$HOME/.config/sh/bin"
 
 # --- locale / history / misc app env ---
 export LANG="en_US.UTF-8" LC_MESSAGES="en_US.UTF-8" LC_TIME="pt_PT.UTF-8"
