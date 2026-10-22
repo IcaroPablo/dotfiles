@@ -12,6 +12,23 @@ command -v have >/dev/null 2>&1 || have() { command -v "$1" >/dev/null 2>&1; }
 
 if have doas; then DOAS='doas'; else DOAS='sudo'; fi
 
+# root through doas/sudo/su: append the invoking user's bin dirs, after the system's
+if [ "$(id -u)" -eq 0 ]; then
+    _ru="${DOAS_USER:-${SUDO_USER:-$(logname 2>/dev/null)}}"
+    case "$_ru" in
+        ''|root|*[!A-Za-z0-9._-]*) : ;;
+        *)  eval "_rh=~$_ru"
+            for _rd in "$_rh/.local/bin"; do
+                case ":$PATH:" in
+                    *":$_rd:"*) : ;;
+                    *) [ -d "$_rd" ] && PATH="$PATH:$_rd" ;;
+                esac
+            done
+            export PATH ;;
+    esac
+    unset _ru _rh _rd
+fi
+
 set -o vi 2>/dev/null || true
 # ksh-family shells keep no history file unless HISTFILE is set
 : "${HISTFILE:=$HOME/.sh_history}" "${HISTSIZE:=10000}"
@@ -233,7 +250,7 @@ alias doas="${DOAS} "
 alias ea="e -a"
 alias f="findfile"
 alias g="simplegrep"
-alias rm="rm -i"
+alias d="delete"
 alias s="sel"
 alias sc="sel c"
 alias t="trash"
@@ -288,17 +305,24 @@ have mpv && alias play="mpv --shuffle ."
 if [ -n "${ZSH_VERSION:-}" ]; then _m1='%{'; _m2='%}'
 elif [ -n "${BASH_VERSION:-}" ]; then _m1='\['; _m2='\]'
 else _m1=''; _m2=''; fi
+# FreeBSD sh (root's on Chimera; unlike dash, it has bind) wants \w and \[ \] in PS1
+_cwd='${PWD}'
+if [ -z "${KSH_VERSION:-}${BASH_VERSION:-}${ZSH_VERSION:-}" ]; then
+    case "$(command -V bind 2>/dev/null)" in
+        *builtin*) _cwd='\w'; _m1='\['; _m2='\]' ;;
+    esac
+fi
 if [ -n "${SSH_CONNECTION:-}" ]; then
     _pid="[${USER:-$(id -un)}@$(hostname 2>/dev/null | cut -d. -f1)] "
 else
     _pid=""
 fi
 if [ "$(id -u)" -eq 0 ]; then
-    PS1="${_m1}$(printf '\033[31m')${_m2}${_pid}[\${PWD}] \$ ${_m1}$(printf '\033[0m')${_m2}"
+    PS1="${_m1}$(printf '\033[31m')${_m2}${_pid}[${_cwd}] \$ ${_m1}$(printf '\033[0m')${_m2}"
 else
-    PS1="${_pid}[\${PWD}] \$ "
+    PS1="${_pid}[${_cwd}] \$ "
 fi
 export PS1
-unset _m1 _m2 _pid
+unset _m1 _m2 _pid _cwd
 
 e
