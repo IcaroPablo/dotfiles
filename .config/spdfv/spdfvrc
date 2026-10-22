@@ -1,4 +1,4 @@
-# spdfv (scripts collection): zathurarc syntax, where this came from; only
+# spdfv (bin/spdfv): zathurarc syntax, where this came from; only
 # these keys are read. Gruvbox dark.
 
 set default-bg                  "rgba(29,32,33,1)"     # bg

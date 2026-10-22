@@ -106,7 +106,17 @@ clone() {
 
 clone dotfiles
 
-as_user "cd $ws/dotfiles && make install"
+[ -t 0 ] || { echo "no terminal to ask which sets to install" >&2; exit 1; }
+printf "dotfiles sets to install besides 0 (1 = shire, 2 = fangorn, e.g. 1 2): "
+read -r sets
+
+for k in $sets; do case $k in 1|2) ;; *) echo "no set $k" >&2; exit 1 ;; esac; done
+
+has_set() { case " $sets " in *" $1 "*) ;; *) return 1 ;; esac; }
+# what only a set's scripts use; set 0's comes with the shell above
+has_set 1 && add rsync tesseract imagemagick android-tools python
+has_set 2 && add python poppler djvulibre imagemagick
+as_user "cd $ws/dotfiles && make install SETS='0 $sets'"
 
 # shell entry block from the dotfiles README
 grep -q icaro-dotfiles "/home/$user/.profile" 2>/dev/null || as_user 'cat >> $HOME/.profile' <<'EOF'
@@ -115,20 +125,6 @@ ENV="$HOME/.config/sh/rc.sh"; export ENV
 . "$HOME/.config/sh/env.sh"
 # <<< icaro-dotfiles <<<
 EOF
-
-clone posix-shell-scripts-collection
-
-[ -t 0 ] || { echo "no terminal to ask which script sets to install" >&2; exit 1; }
-printf "script sets to install besides 0 (1 = shire, 2 = fangorn, e.g. 1 2): "
-read -r sets
-
-for k in $sets; do case $k in 1|2) ;; *) echo "no set $k" >&2; exit 1 ;; esac; done
-
-has_set() { case " $sets " in *" $1 "*) ;; *) return 1 ;; esac; }
-# what only the scripts of a set use; set 0's comes with the shell above
-has_set 1 && add rsync tesseract imagemagick android-tools python
-has_set 2 && add python poppler djvulibre imagemagick
-as_user "cd $ws/posix-shell-scripts-collection && make install SETS='0 $sets'"
 
 chsh -s /usr/bin/oksh "$user"
 
