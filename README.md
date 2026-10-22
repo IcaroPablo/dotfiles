@@ -66,10 +66,6 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
 
     >The Makefile is POSIX make, so it runs under bmake and OpenBSD's make as well as GNU make — no `wildcard`, `notdir` or `CURDIR`, and the lists come from shell globs. Use `cd` rather than `make -C`: OpenBSD's make has no `-C`.
 
-- Properly configure rc.local e rc.shutdown to mount/umount encrypted discs using the following reference scripts
-    - [mount_encrypted](bin/mount_encrypted)
-    - [umount_encrypted](bin/umount_encrypted)
-
 - Properly configure autohotplug
 
     - (todo)
@@ -105,3 +101,8 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
     - https://www.youtube.com/watch?v=f8lloCtrpdk
     - https://www.youtube.com/watch?v=LBozd4_GwIo
     - https://calomel.org/network_performance.html
+
+## Chimera
+
+- Recreate the boot entry if the firmware loses it
+  - `# efibootmgr --create --disk /dev/sda --part 1 --loader '/EFI/chimera/grubx64.efi' --label "chimera" --unicode`

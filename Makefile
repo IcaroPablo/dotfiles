@@ -25,12 +25,11 @@ SET0 = .config/git .config/sh \
 	bin/openfile bin/preview
 SET1 = .config/ghostty .xinitrc \
 	bin/backuphd bin/bar bin/chimera-setup \
-	bin/fix_boot_entry bin/fzfmenu bin/monitor \
+	bin/fzfmenu bin/monitor \
 	bin/pull-files bin/rec_gif bin/run-program bin/scr_shot bin/scrotocr \
 	bin/wipe-ssd
 SET2 = .config/nvim .config/spdfv .config/vis \
-	bin/igsaved bin/launch_nvim bin/mount_encrypted bin/shpad bin/sixiv \
-	bin/spdfv bin/umount_encrypted
+	bin/igsaved bin/launch_nvim bin/shpad bin/sixiv bin/spdfv
 
 # Missing, these fail the doctor; the groups below only inform.
 REQUIRED = git fzf eza file mktemp
@@ -44,14 +43,12 @@ GROUPS1 = \
 	"X11 (xinitrc, bar, fzfmenu, monitor, scr_shot):xwallpaper xsetroot xset xrdb xmodmap setxkbmap xinput xrandr xdpyinfo smawm st scrot xclip xdg-open" \
 	"IMAGEM E VÍDEO (rec_gif, scrotocr):ffmpeg slop tesseract mogrify" \
 	"DISCO (backuphd, wipe-ssd):rsync doas cryptsetup lsof udisksctl blkdiscard sfdisk mkfs.ext4" \
-	"CELULAR (pull-files):adb" \
-	"SISTEMA (fix_boot_entry):efibootmgr"
+	"CELULAR (pull-files):adb"
 GROUPS2 = \
 	"EDITOR (nvim, launch_nvim):nvim tree-sitter rg" \
 	"SHPAD (dvtm, e o carapace completa no nvim):dvtm carapace" \
 	"IMAGEM (sixiv, igsaved):ffmpeg ffprobe chafa python3 less" \
-	"DOCUMENTO (spdfv):pdfinfo pdftoppm ddjvu djvused mutool magick convert chafa python3" \
-	"DISCO (mount_encrypted, umount_encrypted):doas bioctl"
+	"DOCUMENTO (spdfv):pdfinfo pdftoppm ddjvu djvused mutool magick convert chafa python3"
 
 # $pick: what SETS links; warns about files in no set. dest: where a file links.
 PICK = all=" $(SET0) $(SET1) $(SET2) "; \
