@@ -22,14 +22,20 @@ usermod -a -G wheel "$user"
 
 as_user() { doas -u "$user" sh -c "$1"; }
 
+# what was installed before, to show at the end what this script doesn't install
+before=$(cat /etc/apk/world)
+before_apps=$(flatpak list --app --columns=application 2>/dev/null) || true
+wanted=
+add() { apk add "$@"; wanted="$wanted $*"; }
+
 # ==== 2. system ====
 
-apk add chimera-repo-user chimera-repo-contrib
+add chimera-repo-user chimera-repo-contrib
 apk update
 apk upgrade
 
 # what booting needs; already there after the first boot, needed in the chroot
-apk add base-full chimerautils cryptsetup-scripts lvm2 \
+add base-full chimerautils cryptsetup-scripts lvm2 \
 	grub-x86_64-efi linux-stable networkmanager
 
 # microcode and Intel's video decoding, for whatever this machine has
@@ -40,15 +46,15 @@ case $(grep -m1 vendor_id /proc/cpuinfo) in
 esac
 # loaded early from the initramfs, which needs a rebuild once it's installed
 if [ -n "$ucode" ] && ! apk info -e "$ucode" >/dev/null 2>&1; then
-	apk add "$ucode"
+	add "$ucode"
 	update-initramfs -c -k all
 fi
 for d in /sys/bus/pci/devices/*; do
-	case $(cat "$d/class"):$(cat "$d/vendor") in 0x03*:0x8086) apk add intel-media-driver ;; esac
+	case $(cat "$d/class"):$(cat "$d/vendor") in 0x03*:0x8086) add intel-media-driver ;; esac
 done
 
 # what this script itself uses
-apk add git curl openssh
+add git curl openssh
 
 # no dhcpcd (conflicts with NetworkManager)
 for s in networkmanager syslog-ng; do
@@ -69,9 +75,8 @@ done
 
 # ==== 3. shell ====
 
-apk add oksh github-cli fzf fd eza ripgrep zoxide file lsof htop rsync llvm-binutils \
-	7zip zip unzip xz unrar w3m exiftool chafa ffmpeg tesseract yt-dlp \
-	imagemagick python android-tools
+add oksh github-cli fzf fd eza ripgrep zoxide file lsof htop llvm-binutils \
+	7zip zip unzip xz unrar w3m exiftool chafa ffmpeg yt-dlp
 
 as_user "mkdir -p $ws"
 
@@ -98,12 +103,10 @@ clone() {
 	elif [ "${url#git@}" != "$url" ]; then as_user "git -C $ws/$1 remote set-url origin $url/$1.git"
 	fi
 }
-clone dotfiles
-clone posix-shell-scripts-collection
 
-for r in dotfiles posix-shell-scripts-collection; do
-	as_user "cd $ws/$r && make install"
-done
+clone dotfiles
+
+as_user "cd $ws/dotfiles && make install"
 
 # shell entry block from the dotfiles README
 grep -q icaro-dotfiles "/home/$user/.profile" 2>/dev/null || as_user 'cat >> $HOME/.profile' <<'EOF'
@@ -113,17 +116,33 @@ ENV="$HOME/.config/sh/rc.sh"; export ENV
 # <<< icaro-dotfiles <<<
 EOF
 
+clone posix-shell-scripts-collection
+
+[ -t 0 ] || { echo "no terminal to ask which script sets to install" >&2; exit 1; }
+printf "script sets to install besides 0 (1 = shire, 2 = fangorn, e.g. 1 2): "
+read -r sets
+
+for k in $sets; do case $k in 1|2) ;; *) echo "no set $k" >&2; exit 1 ;; esac; done
+
+has_set() { case " $sets " in *" $1 "*) ;; *) return 1 ;; esac; }
+# what only the scripts of a set use; set 0's comes with the shell above
+has_set 1 && add rsync tesseract imagemagick android-tools python
+has_set 2 && add python poppler djvulibre imagemagick
+as_user "cd $ws/posix-shell-scripts-collection && make install SETS='0 $sets'"
+
 chsh -s /usr/bin/oksh "$user"
 
 # ==== 4. graphical environment ====
 
-apk add xserver-xorg xinit mesa-dri xrandr xinput xset xrdb xmodmap xsetroot \
+add xserver-xorg xinit mesa-dri xrandr xinput xset xrdb xmodmap xsetroot \
 	xdpyinfo setxkbmap xclip xwallpaper dbus polkit elogind \
 	xdg-desktop-portal xdg-desktop-portal-gtk pipewire pipewire-alsa \
-	alsa-utils xdg-utils mpv thunar luakit slop gvfs thunar-volman udisks
+	alsa-utils xdg-utils mpv thunar luakit gvfs thunar-volman udisks
+# rec_gif's region picker
+has_set 1 && add slop
 
 # st, sowm and scrot's build deps
-apk add clang gmake pkgconf linux-headers \
+add clang gmake pkgconf linux-headers \
 	libx11-devel libxft-devel libxinerama-devel imlib2-devel \
 	libxcomposite-devel libxfixes-devel libxrandr-devel
 
@@ -152,19 +171,24 @@ fi
 	tar -xz --strip-components=1 && ./configure --prefix=$HOME/.local && make install; s=$?; rm -rf "$d"; exit $s'
 
 # flatpaks
-apk add flatpak
+add flatpak
 
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak install -y --system flathub \
-	io.github.ungoogled_software.ungoogled_chromium \
-	com.discordapp.Discord \
-	org.telegram.desktop \
-	com.stremio.Stremio \
-	org.godotengine.Godot \
-	com.github.tchx84.Flatseal \
-	com.valvesoftware.Steam
+apps="io.github.ungoogled_software.ungoogled_chromium com.discordapp.Discord
+	org.telegram.desktop com.stremio.Stremio org.godotengine.Godot
+	com.github.tchx84.Flatseal com.valvesoftware.Steam"
+flatpak install -y --system flathub $apps
 
 # fails inside a chroot; rerun after boot
+apps="$apps com.teamspeak.TeamSpeak"
 flatpak install -y --system flathub com.teamspeak.TeamSpeak ||
 	echo "warning: TeamSpeak not installed; rerun outside the chroot" >&2
 
+# ==== 5. leftovers ====
+
+# version constraints and repo tags off: foo>=1.2@user -> foo
+in_list() { x=$1; shift; for w; do [ "$w" = "$x" ] && return 0; done; return 1; }
+extra=$(for p in $before; do in_list "${p%%[<>=~@]*}" $wanted || echo "$p"; done)
+extra_apps=$(for a in $before_apps; do in_list "$a" $apps || echo "$a"; done)
+[ -z "$extra" ] || printf '\nalready installed, not by this script (apk del by hand if unwanted):\n%s\n' "$extra"
+[ -z "$extra_apps" ] || printf '\nflatpaks not from this script (flatpak uninstall by hand if unwanted):\n%s\n' "$extra_apps"
