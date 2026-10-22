@@ -1,14 +1,24 @@
 #!/bin/sh
 
 . "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" 2>/dev/null || true
-if ! command -v os_open >/dev/null 2>&1; then
-    os_open() {
-        case "$(uname)" in
-            Darwin) open "$@" ;;
-            *) for _f in "$@"; do xdg-open "$_f" >/dev/null 2>&1 & done ;;
-        esac
-    }
-fi
+
+# open each file with the platform's handler, detached; setsid keeps it past
+# the terminal
+os_open() {
+    case "$(uname)" in
+        Darwin) open "$@" ;;
+        *)
+            have xdg-open || { printf 'openfile: no xdg-open for %s\n' "$1" >&2; return 1; }
+            for _f in "$@"; do
+                if have setsid; then setsid xdg-open "$_f" >/dev/null 2>&1 &
+                else xdg-open "$_f" >/dev/null 2>&1 &
+                fi
+            done ;;
+    esac
+}
+
+# --mime-type: the one form macOS, Linux and OpenBSD's file all report alike
+mimetype() { file --mime-type -bL "$1" 2>/dev/null; }
 
 # ~/.config/openfile/remote (sh), written by fangorn rebuild na VM: mídia sob
 # $root abre na tela de outra máquina, por ssh ($host, com $key, conferindo $known)
@@ -48,8 +58,6 @@ handlenoextension() {
 }
 
 first="$1"
-
-test -L "$first" && first="$(abspath "$first")"
 
 case "$(mimetype "$first")" in
     inode/x-empty|text/*|application/json|*shellscript|application/x-empty|application/octet-stream)

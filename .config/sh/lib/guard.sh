@@ -1,4 +1,4 @@
-# lib/guard.sh — portable helpers shared by the interactive rc and the wizard.
+# lib/guard.sh — portable helpers shared by rc.sh and openfile.
 # POSIX sh. Meant to be sourced, not executed. Safe to source more than once.
 
 : "${CLIPFILE:=${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}/nav-clipboard}"
@@ -30,35 +30,3 @@ abspath() {
     fi
     unset _ap_dir _ap_base
 }
-
-# os_open <files...>: open each argument with the platform's file handler,
-# detached from the shell. macOS uses `open`; elsewhere `xdg-open` (via setsid
-# when available so it survives the terminal). Returns non-zero if no opener.
-os_open() {
-    case "$(uname)" in
-        Darwin)
-            open "$@"
-            ;;
-        *)
-            if have xdg-open; then
-                for _f in "$@"; do
-                    if have setsid; then
-                        setsid xdg-open "$_f" >/dev/null 2>&1 &
-                    else
-                        xdg-open "$_f" >/dev/null 2>&1 &
-                    fi
-                done
-                unset _f
-            else
-                printf 'os_open: no opener found for %s\n' "$(uname)" >&2
-                return 1
-            fi
-            ;;
-    esac
-}
-
-# mimetype <file>: MIME type of <file> (e.g. "text/plain", "application/pdf",
-# "inode/directory"), following symlinks. Uses `--mime-type` — the one form
-# that works on macOS, Linux and OpenBSD alike (BSD `file -i` does not report
-# MIME). Shared by openfile and preview.
-mimetype() { file --mime-type -bL "$1" 2>/dev/null; }
