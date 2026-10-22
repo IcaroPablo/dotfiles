@@ -1,0 +1,1 @@
+efibootmgr --create --disk /dev/sda --part 1 --loader '/EFI/chimera/grubx64.efi' --label "chimera" --unicode

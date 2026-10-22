@@ -1,0 +1,112 @@
+#!/bin/sh
+# Wipe an SSD with random data, TRIM it, and format it as a single ext4
+# partition owned by the invoking user.
+#
+#   wipe-ssd                 list the disks it could wipe
+#   wipe-ssd wwn-0x...       wipe that one
+#
+# The disk is addressed by its WWN (World Wide Name), a hardware ID
+# burned into the drive: it is the same on any port or adapter, and
+# unlike partition/filesystem UUIDs it survives the wipe itself.
+# Known: wwn-0x50026b77848210d7 (Kingston A400 240G),
+#        wwn-0x50026b738001206f (Kingston A400 120G, was OpenBSD).
+
+set -eu
+
+LABEL=storage
+MIN_SPEED=5000	# Mbit/s; 5000 = USB 3.0
+
+die() { printf 'wipe-ssd: %s\n' "$*" >&2; exit 1; }
+
+if [ $# -eq 0 ]; then
+	for l in /dev/disk/by-id/wwn-*; do
+		case $l in *-part*) continue ;; esac
+		[ -e "$l" ] || continue
+		d=$(readlink -f "$l")
+		printf '%s  %s\n' "${l##*/}" "$(lsblk -dno SIZE,MODEL,TRAN "$d")"
+	done
+	exit 0
+fi
+WWN=$1
+case $WWN in wwn-*) ;; *) die "usage: wipe-ssd [wwn-...]  (no argument lists them)" ;; esac
+LINK=/dev/disk/by-id/$WWN
+
+if [ "$(id -u)" -ne 0 ]; then
+	exec doas "$0" "$WWN" "$(id -un)"
+fi
+OWNER=${2:-${DOAS_USER:-}}
+[ -n "$OWNER" ] || die "run as your normal user, not as root"
+
+[ -e "$LINK" ] || die "disk $WWN is not connected"
+DEV=$(readlink -f "$LINK")
+NAME=${DEV##*/}
+
+# Find the USB link speed by walking up sysfs from the block device.
+p=$(readlink -f "/sys/block/$NAME")
+speed=
+while [ "$p" != / ]; do
+	if [ -f "$p/speed" ]; then speed=$(cat "$p/speed"); break; fi
+	p=${p%/*}
+done
+[ -n "$speed" ] || die "could not find the USB link speed of $DEV"
+[ "$speed" -ge "$MIN_SPEED" ] ||
+	die "$DEV is on a ${speed} Mbit/s port; plug it into a USB 3.0 port"
+
+# Unmount anything udisks mounted from it; refuse if anything else is.
+findmnt -rn -o SOURCE,TARGET | while read -r src tgt; do
+	case $src in "$DEV"|"$DEV"[0-9]*) ;; *) continue ;; esac
+	case $tgt in
+	/run/media/*) umount "$tgt" ;;
+	*) die "$src is mounted on $tgt; refusing to touch it" ;;
+	esac
+done
+findmnt -rn -o SOURCE | grep -q "^$DEV" && die "$DEV is still mounted"
+
+# Loop devices into the disk hide their mounts from the check above.
+loops=$(losetup -n -O NAME -j "$DEV")
+for part in "$DEV"[0-9]*; do
+	[ -e "$part" ] && loops="$loops $(losetup -n -O NAME -j "$part")"
+done
+for l in $loops; do
+	die "$l reads from $DEV (mounted on $(findmnt -rn -o TARGET "$l" || echo nothing)); detach it first"
+done
+# Something stacked on it (LUKS, LVM, RAID) is in use even with nothing mounted.
+for h in "/sys/block/$NAME/holders/"* "/sys/block/$NAME/$NAME"*/holders/*; do
+	[ -e "$h" ] && die "$DEV is in use by ${h##*/} (dm-crypt, LVM...); refusing to touch it"
+done
+
+sectors=$(cat "/sys/block/$NAME/size")
+lsblk -o NAME,SIZE,MODEL,SERIAL,MOUNTPOINTS "$DEV"
+printf '\nEVERYTHING on %s (%s) will be destroyed.\n' "$DEV" "$WWN"
+printf 'Type "wipe" to continue: '
+read -r answer
+[ "$answer" = wipe ] || die "aborted"
+
+echo '==> 1/4 overwriting with random data'
+full=$((sectors / 2048))	# whole 1 MiB blocks
+rem=$((sectors % 2048))		# leftover 512-byte sectors
+dd if=/dev/urandom of="$DEV" bs=1m count="$full" iflag=fullblock status=progress
+if [ "$rem" -gt 0 ]; then
+	dd if=/dev/urandom of="$DEV" bs=512 count="$rem" seek=$((full * 2048))
+fi
+sync
+
+echo '==> 2/4 discarding (TRIM) every block'
+blkdiscard -f "$DEV"
+
+echo '==> 3/4 partitioning and formatting as ext4'
+printf 'label: gpt\n,,L\n' | sfdisk -q "$DEV"
+udevadm settle
+PART=$LINK-part1
+[ -e "$PART" ] || die "partition $PART did not appear"
+mkfs.ext4 -q -L "$LABEL" "$PART"
+
+echo "==> 4/4 giving $OWNER ownership"
+mnt=$(mktemp -d)
+mount "$PART" "$mnt"
+chown "$OWNER:$OWNER" "$mnt"
+umount "$mnt"
+rmdir "$mnt"
+
+printf '\nDone. Filesystem UUID: %s\n' "$(blkid -s UUID -o value "$PART")"
+echo "It shows in Thunar as \"$LABEL\"."

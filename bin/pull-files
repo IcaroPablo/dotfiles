@@ -1,0 +1,95 @@
+#!/bin/sh
+# Pull every file with an extension in $exts from the phone's Download
+# folder via adb, then delete
+# each one from the phone once a local copy of the same size exists.
+# Usage: pull-videos [-k] [destination-dir]   (default: current directory)
+#   -k  keep files on the phone (don't delete)
+
+set -eu
+
+src=/sdcard/Download
+
+# File extensions to pull, separated by spaces (case-insensitive, no dot).
+exts="mp4"
+keep=0
+args=$*
+
+while getopts k opt; do
+	case $opt in
+	k) keep=1 ;;
+	*) echo "usage: ${0##*/} [-k] [destination-dir]" >&2; exit 2 ;;
+	esac
+done
+shift $((OPTIND - 1))
+dest=${1:-.}
+
+command -v adb >/dev/null 2>&1 || { echo "adb not found in PATH" >&2; exit 1; }
+
+if [ -z "${ANDROID_SERIAL:-}" ]; then
+	devices=$(adb devices -l | sed 1d | grep -v '^$' || true)
+	if [ "$(printf '%s\n' "$devices" | grep -c .)" -gt 1 ]; then
+		cat >&2 <<-EOF
+		more than one device connected:
+
+		$devices
+
+		Pick one by setting ANDROID_SERIAL to its serial (first column), e.g.:
+
+		  ANDROID_SERIAL=${devices%%[	 ]*} ${0##*/} $args
+		EOF
+		exit 1
+	fi
+fi
+
+state=$(adb get-state 2>/dev/null || true)
+[ "$state" = device ] || { echo "no device connected (or not authorized)" >&2; exit 1; }
+
+mkdir -p "$dest"
+
+# Single-quote a path for the phone's shell.
+q() { printf "'%s'" "$(printf %s "$1" | sed "s/'/'\\\\''/g")"; }
+
+# Build: \( -iname '*.mp4' -o -iname '*.mkv' ... \)
+match=
+for e in $exts; do
+	match="$match${match:+ -o }-iname $(q "*.$e")"
+done
+[ -n "$match" ] || { echo "no extensions configured" >&2; exit 1; }
+
+list=$(adb shell "find $(q "$src") -type f \\( $match \\)" | tr -d '\r')
+[ -n "$list" ] || { echo "no $exts files in $src"; exit 0; }
+
+pulled=0 skipped=0 deleted=0 failed=0
+while IFS= read -r f; do
+	name=${f##*/}
+	local_file=$dest/$name
+	if [ -e "$local_file" ]; then
+		echo "skip: $name (already exists)"
+		skipped=$((skipped + 1))
+	elif adb pull "$f" "$local_file" </dev/null; then
+		pulled=$((pulled + 1))
+	else
+		echo "fail: $f" >&2
+		failed=$((failed + 1))
+		continue
+	fi
+
+	[ "$keep" -eq 0 ] || continue
+
+	# Only delete when the local copy matches the phone's file size.
+	rsize=$(adb shell "stat -c %s $(q "$f")" </dev/null | tr -d '\r')
+	lsize=$(wc -c <"$local_file" | tr -d ' ')
+	if [ "$rsize" != "$lsize" ]; then
+		echo "keep: $name (size differs: phone $rsize, local $lsize)" >&2
+	elif adb shell "rm -f $(q "$f")" </dev/null; then
+		deleted=$((deleted + 1))
+	else
+		echo "fail to delete: $f" >&2
+		failed=$((failed + 1))
+	fi
+done <<EOF
+$list
+EOF
+
+echo "pulled $pulled, skipped $skipped, deleted $deleted, failed $failed -> $dest"
+[ "$failed" -eq 0 ]
