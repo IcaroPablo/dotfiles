@@ -109,6 +109,9 @@ hist() {
 
 see() { tee /dev/tty; }
 
+# make doctor asks a new interactive shell for this: an answer means ENV works
+rc_loaded() { printf 'rc.sh loaded by %s\n' "${0##*[-/]}"; }
+
 p() { [ -s "$CLIPFILE" ] || return; while IFS= read -r _e; do cp -Rv -- "$_e" .; done < "$CLIPFILE"; unset _e; }
 m() { [ -s "$CLIPFILE" ] || return; while IFS= read -r _e; do mv -v -- "$_e" .; done < "$CLIPFILE"; : > "$CLIPFILE"; unset _e; }
 
