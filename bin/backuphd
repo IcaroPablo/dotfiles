@@ -1,0 +1,573 @@
+#!/bin/sh
+# Back up to, and restore from, an encrypted external disk: LUKS on Linux,
+# bioctl softraid CRYPTO on OpenBSD. `backuphd help` explains it all.
+
+set -eu
+
+MNT=/mnt/backup
+MAPNAME=backup		# Linux: /dev/mapper/$MAPNAME
+
+die() { printf 'backuphd: %s\n' "$*" >&2; exit 1; }
+usage() {
+	die "usage: backuphd mount | umount | backup [-n] PATH... | restore [-n] SRC DEST | check [PATH...] | help"
+}
+
+help() {
+	cat <<EOF
+backuphd — back up to an encrypted external disk, and restore from it
+
+  backuphd mount                    unlock (asks the passphrase) and mount on $MNT
+  backuphd umount                   unmount, lock and power off (Linux); then
+                                    it can be unplugged
+  backuphd backup [-n] PATH...      mirror each PATH onto the disk
+  backuphd restore [-n] SRC DEST    copy the disk's SRC into DEST
+  backuphd check [PATH...]          read every file back against its checksum
+  backuphd help                     this text
+
+The disk mirrors the system's absolute paths: \`backup /extra\` lands in
+<disk>/extra, \`backup ~/vidya\` in <disk>/home/$(id -un)/vidya, and that
+absolute path is what restore takes as SRC:
+
+  backuphd backup /extra ~/vidya
+  backuphd restore /extra/library ~/lib
+
+backup is a mirror: what was deleted from PATH is deleted from its copy too.
+restore never deletes from DEST, but overwrites the files there that differ
+from the backup. -n only shows what would change. backup and restore mount
+the disk when needed, and then unmount it only if they mounted it.
+
+Everything runs as root through doas: unlocking needs it, and so does
+reading every path and keeping every file's owner.
+
+CHECKSUMS
+
+ext4 and FFS keep no checksums of file contents, so backuphd keeps its own:
+a SHA-256 of every backed-up file, in <disk>/.backuphd/manifest.
+
+- backup reads every new or changed file back from the disk (after a
+  remount, so it really comes from the disk and not from memory) and
+  compares it with the original. A copy that doesn't match is removed and
+  reported; running the same backup again copies it anew.
+- check reads every file on the disk (or only those under PATH, as it is
+  on the system) and reports any that is CORRUPT or MISSING. It reads the
+  whole backup: at ~100 MB/s on USB 3, about 1h45 for 630G; on USB 2
+  (~40 MB/s), about 4h30. Run it every few months.
+- restore reads the restored files back against the checksums.
+
+Unlike a btrfs/ZFS scrub, nothing is checked on an ordinary read, and a
+damaged file is not repaired: back it up again from the original.
+
+WHICH DISK
+
+The encryption follows the system: LUKS (cryptsetup) on Linux, a softraid
+CRYPTO volume (bioctl) on OpenBSD. Each system can only open its own kind.
+
+Without BACKUPHD_DISK, backuphd lists the encrypted disks that are
+connected and asks which one to use. To skip that question, set it in
+~/.profile:
+
+  Linux, the LUKS UUID (blkid shows it as TYPE="crypto_LUKS"):
+    export BACKUPHD_DISK=e15437de-ab20-4e0b-b051-17174060c414
+  or any device path, as long as it is stable:
+    export BACKUPHD_DISK=/dev/disk/by-id/usb-Seagate_Expansion_NA8DSKP3-0:0-part1
+
+  OpenBSD, the RAID partition by DUID (disklabel shows the DUID):
+    export BACKUPHD_DISK=33936b7dbd03d222.a
+
+After choosing from the list, backuphd prints the line for that disk.
+EOF
+}
+
+[ $# -gt 0 ] || usage
+case $1 in
+help|-h|--help) help; exit 0 ;;
+mount|umount|backup|restore|check) ;;
+*) usage ;;
+esac
+
+OS=$(uname -s)
+case $OS in Linux|OpenBSD) ;; *) die "only Linux (LUKS) and OpenBSD (bioctl) are supported" ;; esac
+
+# doas resets the environment, so the disk choice is carried across by hand.
+[ "$(id -u)" -eq 0 ] ||
+	exec doas env BACKUPHD_DISK="${BACKUPHD_DISK:-}" "$0" "$@"
+DISK=${BACKUPHD_DISK:-}
+
+# The device mounted on $MNT, if any.
+mounted_dev() {
+	mount | awk -v m="$MNT" '$2 == "on" && $3 == m { print $1; exit }'
+}
+
+### Linux: LUKS ###############################################################
+
+luks_dev() {	# BACKUPHD_DISK -> device path
+	case $1 in
+	/*) printf '%s\n' "$1" ;;
+	*) printf '/dev/disk/by-uuid/%s\n' "$1" ;;
+	esac
+}
+
+luks_candidates() {	# "UUID<TAB>description" per usable LUKS partition
+	# -c /dev/null: probe every device now, not what the cache remembers.
+	blkid -c /dev/null -t TYPE=crypto_LUKS -o device | while read -r dev; do
+		# Already opened under another name: the system's own disk.
+		busy=$(lsblk -rno NAME,TYPE "$dev" |
+			awk -v n="$MAPNAME" '$2 == "crypt" && $1 != n { print $1 }')
+		[ -z "$busy" ] || continue
+		uuid=$(blkid -s UUID -o value "$dev")
+		parent=$(lsblk -no PKNAME "$dev" | head -n 1)
+		desc=$(lsblk -dno SIZE,MODEL,TRAN "/dev/${parent:-${dev#/dev/}}" | tr -s ' ')
+		printf '%s\t%s %s\n' "$uuid" "$dev" "$desc"
+	done
+}
+
+luks_open() {	# -> prints the device to mount
+	mapper=/dev/mapper/$MAPNAME
+	if [ -e "$mapper" ]; then
+		if [ -n "$DISK" ]; then
+			have=$(cryptsetup status "$MAPNAME" | awk '$1 == "device:" { print $2 }')
+			want=$(readlink -f "$(luks_dev "$DISK")")
+			[ "$have" = "$want" ] ||
+				die "$mapper is already open on $have, not on $DISK; run backuphd umount"
+		fi
+		printf '%s\n' "$mapper"
+		return
+	fi
+	[ -n "$DISK" ] || DISK=$(choose luks_candidates)
+	dev=$(luks_dev "$DISK")
+	[ -e "$dev" ] || die "disk $DISK is not connected"
+	cryptsetup isLuks "$dev" ||
+		die "$DISK is not LUKS (a bioctl volume can only be opened on OpenBSD)"
+	cryptsetup open "$dev" "$MAPNAME" </dev/tty >/dev/tty
+	printf '%s\n' "$mapper"
+}
+
+luks_close() {	# $1 = device that was mounted, or empty
+	case ${1:-/dev/mapper/$MAPNAME} in
+	/dev/mapper/*)
+		name=${1:-/dev/mapper/$MAPNAME}
+		name=${name#/dev/mapper/}
+		backing=
+		if [ -e "/dev/mapper/$name" ]; then
+			backing=$(cryptsetup status "$name" | awk '$1 == "device:" { print $2 }')
+			cryptsetup close "$name"
+		elif [ -n "$DISK" ]; then
+			backing=$(luks_dev "$DISK")
+		fi
+		luks_poweroff "$backing"
+		;;
+	esac
+}
+
+# Spin the disk under the LUKS partition $1 down and cut its power, as a
+# desktop's "safely remove" does: an unmounted disk otherwise keeps spinning.
+luks_poweroff() {
+	[ -n "$1" ] && [ -e "$1" ] || return 0
+	dev=$(readlink -f "$1")
+	disk=$(lsblk -no PKNAME "$dev" | head -n 1)
+	disk=/dev/${disk:-${dev#/dev/}}
+	# Anything on it still mounted or unlocked: the system's own disk, or busy.
+	if lsblk -Pno MOUNTPOINT,TYPE "$disk" | grep -qv -e '^MOUNTPOINT="" TYPE="disk"$' -e '^MOUNTPOINT="" TYPE="part"$'; then
+		echo "backuphd: $disk is still in use, left powered on" >&2
+		return 0
+	fi
+	if ! command -v udisksctl >/dev/null; then
+		echo "backuphd: no udisksctl (udisks2), $disk left powered on" >&2
+		return 0
+	fi
+	udisksctl power-off -b "$disk" ||
+		echo "backuphd: could not power $disk off; it is locked, unplugging it is safe" >&2
+}
+
+### OpenBSD: bioctl softraid CRYPTO ###########################################
+
+duid_to_dev() {	# 33936b7dbd03d222.a -> sd2a; sd2a stays sd2a
+	case $1 in
+	*.?)
+		d=$(sysctl -n hw.disknames | tr ',' '\n' |
+			awk -F: -v u="${1%.?}" '$2 == u { print $1; exit }')
+		[ -n "$d" ] || return 1
+		printf '%s%s\n' "$d" "${1##*.}"
+		;;
+	*) printf '%s\n' "${1#/dev/}" ;;
+	esac
+}
+
+bio_volume() {	# chunk (sd2a) -> the softraid volume it is attached as (sd4)
+	bioctl softraid0 2>/dev/null | awk -v c="<$1>" '
+		$1 == "softraid0" { vol = $5 }
+		$NF == c { print vol; exit }'
+}
+
+bio_candidates() {	# "DUID.p<TAB>description" per RAID partition not in use
+	for entry in $(sysctl -n hw.disknames | tr ',' ' '); do
+		disk=${entry%%:*} duid=${entry#*:}
+		case $disk in sd*) ;; *) continue ;; esac
+		[ -n "$duid" ] || continue
+		label=$(disklabel "$disk" 2>/dev/null) || continue
+		desc=$(printf '%s\n' "$label" | sed -n 's/^label: *//p')
+		printf '%s\n' "$label" | awk '$1 ~ /^[a-p]:$/ && $4 == "RAID" { print substr($1, 1, 1), $2 }' |
+		while read -r part sectors; do
+			vol=$(bio_volume "$disk$part")
+			# Attached with something mounted: the system's own encrypted root.
+			if [ -n "$vol" ] && mount | grep -q "^/dev/$vol[a-p] "; then
+				continue
+			fi
+			printf '%s.%s\t%s%s %s GB %s\n' "$duid" "$part" "$disk" "$part" \
+				"$((sectors / 2097152))" "$desc"
+		done
+	done
+}
+
+bio_open() {	# -> prints the device to mount
+	[ -n "$DISK" ] || DISK=$(choose bio_candidates)
+	chunk=$(duid_to_dev "$DISK") || die "disk $DISK is not connected"
+	[ -e "/dev/$chunk" ] || die "disk $DISK is not connected"
+	vol=$(bio_volume "$chunk")
+	if [ -z "$vol" ]; then
+		disklabel "${chunk%?}" | awk -v p="${chunk#${chunk%?}}:" '$1 == p { print $4 }' |
+			grep -qx RAID ||
+			die "$DISK is not a softraid partition (LUKS can only be opened on Linux)"
+		out=$(bioctl -c C -l "$chunk" softraid0 </dev/tty 2>/dev/tty) ||
+			die "could not unlock $DISK"
+		vol=$(printf '%s\n' "$out" | sed -n 's/.*attached as \(sd[0-9]*\).*/\1/p')
+		[ -n "$vol" ] || vol=$(bio_volume "$chunk")
+		[ -n "$vol" ] || die "unlocked $DISK, but could not find the new volume"
+	fi
+	part=$(disklabel "$vol" | awk '$1 ~ /^[a-p]:$/ && $4 == "4.2BSD" { print substr($1, 1, 1); exit }')
+	[ -n "$part" ] || die "no FFS partition inside $vol"
+	printf '/dev/%s%s\n' "$vol" "$part"
+}
+
+bio_close() {	# $1 = device that was mounted, or empty
+	vol=
+	case ${1:-} in
+	/dev/sd[0-9]*) vol=${1#/dev/}; vol=${vol%[a-p]} ;;
+	'')
+		[ -n "$DISK" ] || return 0
+		chunk=$(duid_to_dev "$DISK") || return 0
+		vol=$(bio_volume "$chunk")
+		;;
+	esac
+	if [ -n "$vol" ] && bioctl "$vol" 2>/dev/null | grep -q CRYPTO; then
+		bioctl -d "$vol"
+	fi
+}
+
+### both ######################################################################
+
+# Lists what $1 prints, asks which one, prints its id.
+choose() {
+	list=$("$1")
+	[ -n "$list" ] || die "no encrypted disk connected (see backuphd help)"
+	echo "Encrypted disks connected:" >/dev/tty
+	printf '%s\n' "$list" | awk -F '\t' '{ printf "  %d) %s\n", NR, $2 }' >/dev/tty
+	printf 'Which one? ' >/dev/tty
+	read -r n </dev/tty
+	id=$(printf '%s\n' "$list" | awk -F '\t' -v n="$n" 'NR == n { print $1 }')
+	[ -n "$id" ] || die "no disk number $n"
+	printf 'To skip this question, add to ~/.profile:\n  export BACKUPHD_DISK=%s\n' "$id" >/dev/tty
+	printf '%s\n' "$id"
+}
+
+do_mount() {
+	if [ -n "$(mounted_dev)" ]; then
+		echo "already mounted on $MNT ($(mounted_dev))"
+		return
+	fi
+	case $OS in
+	Linux) dev=$(luks_open) ;;
+	OpenBSD) dev=$(bio_open) ;;
+	esac
+	if mount | awk -v d="$dev" '$1 == d { found = 1 } END { exit !found }'; then
+		die "$dev is mounted somewhere else; unmount it there first"
+	fi
+	# 1 = errors found and fixed, still fine to mount.
+	fsck -p "$dev" || [ $? -le 1 ] || die "fsck found errors it could not fix; run: doas fsck $dev"
+	mkdir -p "$MNT"
+	mount -o noatime "$dev" "$MNT"
+	echo "mounted on $MNT"
+}
+
+do_umount() {
+	dev=$(mounted_dev)
+	if [ -n "$dev" ]; then
+		sync
+		if ! umount "$MNT"; then
+			echo "still in use by:" >&2
+			case $OS in
+			Linux) lsof +f -- "$MNT" >&2 || : ;;
+			OpenBSD) fstat -f "$MNT" >&2 || : ;;
+			esac
+			die "close those (or cd out of $MNT) and run backuphd umount again"
+		fi
+	fi
+	case $OS in
+	Linux) luks_close "$dev" ;;
+	OpenBSD) bio_close "$dev" ;;
+	esac
+	echo "unmounted and locked; safe to unplug"
+}
+
+# Mount for backup/restore/check, and leave it the way it was found.
+automounted=
+ensure_mounted() {
+	[ -z "$(mounted_dev)" ] || return 0
+	do_mount
+	automounted=1
+}
+cleanup() {
+	[ -z "$automounted" ] || do_umount
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM HUP
+
+# Unmounting drops the disk's cached pages, so what is read next comes from
+# the disk itself and not from memory.
+remount() {
+	dev=$(mounted_dev)
+	sync
+	if umount "$MNT" 2>/dev/null; then
+		mount -o noatime "$dev" "$MNT"
+	else
+		echo "backuphd: $MNT is busy, could not remount; some files may be read from memory, not from the disk" >&2
+	fi
+}
+
+# FFS on OpenBSD has neither ACLs nor extended attributes.
+case $OS in
+Linux) keep=-aHAX ;;
+OpenBSD) keep=-aH ;;
+esac
+
+### checksums #################################################################
+
+# One line per backed-up file, the path being the one it has on the system:
+#   <sha256> <size> <mtime> <path>
+# backup keeps it up to date; check reads every file back against it.
+MANIFEST=$MNT/.backuphd/manifest
+DAMAGED=$MNT/.backuphd/damaged	# what check found corrupt
+
+sum256() { sha256 -q "$1" 2>/dev/null; }
+
+# "N/M" on the terminal, overwritten in place.
+progress() {
+	[ -t 2 ] || return 0
+	printf '\r  %s %d/%d files' "$1" "$2" "$3" >&2
+	[ "$2" -lt "$3" ] || printf '\n' >&2
+}
+
+# Bring the manifest's entries under $1 up to date with what is on the disk.
+# A file that is new or changed (size or mtime) is read twice — the copy on
+# the disk and the original — and only recorded if both match; a copy that
+# doesn't match is deleted, so the next backup copies it again.
+update_manifest() {
+	r=$1
+	mkdir -p "$MNT/.backuphd"
+	[ -f "$MANIFEST" ] || : > "$MANIFEST"
+	work=$MNT/.backuphd/work
+	rm -rf "$work"
+	mkdir "$work"
+
+	if [ -n "$(cd "$MNT" && find ".$r" -name '*
+*' | head -n 1)" ]; then
+		echo "backuphd: names with a line break in $r are not checksummed" >&2
+	fi
+	# What is on the disk now: "size mtime path".
+	(cd "$MNT" && find ".$r" -type f ! -name '*
+*' -exec stat -f '%z %m %N' {} +) |
+		sed 's/^\([0-9]* [0-9]*\) \./\1 /' > "$work/now"
+
+	awk -v r="$r" -v keep="$work/keep" -v todo="$work/todo" '
+		FILENAME == ARGV[1] {
+			p = $0; sub(/^[^ ]* [^ ]* [^ ]* /, "", p)
+			if (p == r || index(p, r "/") == 1) { old[p] = $2 " " $3; h[p] = $1 }
+			else print > keep
+			next
+		}
+		{
+			p = $0; sub(/^[^ ]* [^ ]* /, "", p)
+			if (old[p] == $1 " " $2) print h[p], $1, $2, p > keep
+			else print p > todo
+		}' "$MANIFEST" "$work/now"
+	touch "$work/keep" "$work/todo"
+
+	total=$(wc -l < "$work/todo" | tr -d ' ')
+	if [ "$total" -gt 0 ]; then
+		remount
+		n=0
+		while IFS= read -r p; do
+			n=$((n + 1))
+			progress verifying "$n" "$total"
+			copy=$(sum256 "$MNT$p") || copy=
+			orig=$(sum256 "$p") || orig=
+			if [ -n "$copy" ] && [ "$copy" = "$orig" ]; then
+				printf '%s %s\n' "$copy" "$(stat -f '%z %m' "$MNT$p") $p" >> "$work/keep"
+			else
+				printf '\nbackuphd: the copy of %s does not match the original (changed during the backup, or written badly); removed it, run the backup again\n' "$p" >&2
+				rm -f "$MNT$p"
+				bad=$((bad + 1))
+			fi
+		done < "$work/todo"
+	fi
+	mv "$work/keep" "$MANIFEST"
+	rm -rf "$work"
+}
+
+# Copies check found corrupt keep their size and mtime, so rsync would skip
+# them: remove those under $1 whose original still exists, to be copied anew.
+recopy_damaged() {
+	[ -s "$DAMAGED" ] || return 0
+	r=$1
+	sort -u "$DAMAGED" > "$DAMAGED.new"
+	: > "$DAMAGED"
+	while IFS= read -r p; do
+		if { [ "$p" = "$r" ] || case $p in "$r"/*) true ;; *) false ;; esac; } && [ -f "$p" ]; then
+			rm -f "$MNT$p"
+		else
+			printf '%s\n' "$p" >> "$DAMAGED"
+		fi
+	done < "$DAMAGED.new"
+	rm -f "$DAMAGED.new"
+}
+
+do_check() {
+	for p; do
+		case $p in /*) ;; *) die "PATH is the absolute path it had on the system, like /extra/library" ;; esac
+	done
+	ensure_mounted
+	[ -s "$MANIFEST" ] || die "no checksums on this disk yet; run backuphd backup first"
+	[ -n "$automounted" ] || remount
+	list=$MNT/.backuphd/check
+	if [ $# -eq 0 ]; then
+		cp "$MANIFEST" "$list"
+	else
+		for p; do printf '%s\n' "${p%/}"; done > "$list.want"
+		awk 'FILENAME == ARGV[1] { want[++n] = $0; next }
+			{
+				p = $0; sub(/^[^ ]* [^ ]* [^ ]* /, "", p)
+				for (i = 1; i <= n; i++)
+					if (p == want[i] || index(p, want[i] "/") == 1) { print; next }
+			}' "$list.want" "$MANIFEST" > "$list"
+		rm -f "$list.want"
+		[ -s "$list" ] || die "nothing under $* in the checksums"
+	fi
+	total=$(wc -l < "$list" | tr -d ' ')
+	n=0
+	while IFS= read -r line; do
+		n=$((n + 1))
+		progress checking "$n" "$total"
+		sum=${line%% *}
+		p=${line#* * * }
+		case $sum in
+		????????????????????????????????????????????????????????????????) ;;
+		*) printf '\nDAMAGED  checksum list, line %d\n' "$n"; bad=$((bad + 1)); continue ;;
+		esac
+		if [ ! -f "$MNT$p" ]; then
+			printf '\nMISSING  %s\n' "$p"
+			bad=$((bad + 1))
+		elif [ "$(sum256 "$MNT$p")" != "$sum" ]; then
+			printf '\nCORRUPT  %s\n' "$p"
+			printf '%s\n' "$p" >> "$DAMAGED"
+			bad=$((bad + 1))
+		fi
+	done < "$list"
+	rm -f "$list"
+	if [ "$bad" -eq 0 ]; then
+		echo "all $total files match their checksums"
+	else
+		echo "$bad of $total files are damaged or missing; the next backup of their paths copies them again from the originals"
+	fi
+}
+
+### backup and restore ########################################################
+
+do_backup() {
+	# Check every path before copying any: a typo stops the run up front.
+	for p; do
+		[ -e "$p" ] || die "$p does not exist"
+		r=$(realpath "$p")
+		[ "$r" != / ] || die "refusing to back up / (it contains $MNT)"
+		case $MNT/ in "$r"/*) die "$p contains $MNT" ;; esac
+	done
+	ensure_mounted
+	for p; do
+		r=$(realpath "$p")
+		printf '==> %s\n' "$r"
+		[ -n "$dry" ] || recopy_damaged "$r"
+		# -R keeps the absolute path under $MNT; -x stays on PATH's filesystem.
+		rsync "$keep" -Rx --numeric-ids --delete --exclude=lost+found/ \
+			$opts "$r" "$MNT/"
+		[ -n "$dry" ] || update_manifest "$r"
+	done
+	[ "$bad" -eq 0 ] || die "$bad file(s) did not copy correctly and were removed; run the same backup again"
+}
+
+do_restore() {
+	[ $# -eq 2 ] || usage
+	src=${1%/} dest=$2
+	case $src in
+	/?*) ;;
+	*) die "SRC is the absolute path it had on the system, like /extra/library" ;;
+	esac
+	case /$src/ in */../*) die "SRC cannot contain .." ;; esac
+	parent=$(dirname "$dest")
+	[ -d "$parent" ] || die "$parent does not exist"
+	case $(realpath "$parent")/ in "$MNT"/*) die "DEST is on the backup disk itself" ;; esac
+	ensure_mounted
+	[ -e "$MNT$src" ] || die "$src is not on the backup disk"
+	s=$(realpath "$MNT$src")
+	case $s in "$MNT"|"$MNT"/*) ;; *) die "$src points outside the backup disk" ;; esac
+	# Where a single file lands: into DEST if that is a directory.
+	target=$dest
+	[ ! -d "$dest" ] || target=$dest/${src##*/}
+	# The trailing slash copies the directory's contents into DEST, not the
+	# directory itself into it.
+	[ ! -d "$s" ] || { s=$s/; target=$dest; }
+	printf '==> %s -> %s\n' "$src" "$dest"
+	rsync "$keep" --numeric-ids $opts "$s" "$dest"
+	[ -z "$dry" ] || return 0
+
+	# Read the restored files back against the checksums.
+	[ -s "$MANIFEST" ] || { echo "backuphd: no checksums on this disk; restored files not verified" >&2; return 0; }
+	list=$MNT/.backuphd/check
+	awk -v r="$src" '{
+			p = $0; sub(/^[^ ]* [^ ]* [^ ]* /, "", p)
+			if (p == r || index(p, r "/") == 1) print
+		}' "$MANIFEST" > "$list"
+	total=$(wc -l < "$list" | tr -d ' ')
+	n=0
+	while IFS= read -r line; do
+		n=$((n + 1))
+		progress verifying "$n" "$total"
+		sum=${line%% *}
+		p=${line#* * * }
+		f=$target${p#"$src"}
+		if [ "$(sum256 "$f")" != "$sum" ]; then
+			printf '\nDIFFERS  %s\n' "$f"
+			bad=$((bad + 1))
+		fi
+	done < "$list"
+	rm -f "$list"
+	[ "$bad" -eq 0 ] ||
+		die "$bad restored file(s) differ from the backup's checksums (see backuphd check $src)"
+	echo "all $total restored files match their checksums"
+}
+
+cmd=$1
+shift
+opts='-h --info=progress2,stats1'
+dry=
+bad=0
+if [ "${1:-}" = -n ]; then
+	opts='-n --itemize-changes'
+	dry=1
+	shift
+fi
+case $cmd in
+mount) [ $# -eq 0 ] || usage; do_mount ;;
+umount) [ $# -eq 0 ] || usage; do_umount ;;
+backup) [ $# -gt 0 ] || usage; do_backup "$@" ;;
+restore) do_restore "$@" ;;
+check) [ -z "$dry" ] || usage; do_check "$@"; [ "$bad" -eq 0 ] ;;
+esac
