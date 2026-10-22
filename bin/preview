@@ -1,0 +1,89 @@
+#!/bin/sh
+#
+# preview <file> — best-effort preview of <file>, usado pelo fzf do `sel`. Fora
+# do eza, toda ferramenta externa é opcional: faltando, o ramo cai numa descrição
+# de uma linha em vez de dar erro.
+
+have() { command -v "$1" >/dev/null 2>&1; }
+# --mime-type: the one form macOS, Linux and OpenBSD's file all report alike
+mimetype() { file --mime-type -bL "$1" 2>/dev/null; }
+
+# one-line human description — the universal fallback (no tool required)
+desc() { have file && file -Lb "$1" || mimetype "$1" || printf '%s\n' "$1"; }
+
+# chafa symbols, sized to fzf's preview pane inside fzf and to the terminal
+# outside it; sixel images are sixiv's job
+image() {
+    if have chafa; then
+        chafa -f symbols ${FZF_PREVIEW_COLUMNS:+-s "${FZF_PREVIEW_COLUMNS}x${FZF_PREVIEW_LINES}"} "$1"
+    else
+        desc "$1"
+    fi
+}
+
+# vídeo: grade 2x2 com quadros a 10, 35, 60 e 85% da duração, mostrada pelo image
+video() {
+    have ffmpeg && have ffprobe || { desc "$1"; return; }
+    _vd=$(ffprobe -v error -show_entries format=duration -of default=nw=1:nk=1 "$1" 2>/dev/null)
+    _vf="$1"
+    _vt=$(mktemp) || { desc "$_vf"; return; }
+    trap 'rm -f "$_vt"' EXIT
+    set --
+    for _vs in $(awk -v d="$_vd" 'BEGIN { if (d > 0) print d*.10, d*.35, d*.60, d*.85 }'); do
+        set -- "$@" -ss "$_vs" -i "$_vf"
+    done
+    if [ $# -eq 16 ] && ffmpeg -v error -y "$@" -filter_complex \
+        '[0:v]scale=240:-2[a];[1:v]scale=240:-2[b];[2:v]scale=240:-2[c];[3:v]scale=240:-2[d];[a][b][c][d]xstack=inputs=4:layout=0_0|w0_0|0_h0|w0_h0' \
+        -frames:v 1 -update 1 -f image2 -c:v png "$_vt" 2>/dev/null && [ -s "$_vt" ]; then
+        image "$_vt"
+    else
+        desc "$_vf"
+    fi
+}
+
+handlenoextension() {
+    case "$(mimetype "$1")" in
+        text/*) cat "$1" ;;
+        inode/directory) eza -1 --group-directories-first --no-quotes --icons always -a "$1" ;;
+        *) desc "$1" ;;
+    esac
+}
+
+# a link previews as what it points to (foo -> bar.jpg is an image)
+name=$1
+[ -L "$1" ] && { name=$(realpath "$1" 2>/dev/null || readlink -f "$1" 2>/dev/null) || name=$1; }
+
+case "$(printf "%s\n" "$name" | awk '{print tolower($0)}')" in
+	*.tgz|*.tar.gz) have tar && tar tzf "$1" || desc "$1" ;;
+	*.tar.bz2|*.tbz2) have tar && tar tjf "$1" || desc "$1" ;;
+	*.tar.xz|*.txz) have tar && tar tJf "$1" || desc "$1" ;;
+	*.tar) have tar && tar tf "$1" || desc "$1" ;;
+	*.zip|*.jar|*.war|*.ear|*.oxt) have unzip && unzip -l "$1" || desc "$1" ;;
+	*.gz) have gzip && gzip -l "$1" || desc "$1" ;;
+	*.rar) have unrar && unrar l "$1" || desc "$1" ;;
+	*.md) have glow && glow "$1" || cat "$1" ;;
+	*.7z) have 7z && 7z l "$1" || desc "$1" ;;
+	*.[1-8]) have man && man "$1" | col -b || desc "$1" ;;
+	*.o) have nm && nm "$1" || desc "$1" ;;
+	*.torrent) have transmission-show && transmission-show "$1" || desc "$1" ;;
+	*.iso) have iso-info && iso-info --no-header -l "$1" || desc "$1" ;;
+	*.odt|*.ods|*.odp|*.sxw) have odt2txt && odt2txt "$1" || desc "$1" ;;
+	*.doc) have catdoc && catdoc "$1" || desc "$1" ;;
+	*.docx) have docx2txt && docx2txt "$1" || desc "$1" ;;
+	*.xml|*.html) have w3m && w3m -dump "$1" || cat "$1" ;;
+	*.xls|*.xlsx)
+		have ssconvert && ssconvert --export-type=Gnumeric_stf:stf_csv "$1" "fd://1" || desc "$1"
+		;;
+	*.wav|*.mp3|*.flac|*.m4a|*.wma|*.ape|*.ac3|*.og[agx]|*.spx|*.opus|*.as[fx]|*.mka)
+		have exiftool && exiftool "$1" || desc "$1"
+		;;
+	*.jpg|*.jpeg|*.png|*.gif|*.bmp|*.tiff|*.webp)
+		image "$1"
+		;;
+	*.mp4|*.m4v|*.mkv|*.webm|*.mov|*.avi|*.wmv|*.flv|*.mpg|*.mpeg|*.ogv|*.3gp)
+		video "$1"
+		;;
+	*) handlenoextension "$1" ;;
+esac
+
+exit 0

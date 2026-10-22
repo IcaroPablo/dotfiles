@@ -1,0 +1,279 @@
+#!/bin/sh
+# requires a sixel terminal (st do branch sixel, foot, xterm -ti vt340)
+#
+# spdfv documento [página]     PDF, DjVu, EPUB (e o mais que o mutool abre)
+#
+#   j k, setas      rola              J K               próxima/anterior página
+#   d u             meia tela         espaço b, PgDn PgUp  tela inteira
+#   g G             primeira/última   [n]Enter, [n]g    vai para a página n
+#   + -             zoom              = w               largura / página inteira
+#   h l             anda para o lado  Ctrl-R            inverte as cores (recolor)
+#   r               redesenha         q                 sai
+#
+# Rola contínuo como o zathura: as páginas ficam empilhadas, e a tela é um
+# recorte delas. Cada página é renderizada uma vez por largura e fica em cache;
+# redesenhar é só recortar (ImageMagick) e codificar o sixel (chafa). O
+# ImageMagick também gera sixel, mas leva ~0,4 s por tela; o chafa, ~20 ms.
+#
+# Renderiza com o poppler (PDF) e o djvulibre (DjVu). EPUB e o resto que o
+# mupdf lê viram PDF uma vez, na abertura, com o mutool.
+#
+# Cores em ~/.config/spdfv/spdfvrc, na sintaxe do zathurarc (set chave valor),
+# com as chaves dele: default-bg, statusbar-bg, statusbar-fg, recolor,
+# recolor-lightcolor, recolor-darkcolor, recolor-keephue.
+set -u
+f=${1:?uso: spdfv documento [página]}
+name=${f##*/}
+[ -r "$f" ] || { echo "spdfv: não consigo ler $f" >&2; exit 1; }
+
+# need ferramenta...: sai dizendo qual falta (o host, por exemplo, não tem leitor)
+need() {
+    for _t; do
+        command -v "$_t" >/dev/null 2>&1 ||
+            { echo "spdfv: falta o $_t para abrir $name" >&2; exit 1; }
+    done
+}
+need chafa python3
+command -v magick >/dev/null 2>&1 || need convert
+
+# O ImageMagick 7 é `magick`; o 6 (o do OpenBSD) é `convert`, e não tem QOI.
+# QOI é o intermediário mais rápido (~30 ms o recorte); sem ele, PNG cru.
+if command -v magick >/dev/null 2>&1; then im=magick; else im=convert; fi
+if $im -list format 2>/dev/null | grep -q '^ *QOI'; then ext=qoi
+else ext=png; im="$im -define png:compression-level=0"; fi
+
+bg='rgb(0,0,0)' sbg= sfg= recolor=false light='rgb(255,255,255)' dark='rgb(0,0,0)'
+keephue=false
+rc=${XDG_CONFIG_HOME:-$HOME/.config}/spdfv/spdfvrc
+[ -r "$rc" ] && while IFS='	' read -r k v; do
+    case $k in
+    default-bg) bg=$v ;;
+    statusbar-bg) sbg=$v ;;
+    statusbar-fg) sfg=$v ;;
+    recolor) recolor=$v ;;
+    recolor-lightcolor) light=$v ;;
+    recolor-darkcolor) dark=$v ;;
+    recolor-keephue) keephue=$v ;;
+    esac
+done <<EOF
+$(awk '$1 == "set" { k = $2; sub(/^[ \t]*set[ \t]+[^ \t]+[ \t]+/, ""); sub(/[ \t]+#.*$/, "")
+    gsub(/"/, ""); print k "\t" $0 }' "$rc")
+EOF
+
+n=${2:-1}       # página atual
+y=0             # deslocamento, em pixels, dentro da página n
+x=0             # deslocamento horizontal (com zoom)
+zoom=100        # % da largura da janela; 0 = página inteira
+gap=8           # pixels entre uma página e outra
+
+tmp=$(mktemp -d) || exit 1
+old=$(stty -g)
+trap 'stty "$old"; [ -n "${alt:-}" ] && printf "\033[?25h\033[?1049l"
+    [ -n "${pre:-}" ] && kill "$pre" 2>/dev/null; wait; rm -rf "$tmp"' EXIT
+trap 'exit 1' INT TERM HUP
+
+# O formato pelo conteúdo, não pela extensão: o openfile decide pelo mimetype.
+case $(dd bs=4 count=1 <"$f" 2>/dev/null) in
+'%PDF') kind=pdf ;;
+'AT&T') kind=djvu ;;
+*)
+    need mutool pdfinfo pdftoppm
+    echo "spdfv: convertendo $name ..." >&2
+    mutool convert -o "$tmp/doc.pdf" "$f" >/dev/null 2>&1 ||
+        { echo "spdfv: o mutool não converteu $name" >&2; exit 1; }
+    f=$tmp/doc.pdf kind=pdf ;;
+esac
+
+case $kind in
+pdf) need pdfinfo pdftoppm
+    total=$(pdfinfo "$f" 2>/dev/null | awk '/^Pages:/ {print $2}') ;;
+djvu) need djvused ddjvu
+    total=$(djvused -e n "$f" 2>/dev/null) ;;
+esac
+[ -n "$total" ] || { echo "spdfv: não consigo ler $name" >&2; exit 1; }
+
+# só agora a tela alternativa: o que deu errado até aqui fica visível na volta
+printf '\033[?1049h\033[?25l'; alt=1
+stty -icanon -echo min 1
+
+# largura e altura da página $1, em qualquer unidade: só a proporção importa
+pagesize() {
+    case $kind in
+    pdf) pdfinfo -f "$1" -l "$1" "$f" | awk '/size:/ {print $4, $6; exit}' ;;
+    djvu) djvused -e "select $1; size" "$f" | tr -c '0-9\n' ' ' ;;
+    esac
+}
+
+# página $1 na largura $P, em $2.ppm
+raster() {
+    case $kind in
+    pdf) pdftoppm -f "$1" -l "$1" -singlefile -scale-to-x "$P" -scale-to-y -1 \
+        "$f" "$2" ;;
+    # -size é uma caixa, e o djvulibre mantém a proporção dentro dela
+    djvu) ddjvu -format=ppm -page="$1" -size="${P}x65535" "$f" "$2.ppm" ;;
+    esac
+}
+
+# Recolor como o do zathura: o claro vira light, o escuro vira dark. Com
+# keephue, o que tem cor mantém matiz e saturação e só a luminosidade segue a
+# escala; a máscara de saturação decide quanto de cada.
+# paint entrada.ppm altura.h saída
+paint() {
+    _h=$2 _out=$3
+    set -- "$1"
+    if [ "$recolor" = true ]; then
+        set -- "$1" '(' +clone -colorspace gray -colorspace sRGB \
+            +level-colors "$dark,$light" ')'
+        [ "$keephue" = true ] && set -- "$@" \
+            '(' -clone 1 -clone 0 -compose colorize -composite ')' \
+            '(' -clone 0 -colorspace HSL -channel G -separate +channel ')' \
+            -delete 0 -compose over -composite
+        [ "$keephue" = true ] || set -- "$@" -delete 0
+    fi
+    $im "$@" -background "$bg" -gravity south -splice 0x$gap \
+        -format '%h' -write info:"$_h" "$_out"
+}
+
+# Tamanho da área de texto em células e em pixels. O st não responde às
+# consultas CSI 14t/16t (o chafa chuta errado sem elas), mas preenche os
+# pixels no TIOCGWINSZ — e o stty só mostra linhas e colunas.
+geom() {
+    set -- $(python3 -c 'import fcntl,termios,struct
+print(*struct.unpack("4H",fcntl.ioctl(0,termios.TIOCGWINSZ,bytes(8))))')
+    rows=$1 cols=$2 W=$3
+    ch=$(($4 / rows))
+    H=$(((rows - 1) * ch))  # células inteiras: o chafa não acrescenta margem
+}
+
+# Largura da página, em pixels, no zoom atual.
+pw() {
+    if [ "$zoom" -eq 0 ]; then
+        # página inteira: a altura enche a tela, pela proporção da página
+        set -- $(pagesize "$n")
+        awk -v w="$1" -v h="$2" -v H="$H" -v W="$W" \
+            'BEGIN { p = int(H * w / h); print (p > W ? W : p) }'
+    else
+        echo $((W * zoom / 100))
+    fi
+}
+
+# Renderiza a página $1 em $tmp/$1-$P-$recolor.$ext, com a altura em .h.
+# Escreve com nome provisório ($t: fg ou bg) e só depois renomeia, para que o
+# prefetch em segundo plano e o primeiro plano não leiam arquivo pela metade.
+render() {
+    p=$tmp/$1-$P-$recolor t=${t:-fg}
+    [ -f "$p.h" ] && return
+    raster "$1" "$p.$t" &&
+    paint "$p.$t.ppm" "$p.$t.h" "$p.$t.$ext" &&
+    mv "$p.$t.$ext" "$p.$ext" && mv "$p.$t.h" "$p.h"
+    rm -f "$p.$t.ppm"
+}
+
+# Altura da página $1, já com o espaço entre páginas.
+page() { render "$1"; cat "$tmp/$1-$P-$recolor.h"; }
+
+prefetch() {
+    for i in 1 2; do
+        [ $((n + i)) -le "$total" ] && render $((n + i))
+    done
+}
+
+# Põe n/y/x dentro dos limites, atravessando a fronteira entre páginas.
+settle() {
+    [ "$n" -lt 1 ] && n=1 y=0
+    [ "$n" -gt "$total" ] && n=$total
+    while [ "$y" -lt 0 ] && [ "$n" -gt 1 ]; do
+        n=$((n - 1)); y=$((y + $(page $n)))
+    done
+    [ "$y" -lt 0 ] && y=0
+    while :; do
+        h=$(page $n)
+        [ "$y" -ge "$h" ] && [ "$n" -lt "$total" ] || break
+        y=$((y - h)); n=$((n + 1))
+    done
+    if [ "$n" -eq "$total" ]; then
+        m=$((h - H)); [ "$m" -lt 0 ] && m=0
+        [ "$y" -gt "$m" ] && y=$m
+    fi
+    m=$((P - W)); [ "$m" -lt 0 ] && m=0
+    [ "$x" -gt "$m" ] && x=$m
+    [ "$x" -lt 0 ] && x=0
+}
+
+# "rgba(29,32,33,1)" ou "#1d2021" em "29;32;33", para a cor de 24 bits do terminal
+tc() {
+    echo "$1" | awk 'function hx(s) { return index("0123456789abcdef", s) - 1 }
+        /^#/ { s = tolower(substr($0, 2)); for (i = 1; i <= 5; i += 2)
+            printf "%s%d", (i > 1 ? ";" : ""), hx(substr(s, i, 1)) * 16 + hx(substr(s, i + 1, 1)) }
+        /^rgb/ { gsub(/[^0-9.,]/, ""); split($0, c, ","); printf "%d;%d;%d", c[1], c[2], c[3] }'
+}
+status='\033[7m'
+[ -n "$sbg" ] && [ -n "$sfg" ] && status="\\033[38;2;$(tc "$sfg");48;2;$(tc "$sbg")m"
+
+draw() {
+    geom
+    P=$(pw)
+    # zoom ou janela redimensionada mudam a largura: fica no mesmo ponto
+    [ "${lastP:-$P}" -ne "$P" ] && y=$((y * P / lastP)) x=$((x * P / lastP))
+    lastP=$P
+    settle
+    # Empilha recortes das páginas n, n+1, ... até encher a tela; a barra de
+    # status mostra a página que está no meio dela.
+    c=$tmp/%d-$P-$recolor.$ext
+    set -- "$(printf "$c" "$n")" -crop "${W}x${H}+$x+$y" +repage
+    left=$((H - $(page $n) + y)) k=$n shown=$n
+    while [ "$left" -gt 0 ] && [ "$k" -lt "$total" ]; do
+        [ "$left" -gt $((H / 2)) ] && shown=$((k + 1))
+        k=$((k + 1)); h=$(page $k)
+        set -- "$@" '(' "$(printf "$c" "$k")" -crop "${W}x${left}+$x+0" +repage ')'
+        left=$((left - h))
+    done
+    $im "$@" -append -background "$bg" -gravity north \
+        -extent "${W}x${H}" "$tmp/view.$ext"
+    # o $(...) come o \n que o chafa põe depois da imagem, que rolaria a tela
+    printf '\033[H%s' "$(chafa -f sixels --probe=off --exact-size=on \
+        --polite=on "$tmp/view.$ext")"
+    z=$zoom%; [ "$zoom" -eq 0 ] && z=página
+    printf "\\033[%d;1H$status %s  %d/%d  %s \\033[K\\033[m" \
+        "$rows" "$name" "$shown" "$total" "$z"
+    [ -n "${pre:-}" ] && kill -0 "$pre" 2>/dev/null && return
+    (t=bg; prefetch) </dev/null >/dev/null 2>&1 & pre=$!
+}
+
+key() { dd bs=1 count=1 2>/dev/null; }
+esc=$(printf '\033') ctrl_r=$(printf '\022')
+
+num=
+draw
+while :; do
+    k=$(key)
+    [ "$k" = "$esc" ] && k=$(key)$(key) &&
+        case $k in '['[56]) k=$k$(key) ;; esac
+    step=$((H / 10))
+    case $k in
+    [0-9]) num=$num$k; continue ;;
+    '') [ -n "$num" ] || continue; n=$num y=0 ;;
+    g) n=${num:-1} y=0 ;;
+    j|'[B') y=$((y + step)) ;;
+    k|'[A') y=$((y - step)) ;;
+    d) y=$((y + H / 2)) ;;
+    u) y=$((y - H / 2)) ;;
+    ' '|'[6~') y=$((y + H - step)) ;;
+    b|'[5~') y=$((y - H + step)) ;;
+    J) n=$((n + 1)) y=0 ;;
+    K) [ "$y" -lt "$step" ] && n=$((n - 1)); y=0 ;;
+    G) n=$total y=0 ;;
+    l|'[C') x=$((x + W / 10)) ;;
+    h|'[D') x=$((x - W / 10)) ;;
+    +) [ "$zoom" -eq 0 ] && zoom=100 || zoom=$((zoom + 25)) ;;
+    -) [ "$zoom" -gt 50 ] && zoom=$((zoom - 25)) ;;
+    =) zoom=100 x=0 ;;
+    w) zoom=0 x=0 y=0 ;;
+    "$ctrl_r") [ "$recolor" = true ] && recolor=false || recolor=true ;;
+    r) printf '\033[2J' ;;
+    q) exit 0 ;;
+    *) num=; continue ;;
+    esac
+    num=
+    draw
+done

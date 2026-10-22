@@ -1,0 +1,515 @@
+#!/bin/sh
+# requires a sixel terminal (st do branch sixel, foot, xterm -ti vt340)
+#
+# igsaved                  percorre os posts salvos no Instagram, um a um
+# igsaved sync             traz a lista de salvos da conta
+# igsaved import a.json    ...ou do export ("Baixe suas informações", JSON)
+#
+#   h l, setas  foto anterior/próxima do carrossel
+#   d           baixa esta foto/vídeo       a   baixa o carrossel inteiro
+#   w           assiste o vídeo no mpv      c   legenda inteira
+#   p           abre o perfil, e o anota    o   abre o post no navegador
+#   y           copia a foto (de vídeo, a capa) para a área de transferência
+#   n           escreve uma nota sobre o post (o filme da foto, por exemplo)
+#   Enter       pronto, próximo             s   deixa para depois
+#   r           tira dos salvos no Instagram, e próximo
+#   k           volta ao anterior           q   sai
+#
+# Fala com o Instagram pela sessão do Chromium: os cookies saem do perfil dele
+# a cada execução (pelo yt-dlp, que sabe decifrá-los), então basta estar logado
+# lá. A lista e os metadados ficam em ~/.local/share/igsaved; o que se baixa,
+# as notas (notas.md) e os perfis (perfis.md) em $IGSAVED_DIR (~/instagram),
+# que é o que sobra depois de apagar a conta.
+#
+# "Pronto" tira o post da fila, com ou sem ação; "depois" o deixa para a
+# próxima vez. Na conta só o r mexe: o resto deixa os salvos como estão.
+#
+# CHROMIUM_DIR escolhe a instalação.
+set -u
+
+die() { echo "igsaved: $*" >&2; exit 1; }
+
+state=${XDG_DATA_HOME:-$HOME/.local/share}/igsaved
+out=${IGSAVED_DIR:-$HOME/instagram}
+mkdir -p "$state/posts" "$out" || exit 1
+touch "$state/list" "$state/done"
+
+dir=$HOME/.config/chromium
+app=io.github.ungoogled_software.ungoogled_chromium
+[ -d "$HOME/.var/app/$app/config/chromium" ] && dir=$HOME/.var/app/$app/config/chromium
+dir=${CHROMIUM_DIR:-$dir}
+
+# A rede e o JSON ficam com o Python; o sh cuida da tela e do teclado.
+#   cookies               cookies do instagram.com, do Chromium para cookies.txt
+#   sync                  lista de salvos, página a página, em list e posts/
+#   import arquivo        códigos de post achados no JSON do export
+#   show código           usuário, itens, data, tipos (f/v); legenda numa linha
+#   caption código        legenda inteira
+#   thumb código i W H f  maior versão da foto i que caiba em WxH pixels
+#   get código i|all dir  baixa em dir/usuário/, imprime os caminhos
+#   url código i          endereço do vídeo i (ou da foto)
+#   unsave código         tira o post dos salvos da conta
+#   img código i arquivo  a foto i na maior versão (de vídeo, a capa)
+py() {
+    IGS_STATE=$state IGS_CHROMIUM=$dir python3 -I - "$@" <<'PY'
+import sys, os, json, re, time, http.cookiejar
+import urllib.request, urllib.error, urllib.parse
+
+st = os.environ["IGS_STATE"]
+jar_path = os.path.join(st, "cookies.txt")
+UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36")
+B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+
+def die(msg):
+    print("igsaved: " + msg, file=sys.stderr)
+    sys.exit(1)
+
+def cookies():
+    from yt_dlp.cookies import extract_cookies_from_browser
+    class Quiet:
+        def debug(self, m, only_once=False): pass
+        info = warning = debug
+        def error(self, m): print(m, file=sys.stderr)
+        def progress_bar(self): return None
+    prof = os.path.join(os.environ["IGS_CHROMIUM"], "Default")
+    src = extract_cookies_from_browser("chromium", prof, logger=Quiet())
+    jar = http.cookiejar.MozillaCookieJar(jar_path)
+    for c in src:
+        if c.domain.endswith("instagram.com"):
+            jar.set_cookie(c)
+    if not any(c.name == "sessionid" for c in jar):
+        die("o Chromium não está logado no Instagram")
+    os.umask(0o077)
+    jar.save(ignore_discard=True, ignore_expires=True)
+
+def opener():
+    jar = http.cookiejar.MozillaCookieJar(jar_path)
+    jar.load(ignore_discard=True, ignore_expires=True)
+    csrf = next((c.value for c in jar if c.name == "csrftoken"), "")
+    return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar)), csrf
+
+# Com data, POST (form); sem, GET. headers soma aos de sempre, e None tira um.
+def api(path, data=None, headers={}):
+    op, csrf = opener()
+    if data is not None:
+        data = urllib.parse.urlencode(data).encode()
+    h = {"User-Agent": UA, "X-IG-App-ID": "936619743392459",
+         "X-CSRFToken": csrf, "X-Requested-With": "XMLHttpRequest",
+         "Referer": "https://www.instagram.com/", **headers}
+    req = urllib.request.Request("https://www.instagram.com" + path, data,
+        headers={k: v for k, v in h.items() if v is not None})
+    try:
+        with op.open(req, timeout=30) as r:
+            return json.load(r)
+    except urllib.error.HTTPError as e:
+        if e.code == 429:
+            die("o Instagram pediu calma (429): espere uns minutos")
+        if e.code in (401, 403):
+            die("sessão recusada: entre de novo no Instagram pelo Chromium")
+        raise
+    except json.JSONDecodeError:
+        # sessão vencida devolve a página de login, não JSON
+        die("sessão recusada: entre de novo no Instagram pelo Chromium")
+
+def save(m):
+    p = os.path.join(st, "posts", m["code"] + ".json")
+    with open(p + ".tmp", "w") as f:
+        json.dump({"fetched": time.time(), "media": m}, f)
+    os.replace(p + ".tmp", p)
+
+# Os endereços do CDN vencem em uns dias: com mais de 20 h, busca de novo.
+def load(code, force=False):
+    p = os.path.join(st, "posts", code + ".json")
+    d = None
+    if os.path.exists(p):
+        with open(p) as f:
+            d = json.load(f)
+    if d and not force and time.time() - d["fetched"] < 20 * 3600:
+        return d["media"]
+    pk = d["media"]["pk"] if d else None
+    if pk is None:
+        pk = 0
+        for ch in code[:11]:  # depois do 11º vem o sufixo de post privado
+            pk = pk * 64 + B64.index(ch)
+    try:
+        m = api("/api/v1/media/%s/info/" % pk)["items"][0]
+    except urllib.error.HTTPError as e:
+        if e.code in (400, 404):
+            die("o post não existe mais (ou o perfil ficou privado)")
+        raise
+    save(m)
+    return m
+
+def items(m):
+    return m.get("carousel_media") or [m]
+
+def caption(m):
+    return (m.get("caption") or {}).get("text") or ""
+
+def download(url, path):
+    req = urllib.request.Request(url, headers={"User-Agent": UA})
+    with urllib.request.urlopen(req, timeout=60) as r, open(path + ".part", "wb") as f:
+        while True:
+            b = r.read(1 << 16)
+            if not b:
+                break
+            f.write(b)
+    os.replace(path + ".part", path)
+
+# Endereço vencido antes das 20 h dá 403: busca o post de novo e tenta outra vez.
+def fetch(code, pick, path):
+    for force in (False, True):
+        try:
+            return download(pick(load(code, force)), path)
+        except urllib.error.HTTPError as e:
+            if force or e.code not in (403, 404, 410):
+                raise
+
+def best(it, video=True):
+    if video and it.get("video_versions"):
+        return it["video_versions"][0]["url"]
+    c = it["image_versions2"]["candidates"]
+    return max(c, key=lambda x: x["width"])["url"]
+
+# Tirar dos salvos só existe como mutação GraphQL do site, que pede os tokens
+# da página (fb_dtsg, lsd, o id da conta, as revisões) e o doc_id da mutação.
+# A API REST de antes (/api/v1/web/save/.../unsave/) responde 404. Os tokens
+# ficam em web.json por uma hora. O doc_id muda quando o Instagram publica
+# versão nova: se a mutação volta vazia, busca tudo de novo e procura o doc_id
+# atual nos scripts do site (centenas, uns 30 s), uma vez só.
+UNSAVE = "PolarisAPIUnsavePostMutation"
+
+def web(fresh=False):
+    p = os.path.join(st, "web.json")
+    try:
+        with open(p) as f:
+            w = json.load(f)
+    except (OSError, ValueError):
+        w = {"doc": "27203919972607144"}
+    if not fresh and time.time() - w.get("t", 0) < 3600:
+        return w
+    op, _ = opener()
+    h = op.open(urllib.request.Request("https://www.instagram.com/",
+        headers={"User-Agent": UA}), timeout=30).read().decode("utf-8", "replace")
+    def g(k):
+        m = re.search(r'"%s":"?([^",}]+)' % re.escape(k), h)
+        if not m:
+            die("a página do Instagram mudou: não achei %s" % k)
+        return m.group(1)
+    w["dtsg"] = re.search(r'"DTSGInitialData",\[\],\{"token":"([^"]+)"', h).group(1)
+    w["lsd"] = re.search(r'"LSD",\[\],\{"token":"([^"]+)"', h).group(1)
+    w["actor"] = g("NON_FACEBOOK_USER_ID")
+    w["form"] = {"__user": "0", "__a": "1", "__comet_req": "7",
+        "dpr": "1", "__ccg": "EXCELLENT", "__rev": g("client_revision"),
+        "__hs": g("haste_session"), "__hsi": g("hsi"), "__spin_r": g("__spin_r"),
+        "__spin_b": g("__spin_b"), "__spin_t": g("__spin_t"),
+        "jazoest": "2" + str(sum(map(ord, w["dtsg"])))}
+    if fresh:
+        pat = re.compile(r'"%s_instagramRelayOperation",\[\],\(function\([^)]*\)\{a\.exports="(\d+)"' % UNSAVE)
+        for u in sorted(set(u.replace("\\/", "/") for u in
+                re.findall(r'https:\\?/\\?/static\.cdninstagram\.com[^"\']+?\.js[^"\']*', h))):
+            try:
+                m = pat.search(urllib.request.urlopen(urllib.request.Request(u,
+                    headers={"User-Agent": UA}), timeout=30).read().decode("utf-8", "replace"))
+            except OSError:
+                continue
+            if m:
+                w["doc"] = m.group(1)
+                break
+    w["t"] = time.time()
+    with open(p, "w") as f:
+        json.dump(w, f)
+    return w
+
+cmd, args = sys.argv[1], sys.argv[2:]
+lst = os.path.join(st, "list")
+known = set(open(lst).read().split())
+
+if cmd == "cookies":
+    cookies()
+
+elif cmd == "sync":
+    # Sempre a lista inteira: parar na primeira página conhecida perderia o
+    # resto de um sync interrompido. Cada página entra na hora no list.
+    max_id, n = None, 0
+    while True:
+        q = "/api/v1/feed/saved/posts/"
+        if max_id:
+            q += "?max_id=" + urllib.parse.quote(max_id)
+        d = api(q)
+        new = []
+        for it in d.get("items", []):
+            m = it.get("media")
+            if not m:
+                continue
+            save(m)
+            if m["code"] not in known:
+                known.add(m["code"])
+                new.append(m["code"])
+        with open(lst, "a") as f:
+            f.writelines(c + "\n" for c in new)
+        n += len(new)
+        print("\r%d novos, %d na lista" % (n, len(known)), end="", file=sys.stderr)
+        max_id = d.get("next_max_id")
+        if not d.get("more_available") or not max_id:
+            break
+        time.sleep(2)
+    print(file=sys.stderr)
+
+elif cmd == "import":
+    # Procura endereço de post em qualquer parte do arquivo, em vez de seguir a
+    # estrutura do export, que o Instagram já mudou mais de uma vez.
+    t = open(args[0], encoding="utf-8", errors="replace").read()
+    new = []
+    for c in re.findall(r"instagram\.com/(?:[^/\"\s]+/)?(?:p|reels?|tv)/([\w-]+)", t):
+        if c not in known:
+            known.add(c)
+            new.append(c)
+    with open(lst, "a") as f:
+        f.writelines(c + "\n" for c in new)
+    print("%d novos, %d na lista" % (len(new), len(known)), file=sys.stderr)
+
+elif cmd == "show":
+    m = load(args[0])
+    its = items(m)
+    kinds = "".join("v" if it.get("video_versions") else "f" for it in its)
+    print("%s\t%d\t%s\t%s" % (m["user"]["username"], len(its),
+          time.strftime("%Y-%m-%d", time.localtime(m["taken_at"])), kinds))
+    print(" ".join(caption(m).split()))
+
+elif cmd == "caption":
+    print(caption(load(args[0])))
+
+elif cmd == "thumb":
+    code, i, W, H, path = args[0], int(args[1]), int(args[2]), int(args[3]), args[4]
+    # Junto das versões na proporção do post vêm recortes quadrados do centro:
+    # fora com eles. Das que sobram, a menor que cubra WxH; o chafa reduz.
+    def pick(m):
+        it = items(m)[i]
+        c = it["image_versions2"]["candidates"]
+        r = (it.get("original_width") or c[0]["width"]) / (it.get("original_height") or c[0]["height"])
+        c = [x for x in c if abs(x["width"] / x["height"] - r) < 0.02] or c
+        big = [x for x in c if x["width"] >= W or x["height"] >= H]
+        return (min(big, key=lambda x: x["width"]) if big
+                else max(c, key=lambda x: x["width"]))["url"]
+    fetch(code, pick, path)
+
+elif cmd == "get":
+    code, which, dest = args
+    m = load(code)
+    its = items(m)
+    sel = range(len(its)) if which == "all" else [int(which)]
+    d = os.path.join(dest, m["user"]["username"])
+    os.makedirs(d, exist_ok=True)
+    for i in sel:
+        url = best(its[i])
+        ext = os.path.splitext(urllib.parse.urlparse(url).path)[1] or ".jpg"
+        name = code + ("_%d" % (i + 1) if len(its) > 1 else "") + ext
+        path = os.path.join(d, name)
+        if not os.path.exists(path):
+            fetch(code, lambda m, i=i: best(items(m)[i]), path)
+        print(path)
+
+elif cmd == "unsave":
+    pk = load(args[0])["pk"]
+    for retry in (False, True):
+        w = web(retry)
+        d = api("/api/graphql", {**w["form"], "fb_dtsg": w["dtsg"], "lsd": w["lsd"],
+            "av": w["actor"], "doc_id": w["doc"], "fb_api_caller_class": "RelayModern",
+            "fb_api_req_friendly_name": UNSAVE, "server_timestamps": "true",
+            "variables": json.dumps({"input": {"media_id": pk, "actor_id": w["actor"],
+                                               "client_mutation_id": "1"}})},
+            # os cabeçalhos do navegador: com os da API REST (X-Requested-With)
+            # a mutação volta "for (;;);" e erro 1357054
+            {"X-FB-LSD": w["lsd"], "X-FB-Friendly-Name": UNSAVE, "X-ASBD-ID": "359341",
+             "X-IG-WWW-Claim": "0", "Sec-Fetch-Site": "same-origin",
+             "Origin": "https://www.instagram.com", "X-Requested-With": None})
+        if (d.get("data") or {}).get("xig_media_unsave"):
+            break
+    else:
+        die("o Instagram não tirou dos salvos: %s" % json.dumps(d)[:200])
+
+elif cmd == "img":
+    fetch(args[0], lambda m: best(items(m)[int(args[1])], video=False), args[2])
+
+elif cmd == "url":
+    print(best(items(load(args[0]))[int(args[1])]))
+PY
+}
+
+case ${1:-} in
+sync) py cookies && py sync; exit ;;
+import) [ -r "${2:-}" ] || die "uso: igsaved import arquivo.json"
+    py import "$2"; exit ;;
+'') ;;
+*) die "uso: igsaved [sync | import arquivo.json]" ;;
+esac
+
+command -v chafa >/dev/null 2>&1 || die "falta o chafa"
+py cookies || exit 1
+[ -s "$state/list" ] || py sync || exit 1
+
+tmp=$(mktemp -d) || exit 1
+old=$(stty -g)
+trap 'stty "$old"; [ -n "${alt:-}" ] && printf "\033[?25h\033[?1049l"
+    rm -rf "$tmp"' EXIT
+trap 'exit 1' INT TERM HUP
+
+# A fila é fotografada na entrada: "pronto" não a encolhe embaixo do k.
+# FILENAME e não NR == FNR, que com o done vazio vale também para o list.
+awk -F'\t' 'FILENAME == ARGV[1] { done[$1]; next } !($1 in done)' \
+    "$state/done" "$state/list" >"$tmp/queue"
+total=$(wc -l <"$tmp/queue" | tr -d ' ')
+[ "$total" -gt 0 ] || { echo "igsaved: fila vazia, nada salvo por ver"; exit 0; }
+
+# Navegador: $BROWSER, senão o Chromium de onde vêm os cookies (logado).
+if [ -n "${BROWSER:-}" ]; then web=$BROWSER
+elif [ "$dir" = "$HOME/.var/app/$app/config/chromium" ]; then web="flatpak run $app"
+elif command -v chromium >/dev/null 2>&1; then web=chromium
+else web=xdg-open; fi
+browse() { $web "$1" </dev/null >/dev/null 2>&1 & }
+
+printf '\033[?1049h\033[?25l'; alt=1
+# O dd não acorda com o SIGWINCH: em vez disso a leitura desiste a cada meio
+# segundo (time 5), e o laço confere o tamanho.
+stty -icanon -echo min 0 time 5
+
+# Como no spdfv: o st não responde às consultas de tamanho em pixels, mas
+# preenche o TIOCGWINSZ.
+geom() {
+    set -- $(python3 -c 'import fcntl,termios,struct
+print(*struct.unpack("4H",fcntl.ioctl(0,termios.TIOCGWINSZ,bytes(8))))')
+    rows=$1 cols=$2 W=$3
+    ch=$(($4 / rows))
+}
+
+# Lê o post $code em user/n/date/kinds e a legenda curta em $tmp/cap.
+load() {
+    j=0 acts= msg=
+    url=https://www.instagram.com/p/$code/
+    if py show "$code" >"$tmp/info" 2>"$tmp/err"; then
+        IFS='	' read -r user n date kinds <"$tmp/info"
+        sed 1d "$tmp/info" >"$tmp/cap"
+    else
+        user=? n=0 date= kinds=
+        cp "$tmp/err" "$tmp/cap"
+    fi
+}
+
+draw() {
+    printf '\033[H\033[2J\033[1m@%s\033[m  %s  [%d/%d]\n' \
+        "$user" "$date" "$i" "$total"
+    # quebrada aqui, e não no show, para acompanhar a largura da janela
+    fold -s -w "$cols" "$tmp/cap" | head -2
+    if [ "$n" -gt 0 ]; then
+        k=$(printf %s "$kinds" | cut -c$((j + 1)))
+        [ "$k" = v ] && t=vídeo || t=foto
+        [ "$n" -gt 1 ] && t="$t $((j + 1))/$n"
+        # 4 linhas de texto em cima, 1 de status embaixo, 1 de folga. O chafa
+        # tira o tamanho da célula do TIOCGWINSZ e encaixa a foto nessa caixa.
+        f=$tmp/$code-$j-$W.jpg
+        [ -s "$f" ] || py thumb "$code" "$j" "$W" $(((rows - 6) * ch)) "$f" 2>"$tmp/err" ||
+            msg=$(tail -1 "$tmp/err")
+        printf '\033[4;1H\033[2m%s\033[m' "$t"
+        # o $(...) come o \n que o chafa põe depois da imagem, que rolaria a tela
+        [ -s "$f" ] && printf '\033[5;1H%s' "$(chafa -f sixels --probe=off \
+            --polite=on -s "${cols}x$((rows - 6))" "$f")"
+    fi
+    printf '\033[%d;1H\033[7m %s \033[m %s\033[K' "$rows" \
+        "d a w y c p o n · Enter pronto · r remove · s depois · k volta · q" "${msg:-$acts}"
+}
+
+status() { msg=$1; printf '\033[%d;1H\033[K%s' "$rows" "$msg"; }
+
+note() {
+    stty "$old"; printf '\033[%d;1H\033[K\033[?25hnota: ' "$rows"
+    IFS= read -r t
+    stty -icanon -echo min 0 time 5; printf '\033[?25l'
+    [ -n "$t" ] || return
+    printf -- '- [@%s](%s): %s\n' "$user" "$url" "$t" >>"$out/notas.md"
+    acts="$acts nota"
+}
+
+get() {
+    status "baixando..."
+    if py get "$code" "$1" "$out" >"$tmp/got" 2>"$tmp/err"; then
+        acts="$acts baixou($(wc -l <"$tmp/got" | tr -d ' '))"
+        msg=  # o "baixando..." do status, que senão tapava o acts
+    else
+        msg=$(tail -1 "$tmp/err")
+    fi
+}
+
+# PNG, e não o JPEG que o Instagram serve: muito programa só cola image/png.
+# O xclip fica de pé servindo a seleção; o nohup o livra do SIGHUP de quando
+# a janela do terminal fecha, que levaria a imagem junto.
+yank() {
+    status "copiando..."
+    if py img "$code" "$j" "$tmp/clip.jpg" 2>"$tmp/err" &&
+        ffmpeg -v error -y -i "$tmp/clip.jpg" "$tmp/clip.png" 2>"$tmp/err" &&
+        nohup xclip -selection clipboard -t image/png -i "$tmp/clip.png" \
+            >/dev/null 2>"$tmp/err"; then
+        msg="copiada"
+    else
+        msg=$(tail -1 "$tmp/err")
+    fi
+}
+
+# O ponto preserva o Enter, que o $(...) comeria: quem chama o tira com
+# ${c%.}. Sem tecla, sobra só o ponto.
+key() { dd bs=1 count=1 2>/dev/null; echo .; }
+esc=$(printf '\033') nl='
+'
+
+i=1 cur=
+while [ "$i" -le "$total" ]; do
+    code=$(sed -n "${i}p" "$tmp/queue")
+    geom
+    [ "$code" = "$cur" ] || { load; cur=$code; }
+    draw
+    msg=
+    size=$rows.$cols.$W
+    while c=$(key); c=${c%.}; [ -z "$c" ]; do
+        geom
+        [ "$rows.$cols.$W" = "$size" ] || break
+    done
+    if [ "$c" = "$esc" ]; then
+        c=$(key); c2=$(key); c=${c%.}${c2%.}
+        case $c in '[C') c=l ;; '[D') c=h ;; *) c= ;; esac
+    fi
+    case $c in
+    h) [ "$j" -gt 0 ] && j=$((j - 1)) ;;
+    l) [ "$j" -lt $((n - 1)) ] && j=$((j + 1)) ;;
+    d) [ "$n" -gt 0 ] && get "$j" ;;
+    a) [ "$n" -gt 0 ] && get all ;;
+    y) [ "$n" -gt 0 ] && yank ;;
+    w) case $(printf %s "$kinds" | cut -c$((j + 1))) in
+        v) mpv "$(py url "$code" "$j")" </dev/null >/dev/null 2>&1 & ;;
+        *) msg="esta não é vídeo" ;;
+        esac ;;
+    c) stty "$old"; printf '\033[?25h'
+        py caption "$code" 2>&1 | fold -s -w "$cols" | less
+        stty -icanon -echo min 0 time 5; printf '\033[?25l' ;;
+    p) [ "$user" = ? ] && continue
+        p=https://www.instagram.com/$user/
+        grep -qxF -- "- $p" "$out/perfis.md" 2>/dev/null ||
+            echo "- $p" >>"$out/perfis.md"
+        browse "$p"; acts="$acts perfil" ;;
+    o) browse "$url" ;;
+    n) note ;;
+    "$nl"|' ') printf '%s\t%s\n' "$code" "${acts# }" >>"$state/done"
+        i=$((i + 1)) ;;
+    r) status "tirando dos salvos..."
+        if py unsave "$code" 2>"$tmp/err"; then
+            acts="$acts removido"
+            printf '%s\t%s\n' "$code" "${acts# }" >>"$state/done"
+            i=$((i + 1))
+        else
+            msg=$(tail -1 "$tmp/err")
+        fi ;;
+    s) i=$((i + 1)) ;;
+    k) [ "$i" -gt 1 ] && i=$((i - 1)) ;;
+    q) break ;;
+    esac
+done

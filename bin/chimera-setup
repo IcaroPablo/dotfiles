@@ -1,0 +1,194 @@
+#!/bin/sh
+# Fresh Chimera install -> my environment. Run as root: doas sh chimera-setup
+# Safe to rerun.
+set -e
+
+user=meriadoc
+host=shire
+ws=/home/$user/Workspace
+
+[ "$(id -u)" -eq 0 ] || { echo "run as root: doas sh $0" >&2; exit 1; }
+
+# ==== 1. preflight ====
+
+echo "$host" > /etc/hostname
+ln -sf /usr/share/zoneinfo/America/Fortaleza /etc/localtime
+
+id "$user" >/dev/null 2>&1 || useradd -m "$user"
+
+grep -q "^$user:[!*]" /etc/shadow && passwd "$user"
+
+usermod -a -G wheel "$user"
+
+as_user() { doas -u "$user" sh -c "$1"; }
+
+# what was installed before, to show at the end what this script doesn't install
+before=$(cat /etc/apk/world)
+before_apps=$(flatpak list --app --columns=application 2>/dev/null) || true
+wanted=
+add() { apk add "$@"; wanted="$wanted $*"; }
+
+# ==== 2. system ====
+
+add chimera-repo-user chimera-repo-contrib
+apk update
+apk upgrade
+
+# what booting needs; already there after the first boot, needed in the chroot
+add base-full chimerautils cryptsetup-scripts lvm2 \
+	grub-x86_64-efi linux-stable networkmanager
+
+# microcode and Intel's video decoding, for whatever this machine has
+case $(grep -m1 vendor_id /proc/cpuinfo) in
+*GenuineIntel*) ucode=ucode-intel ;;
+*AuthenticAMD*) ucode=ucode-amd ;;
+*) ucode= ;;
+esac
+# loaded early from the initramfs, which needs a rebuild once it's installed
+if [ -n "$ucode" ] && ! apk info -e "$ucode" >/dev/null 2>&1; then
+	add "$ucode"
+	update-initramfs -c -k all
+fi
+for d in /sys/bus/pci/devices/*; do
+	case $(cat "$d/class"):$(cat "$d/vendor") in 0x03*:0x8086) add intel-media-driver ;; esac
+done
+
+# what this script itself uses
+add git curl openssh
+
+# no dhcpcd (conflicts with NetworkManager)
+for s in networkmanager syslog-ng; do
+	[ -e "/etc/dinit.d/boot.d/$s" ] || dinitctl -o enable "$s"
+done
+
+# the system disk's USB-NVMe bridge needs STOP UNIT, or every poweroff is unsafe
+mkdir -p /etc/udev/rules.d
+cat > /etc/udev/rules.d/60-jmicron-nvme-shutdown.rules <<'EOF'
+# JMicron USB-NVMe enclosure (system disk): send STOP UNIT at shutdown; the bridge turns it into the NVMe shutdown notice
+ACTION=="add", SUBSYSTEM=="scsi_disk", ATTRS{idVendor}=="152d", ATTRS{idProduct}=="0583", ATTR{manage_shutdown}="1"
+EOF
+for d in /sys/class/scsi_disk/*; do
+	case $(cat "$d/device/../../../../idVendor" 2>/dev/null):$(cat "$d/device/../../../../idProduct" 2>/dev/null) in
+	152d:0583) echo 1 > "$d/manage_shutdown" ;;
+	esac
+done
+
+# ==== 3. shell ====
+
+add oksh github-cli fzf fd eza ripgrep zoxide file lsof htop llvm-binutils \
+	7zip zip unzip xz unrar w3m exiftool chafa ffmpeg yt-dlp
+
+as_user "mkdir -p $ws"
+
+# GitHub over ssh with a key it accepts; otherwise over https, or abort
+key=/home/$user/.ssh/id_ed25519
+url=git@github.com:IcaroPablo
+# ssh -T exits 1 even when it logs in: what tells is GitHub's greeting
+case $([ -f "$key" ] && as_user "ssh -T -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new git@github.com 2>&1") in
+*"successfully authenticated"*) ;;
+*)
+	[ -t 0 ] || { echo "GitHub doesn't take $key, and no terminal to ask about https" >&2; exit 1; }
+	printf "GitHub doesn't take %s (missing or not added); clone over https or abort? [h/A] " "$key"
+	read -r ans
+	case $ans in
+	[Hh]*) url=https://github.com/IcaroPablo ;;
+	*) echo "aborted" >&2; exit 1 ;;
+	esac
+	;;
+esac
+
+clone() {
+	if [ ! -d "$ws/$1" ]; then as_user "git clone $url/$1.git $ws/$1"
+	# an https clone moves to ssh once GitHub takes the key
+	elif [ "${url#git@}" != "$url" ]; then as_user "git -C $ws/$1 remote set-url origin $url/$1.git"
+	fi
+}
+
+clone dotfiles
+
+as_user "cd $ws/dotfiles && make install"
+
+# shell entry block from the dotfiles README
+grep -q icaro-dotfiles "/home/$user/.profile" 2>/dev/null || as_user 'cat >> $HOME/.profile' <<'EOF'
+# >>> icaro-dotfiles >>>
+ENV="$HOME/.config/sh/rc.sh"; export ENV
+. "$HOME/.config/sh/env.sh"
+# <<< icaro-dotfiles <<<
+EOF
+
+clone posix-shell-scripts-collection
+
+[ -t 0 ] || { echo "no terminal to ask which script sets to install" >&2; exit 1; }
+printf "script sets to install besides 0 (1 = shire, 2 = fangorn, e.g. 1 2): "
+read -r sets
+
+for k in $sets; do case $k in 1|2) ;; *) echo "no set $k" >&2; exit 1 ;; esac; done
+
+has_set() { case " $sets " in *" $1 "*) ;; *) return 1 ;; esac; }
+# what only the scripts of a set use; set 0's comes with the shell above
+has_set 1 && add rsync tesseract imagemagick android-tools python
+has_set 2 && add python poppler djvulibre imagemagick
+as_user "cd $ws/posix-shell-scripts-collection && make install SETS='0 $sets'"
+
+chsh -s /usr/bin/oksh "$user"
+
+# ==== 4. graphical environment ====
+
+add xserver-xorg xinit mesa-dri xrandr xinput xset xrdb xmodmap xsetroot \
+	xdpyinfo setxkbmap xclip xwallpaper dbus polkit elogind \
+	xdg-desktop-portal xdg-desktop-portal-gtk pipewire pipewire-alsa \
+	alsa-utils xdg-utils mpv thunar luakit gvfs thunar-volman udisks
+# rec_gif's region picker
+has_set 1 && add slop
+
+# st, sowm and scrot's build deps
+add clang gmake pkgconf linux-headers \
+	libx11-devel libxft-devel libxinerama-devel imlib2-devel \
+	libxcomposite-devel libxfixes-devel libxrandr-devel
+
+clone st
+clone sowm
+
+# /usr/local: build as user, install as root
+for r in st sowm; do
+	as_user "cd $ws/$r && make"
+	(cd "$ws/$r" && make install)
+done
+
+# checked as user so a copy in ~/.local/share/fonts counts
+if ! as_user 'fc-list : family | grep -q CozetteVector'; then
+	mkdir -p /usr/local/share/fonts/cozette
+	for f in CozetteVector.ttf CozetteVectorBold.ttf LICENSE; do
+		curl -fL -o "/usr/local/share/fonts/cozette/$f" \
+			"https://github.com/slavfox/Cozette/releases/download/v.1.30.0/$f"
+	done
+	fc-cache -f
+fi
+
+# build scrot from its release tarball into ~/.local (not in apk)
+[ -x "/home/$user/.local/bin/scrot" ] || as_user 'd=$(mktemp -d) && cd "$d" &&
+	curl -fsSL https://github.com/resurrecting-open-source-projects/scrot/releases/download/2.0.0/scrot-2.0.0.tar.gz |
+	tar -xz --strip-components=1 && ./configure --prefix=$HOME/.local && make install; s=$?; rm -rf "$d"; exit $s'
+
+# flatpaks
+add flatpak
+
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+apps="io.github.ungoogled_software.ungoogled_chromium com.discordapp.Discord
+	org.telegram.desktop com.stremio.Stremio org.godotengine.Godot
+	com.github.tchx84.Flatseal com.valvesoftware.Steam"
+flatpak install -y --system flathub $apps
+
+# fails inside a chroot; rerun after boot
+apps="$apps com.teamspeak.TeamSpeak"
+flatpak install -y --system flathub com.teamspeak.TeamSpeak ||
+	echo "warning: TeamSpeak not installed; rerun outside the chroot" >&2
+
+# ==== 5. leftovers ====
+
+# version constraints and repo tags off: foo>=1.2@user -> foo
+in_list() { x=$1; shift; for w; do [ "$w" = "$x" ] && return 0; done; return 1; }
+extra=$(for p in $before; do in_list "${p%%[<>=~@]*}" $wanted || echo "$p"; done)
+extra_apps=$(for a in $before_apps; do in_list "$a" $apps || echo "$a"; done)
+[ -z "$extra" ] || printf '\nalready installed, not by this script (apk del by hand if unwanted):\n%s\n' "$extra"
+[ -z "$extra_apps" ] || printf '\nflatpaks not from this script (flatpak uninstall by hand if unwanted):\n%s\n' "$extra_apps"

@@ -1,0 +1,16 @@
+#!/bin/sh
+# requires X11 (macOS uses screencapture)
+
+case "$(uname)" in
+    Darwin)
+        screencapture -i -c
+        ;;
+    *)
+        if command -v scrot >/dev/null 2>&1; then
+            scrot -f -s -q 100 -e 'xclip -selection clipboard -target image/png -i $f && rm $f'
+        else
+            echo "scr_shot: scrot not found" >&2
+            exit 1
+        fi
+        ;;
+esac
