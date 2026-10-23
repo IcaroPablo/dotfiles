@@ -5,7 +5,7 @@ set -e
 SHPAD_HISTORY="${SHPAD_HISTORY:-$HOME/.shpad_history}"
 
 if [ -z "$DVTM_CMD_FIFO" ]; then
-    printf 'shpad: só funciona dentro do dvtm (DVTM_CMD_FIFO vazio)\n' >&2
+    printf 'shpad: only works inside dvtm (DVTM_CMD_FIFO is empty)\n' >&2
     exit 1
 fi
 

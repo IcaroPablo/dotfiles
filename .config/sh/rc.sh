@@ -65,7 +65,7 @@ c() {
         fi
         [ -n "$_c_hit" ] && cd "$_c_hit"
     else
-        printf 'c: %s: sem match\n' "$1" >&2
+        printf 'c: %s: no match\n' "$1" >&2
     fi
 
     if [ "$_c_start" != "$(pwd)" ]; then

@@ -11,7 +11,7 @@ lang="${1:-eng}"
 
 for dep in scrot mogrify tesseract xclip; do
     have "$dep" || {
-        printf 'scrotocr: %s não encontrado\n' "$dep" >&2
+        printf 'scrotocr: %s not found\n' "$dep" >&2
         exit 1
     }
 done
@@ -26,7 +26,7 @@ scrot -s -q 100 "$img.png" || exit 1
 mogrify -modulate 100,0 -resize 400% "$img.png"
 
 tesseract "$img.png" "$img" -l "$lang" >/dev/null 2>&1 || {
-    printf 'scrotocr: tesseract falhou (idioma "%s" instalado?)\n' "$lang" >&2
+    printf 'scrotocr: tesseract failed (is language "%s" installed?)\n' "$lang" >&2
     exit 1
 }
 

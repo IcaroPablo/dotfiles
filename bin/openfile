@@ -39,7 +39,7 @@ send_remote() {
 }
 
 here() { [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ] || [ "$(uname)" = Darwin ]; }
-noscreen() { printf 'openfile: sem tela aqui para %s\n' "$1" >&2; return 1; }
+noscreen() { printf 'openfile: no screen here for %s\n' "$1" >&2; return 1; }
 
 handlenoextension() {
     case "$(mimetype "$1")" in

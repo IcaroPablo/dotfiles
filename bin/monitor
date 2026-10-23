@@ -34,22 +34,22 @@ usage() { echo "usage: monitor off|on|bright VALUE|scale FACTOR|same" >&2; exit 
 
 case "$1" in
     off)
-        o="$(internal)"; need "$o" "nenhum painel interno (eDP/LVDS/DSI) conectado"
+        o="$(internal)"; need "$o" "no internal panel (eDP/LVDS/DSI) connected"
         xrandr --output "$o" --off ;;
     on)
-        o="$(internal)"; need "$o" "nenhum painel interno (eDP/LVDS/DSI) conectado"
+        o="$(internal)"; need "$o" "no internal panel (eDP/LVDS/DSI) connected"
         xrandr --output "$o" --auto ;;
     bright)
         [ -n "$2" ] || usage
-        o="$(active)"; need "$o" "nenhum output aceso"
+        o="$(active)"; need "$o" "no output is on"
         xrandr --output "$o" --brightness "$2" ;;
     scale)
         [ -n "$2" ] || usage
-        o="$(active)"; need "$o" "nenhum output aceso"
+        o="$(active)"; need "$o" "no output is on"
         xrandr --output "$o" --scale "$2x$2" ;;
     same)
-        i="$(internal)"; need "$i" "nenhum painel interno para espelhar"
-        e="$(external)"; need "$e" "nenhum monitor externo conectado"
+        i="$(internal)"; need "$i" "no internal panel to mirror"
+        e="$(external)"; need "$e" "no external monitor connected"
         xrandr --output "$e" --same-as "$i" ;;
     *)  usage ;;
 esac
