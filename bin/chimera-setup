@@ -1,5 +1,5 @@
 #!/bin/sh
-# Fresh Chimera install -> my environment. Run as root: doas sh chimera-setup ['1 2']
+# Fresh Chimera install -> my environment. Run as root: doas sh chimera-setup
 # Safe to rerun.
 set -e
 
@@ -8,16 +8,6 @@ host=shire
 ws=/home/$user/Workspace
 
 [ "$(id -u)" -eq 0 ] || { echo "run as root: doas sh $0" >&2; exit 1; }
-
-# the dotfiles sets besides 0: $1 ('1', '1 2', '' for none), else asked now
-if [ $# -gt 0 ]; then
-	sets=$1
-else
-	[ -t 0 ] || { echo "no terminal to ask which sets to install; pass them: $0 '1 2'" >&2; exit 1; }
-	printf "dotfiles sets to install besides 0 (1 = shire, 2 = fangorn, e.g. 1 2): "
-	read -r sets
-fi
-for k in $sets; do case $k in 1|2) ;; *) echo "no set $k" >&2; exit 1 ;; esac; done
 
 # ==== 1. preflight ====
 
@@ -117,12 +107,12 @@ clone() {
 
 clone dotfiles
 
-has_set() { case " $sets " in *" $1 "*) ;; *) return 1 ;; esac; }
-# what only a set's scripts use; set 0's comes with the shell above
-has_set 1 && add rsync tesseract imagemagick android-tools python
-# no mupdf in apk: spdfv opens PDF and DjVu here, not EPUB
-has_set 2 && add python poppler djvulibre imagemagick neovim tree-sitter-cli
-as_user "cd $ws/dotfiles && make install SETS='0 $sets'"
+# what only some scripts use: backuphd, scrotocr, pull-files, and python for
+# igsaved and the sixel viewers; no mupdf in apk, so spdfv opens PDF and DjVu
+# here, not EPUB. The rest comes with the shell above
+add rsync tesseract imagemagick android-tools python poppler djvulibre
+# HOST: in the installer's chroot, hostname still names the live system
+as_user "cd $ws/dotfiles && make install HOST=$host"
 
 # shell entry block from the dotfiles README
 grep -q icaro-dotfiles "/home/$user/.profile" 2>/dev/null || as_user 'cat >> $HOME/.profile' <<'EOF'
@@ -141,7 +131,7 @@ add xserver-xorg xinit mesa-dri xrandr xinput xset xrdb xmodmap xsetroot \
 	xdg-desktop-portal xdg-desktop-portal-gtk pipewire pipewire-alsa \
 	alsa-utils xdg-utils mpv thunar luakit gvfs thunar-volman udisks
 # rec-gif's region picker
-has_set 1 && add slop
+add slop
 
 # st, sowm and scrot's build deps
 add clang gmake pkgconf linux-headers \
