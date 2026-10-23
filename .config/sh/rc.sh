@@ -214,7 +214,7 @@ compress() (
     case $out in
         *.tar.bz2|*.tbz2) tar cjvf "$out" "$@" ;;
         *.tar.gz|*.tgz)   tar czvf "$out" "$@" ;;
-        *.tar.xz|*.txz)   tar cJvf "$out" "$@" ;;
+        *.tar.xz|*.txz)   tar cvf - "$@" | xz > "$out" ;;
         *.tar)            tar cvf  "$out" "$@" ;;
         *.zip)            zip -r "$out" "$@" ;;
         *.rar)            rar a "$out" "$@" ;;
@@ -226,7 +226,7 @@ extract() {
     case $1 in
         *.tar.bz|*.tar.bz2|*.tbz|*.tbz2) tar xjvf "$1" ;;
         *.tar.gz|*.tgz)                  tar xzvf "$1" ;;
-        *.tar.xz|*.txz)                  tar xJvf "$1" ;;
+        *.tar.xz|*.txz)                  xz -dc "$1" | tar xvf - ;;
         *.tar)                           tar xvf  "$1" ;;
         *.zip)                           unzip "$1" ;;
         *.rar)                           unrar x "$1" ;;
