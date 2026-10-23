@@ -253,19 +253,9 @@ alias sc="sel c"
 alias t="trash"
 alias u="cd .. && e"
 
-_gbranch() {
-    _b="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)"
-    _b="${_b#origin/}"
-    if [ -z "$_b" ]; then
-        for _c in main master; do
-            git show-ref --verify --quiet "refs/remotes/origin/$_c" && { _b="$_c"; break; }
-        done
-    fi
-    printf '%s\n' "${_b:-main}"
-}
-gcm() { git checkout "$(_gbranch)"; }
-gpom() { _b="$(_gbranch)"; git pull origin "$_b"; unset _b; }
-newb() { _b="$(_gbranch)"; git checkout "$_b" && git pull origin "$_b" && git checkout -b "$1"; unset _b; }
+gcm() { git checkout "$(git get-default-branch)"; }
+gpom() { _b="$(git get-default-branch)"; git pull origin "$_b"; unset _b; }
+newb() { _b="$(git get-default-branch)"; git checkout "$_b" && git pull origin "$_b" && git checkout -b "$1"; unset _b; }
 
 case "$(uname)" in
     OpenBSD)

@@ -155,9 +155,15 @@
             git cs -m \"save $NUM\";\
         };f"
 
-    # get default branch
+    # get default branch: the remote's HEAD, else main or master, else main
     get-default-branch = "!f(){\
-            git symbolic-ref refs/remotes/${1:-origin}/HEAD | cut -d'/' -f4;\
+            r=${1:-origin}; \
+            b=$(git symbolic-ref --quiet --short refs/remotes/$r/HEAD 2>/dev/null) && \
+                { echo ${b#$r/}; return; }; \
+            for c in main master; do \
+                git show-ref --verify --quiet refs/remotes/$r/$c && { echo $c; return; }; \
+            done; \
+            echo main; \
         };f"
 
     ## reverse the log output
