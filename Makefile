@@ -27,11 +27,12 @@ DISPLACED = $(HOME_DIR)/.local/share/dotfiles/displaced
 
 # what each capability needs to be there, when declared: commands, or /paths
 # for what puts none on the PATH; a|b is either one. sixel can't be checked in
-# the terminal, only in the viewers' tools: the rest is trusted
+# the terminal, only in the viewers' tools: the rest is trusted. vis by its
+# vis-open, as BSDs have a vis(1) of their own and name the editor vise
 CHECKS = \
 	"x11:startx xrandr xsetroot xdpyinfo xclip st smawm scrot slop" \
 	"sixel:chafa ffmpeg ffprobe python3 pdfinfo pdftoppm djvused ddjvu" \
-	"text-editing:nvim tree-sitter rg vis" \
+	"text-editing:nvim tree-sitter rg vis-open" \
 	"dvtm:dvtm" \
 	"phone:adb" \
 	"host:rsync cryptsetup|bioctl" \
