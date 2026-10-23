@@ -23,7 +23,7 @@ DISPLACED = $(HOME_DIR)/.local/share/dotfiles/displaced
 SETS = 0 1 2
 SET0 = .config/git .config/sh \
 	bin/openfile bin/preview
-SET1 = .config/ghostty .xinitrc \
+SET1 = .config/ghostty .config/x11 .xinitrc \
 	bin/backuphd bin/bar bin/chimera-setup \
 	bin/fzfmenu bin/igsaved bin/monitor \
 	bin/pull-files bin/rec-gif bin/run-program bin/scrotocr \

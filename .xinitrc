@@ -61,11 +61,11 @@ _w=$(for _f in "$HOME"/.local/wallpapers/*; do
 [ -n "$_w" ] && xwallpaper --zoom "$_w" &
 setxkbmap br &
 
-if [ "$(uname)" = OpenBSD ]; then
-    mid=$(xinput list | grep /dev/wsmouse | awk '{print $4}' | sed 's/id=//')
-    mad=$(xinput list-props "$mid" | grep 'Device Accel Constant Deceleration' | awk '{print $5}' | sed 's/[():]//g')
-    [ -n "$mid" ] && [ -n "$mad" ] && xinput set-prop "$mid" "$mad" 2
-fi
+# what only one OS has: ~/.config/x11/xinitrc.d/<os>.sh
+_os=$(uname | tr '[:upper:]' '[:lower:]')
+_x=${XDG_CONFIG_HOME:-$HOME/.config}/x11/xinitrc.d/$_os.sh
+[ -f "$_x" ] && . "$_x"
+unset _os _x
 
 # tap to click and natural scrolling on every libinput touchpad, found by the
 # tapping property (mice don't have it), not by name; on OpenBSD nothing matches
