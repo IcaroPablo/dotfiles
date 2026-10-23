@@ -1,5 +1,5 @@
 #!/bin/sh
-# Fresh Chimera install -> my environment. Run as root: doas sh chimera-setup
+# Fresh Chimera install -> my environment. Run as root: doas sh chimera-setup ['1 2']
 # Safe to rerun.
 set -e
 
@@ -8,6 +8,16 @@ host=shire
 ws=/home/$user/Workspace
 
 [ "$(id -u)" -eq 0 ] || { echo "run as root: doas sh $0" >&2; exit 1; }
+
+# the dotfiles sets besides 0: $1 ('1', '1 2', '' for none), else asked now
+if [ $# -gt 0 ]; then
+	sets=$1
+else
+	[ -t 0 ] || { echo "no terminal to ask which sets to install; pass them: $0 '1 2'" >&2; exit 1; }
+	printf "dotfiles sets to install besides 0 (1 = shire, 2 = fangorn, e.g. 1 2): "
+	read -r sets
+fi
+for k in $sets; do case $k in 1|2) ;; *) echo "no set $k" >&2; exit 1 ;; esac; done
 
 # ==== 1. preflight ====
 
@@ -106,12 +116,6 @@ clone() {
 }
 
 clone dotfiles
-
-[ -t 0 ] || { echo "no terminal to ask which sets to install" >&2; exit 1; }
-printf "dotfiles sets to install besides 0 (1 = shire, 2 = fangorn, e.g. 1 2): "
-read -r sets
-
-for k in $sets; do case $k in 1|2) ;; *) echo "no set $k" >&2; exit 1 ;; esac; done
 
 has_set() { case " $sets " in *" $1 "*) ;; *) return 1 ;; esac; }
 # what only a set's scripts use; set 0's comes with the shell above
