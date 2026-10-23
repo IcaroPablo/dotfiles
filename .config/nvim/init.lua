@@ -36,8 +36,6 @@ vim.opt.relativenumber = true -- números relativos à linha atual
 -- ── Busca ────────────────────────────────────────────────────────────────────
 vim.opt.ignorecase = true -- busca ignora maiúsculas/minúsculas...
 vim.opt.smartcase = true -- ...exceto quando você digita alguma maiúscula
--- vim.opt.incsearch = true -- redundante: já é o default (mostra a busca em tempo real)
--- vim.opt.hlsearch = false -- default é true (mantém o realce dos resultados de busca)
 
 -- ── Indentação ───────────────────────────────────────────────────────────────
 vim.opt.expandtab = true -- Tab insere espaços em vez de um caractere de tab
@@ -46,35 +44,23 @@ vim.opt.softtabstop = 4 -- quantos espaços o Tab/Backspace contam na edição
 vim.opt.shiftwidth = 4 -- largura da indentação (>>, <<, autoindent)
 vim.opt.smartindent = true -- indent automático após blocos estilo C
 vim.opt.shiftround = true
--- vim.opt.autoindent = true -- redundante: já é o default
-
--- ── Quebra de linha ──────────────────────────────────────────────────────────
--- vim.opt.wrap = true -- redundante: já é o default (quebra visual de linhas longas)
 
 -- ── Splits ───────────────────────────────────────────────────────────────────
 vim.opt.splitbelow = true -- split horizontal abre embaixo da janela atual
 vim.opt.splitright = true -- split vertical abre à direita da janela atual
--- vim.opt.laststatus = 2
 
 -- ── Rolagem ──────────────────────────────────────────────────────────────────
--- vim.opt.cursorline = true -- realça a linha do cursor (ver autocmd comentado abaixo)
 vim.opt.scrolloff = 10 -- mantém 10 linhas de contexto acima/abaixo do cursor
 
 -- ── Arquivos / persistência ──────────────────────────────────────────────────
 vim.opt.swapfile = false -- sem arquivos de swap
 vim.opt.undofile = true -- undo persiste entre sessões; o undodir default já é
 -- o stdpath("state")/undo, então não precisa apontar à mão
--- vim.opt.undoreload = 10000 -- redundante: já é o default
--- vim.opt.history = 1000 -- comentado: o default do nvim (10000) é maior; sem motivo pra reduzir
 vim.opt.updatetime = 2000 -- de quanto em quanto o CursorHold dispara (default é 4000)
--- vim.opt.shadafile = "NONE" -- desliga a persistência do shada (marks/registers/etc)
--- vim.opt.path:append("**") -- :find recursivo (a linha antiga era sintaxe vimscript, inválida em Lua)
 
 -- ── Entrada / clipboard ──────────────────────────────────────────────────────
 vim.opt.clipboard = "unnamedplus" -- usa o clipboard do sistema (registro +)
 vim.opt.mouse = "a" -- pretend you didn't see this shit here
--- vim.opt.wildmenu = true -- redundante: já é o default (menu de autocompletar de :cmd)
--- vim.opt.errorbells = false -- redundante: já é o default (sem beep de erro)
 
 vim.g.mapleader = " " -- tecla líder = espaço
 
@@ -85,30 +71,6 @@ local map = require("core.map")
 if not vim.loader.enabled then
     vim.loader.enable()
 end
-
--- Mostra a cursorline só na janela ativa
--- vim.api.nvim_create_autocmd({ "WinEnter", "WinLeave" }, {
---     group = vim.api.nvim_create_augroup("cursor_active_window", { clear = true }),
---     callback = function(args)
---         vim.wo.cursorline = args.event == "WinEnter"
---     end,
--- })
-
--- vim.cmd([[
---     syntax on "some nice and fancy syntax highlight
---     filetype plugin on "auxiliates in filetype dependant behaviour
--- ]])
-
--- setting gruvbox as colorscheme in manpages also disable italics :)
--- vim.cmd([[
---     autocmd FileType man colorscheme gruvbox
--- ]])
-
--- vim.api.nvim_create_user_command("DisableLSPColors", function()
---     for _, group in ipairs(vim.fn.getcompletion("@lsp", "highlight")) do
---         vim.api.nvim_set_hl(0, group, {})
---     end
--- end, {})
 
 -- cd global para a raiz do projeto. Comentado: o telescope passou a resolver a
 -- raiz por buffer e o session-manager faz o próprio cd, então sobrou só o cwd
@@ -220,32 +182,7 @@ map.set("n", "<leader>T", function()
     dvtm_pane(require("core.root").dir() or vim.fn.expand("%:p:h"))
 end)
 
--- map("n", "<A-<>", "<cmd>BufferMovePrevious<CR>", { silent = true, noremap = true })
--- map("n", "<A->>", "<cmd>BufferMoveNext<CR>", { silent = true, noremap = true })
--- map("n", "<A-1>", "<cmd>BufferGoto 1<CR>", { silent = true, noremap = true })
--- map("n", "<A-2>", "<cmd>BufferGoto 2<CR>", { silent = true, noremap = true })
--- map("n", "<A-3>", "<cmd>BufferGoto 3<CR>", { silent = true, noremap = true })
--- map("n", "<A-4>", "<cmd>BufferGoto 4<CR>", { silent = true, noremap = true })
--- map("n", "<A-5>", "<cmd>BufferGoto 5<CR>", { silent = true, noremap = true })
--- map("n", "<A-6>", "<cmd>BufferGoto 6<CR>", { silent = true, noremap = true })
--- map("n", "<A-7>", "<cmd>BufferGoto 7<CR>", { silent = true, noremap = true })
--- map("n", "<A-8>", "<cmd>BufferGoto 8<CR>", { silent = true, noremap = true })
--- map("n", "<A-9>", "<cmd>BufferLast<CR>", { silent = true, noremap = true })
--- map("n", "<A-t>", "<cmd>BufferPin<CR>", { silent = true, noremap = true })
--- map("n", "<A-c>", "<cmd>BufferClose<CR>", { silent = true, noremap = true })
--- map("n", "<A-u>", "<cmd>BufferPick<CR>", { silent = true, noremap = true })
-
 -- easily manage windows
--- vim.keymap.set("", "<c-j>", "<c-w>j", { noremap = true, silent = true })
--- vim.keymap.set("", "<c-k>", "<c-w>k", { noremap = true, silent = true })
--- vim.keymap.set("", "<c-h>", "<c-w>h", { noremap = true, silent = true })
--- vim.keymap.set("", "<c-l>", "<c-w>l", { noremap = true, silent = true })
-
--- vim.keymap.set("", "<c-up>", "<c-w>+", { noremap = true, silent = true })
--- vim.keymap.set("", "<c-down>", "<c-w>-", { noremap = true, silent = true })
--- vim.keymap.set("", "<c-left>", "<c-w>>", { noremap = true, silent = true })
--- vim.keymap.set("", "<c-right>", "<c-w><", { noremap = true, silent = true })
-
 map.set("", "<c-h>", "<c-w>>")
 map.set("", "<c-k>", "<c-w>+")
 map.set("", "<c-j>", "<c-w>-")
@@ -264,26 +201,15 @@ map.set("n", "<c-p>", ":cprev<CR>zz")
 map.set("n", "<c-n>", ":cnext<CR>zz")
 
 -- center search results
--- vim.keymap.set("n", "n", "nzz", {noremap = true, silent = true})
--- vim.keymap.set("n", "N", "Nzz", {noremap = true, silent = true})
 map.set("n", "<C-d>", "<C-d>zz")
 map.set("n", "<C-u>", "<C-u>zz")
 map.set("n", "<C-o>", "<C-o>zz")
 -- no <C-i>zz: st sends Ctrl-I as a Tab, and Tab is :bnext above
--- vim.keymap.set("n", "#", "#zz", { silent = true, noremap = true })
--- vim.keymap.set("n", "g*", "g*zz", { silent = true, noremap = true })
--- vim.keymap.set("n", "g#", "g#zz", { silent = true, noremap = true })
 map.set("n", "<leader>w", "*N")
 map.set("x", "<leader>p", [["_dP]])
--- vim.keymap.set("n", "<leader>ra", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 
 -- deactivate space because of annoying behaviour since its my leader key :)
 map.set("n", "<Space>", "<Nop>")
-
--- word substitution
--- vim.keymap.set("n", "<C-j>", "ciw<C-r>0<ESC>", {silent = true})
--- vim.keymap.set("n", "<C-s>", '"1yiwciw<C-r>0<ESC>/<C-r>1<CR>', { silent = true })
--- vim.keymap.set("n", "<Leader>jq", ":%!jq '.'<CR>", { silent = true })
 
 -- other niceties
 map.set("v", "<", "<gv")

@@ -32,30 +32,17 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         -- formatação roda no build, pelo terminal. Se precisar pontualmente,
         -- gq formata um range via formatexpr, sem mapeamento nenhum.
-        -- map.set("n", "<Leader>cf", function()
-        --     vim.lsp.buf.format({ async = true })
-        -- end, bufopts)
     end,
 })
 
 -- ── Diagnósticos ─────────────────────────────────────────────────────────────
 vim.diagnostic.config({
     float = {
-        -- source = "always",
-        -- source = "if_many",
         source = true,
-        -- show_header = false,
-        -- border = border
     },
     underline = false,
     virtual_text = false,
     signs = true,
-    --[[ virtual_text = {
-        show = false,
-        prefix = "",
-    }, ]]
-    -- update_in_insert = false,
-    -- severity_sort = true,
 })
 
 -- Com virtual_text desligado, a mensagem do diagnóstico só aparece sob demanda.
@@ -75,9 +62,6 @@ vim.api.nvim_create_autocmd("CursorHold", {
 
 -- ── Config por server (jdtls tem a sua em jdtls_config.lua) ───────────────────
 vim.lsp.config("lua_ls", {
-    -- cmd = {os.getenv('HOME') .. '/lua-language-server-rust/target/release/lua-language-server'},
-    -- cmd = {'/usr/local/bin/lua-language-server'},
-    -- cmd = {'/usr/local/lib/lua-language-server/bin/lua-language-server'},
     cmd = { "lua-language-server" },
     filetypes = { "lua" },
     root_markers = { ".luarc.json", ".luarc.jsonc", ".luacheckrc", ".stylua.toml", "stylua.toml", ".git" },
@@ -99,7 +83,6 @@ vim.lsp.config("lua_ls", {
             telemetry = {
                 enable = false,
             },
-            -- root_dir = root_pattern(".luarc.json", ".luarc.jsonc", ".luacheckrc", ".stylua.toml", "stylua.toml", "selene.toml", "selene.yml", ".git")
         },
     },
 })
