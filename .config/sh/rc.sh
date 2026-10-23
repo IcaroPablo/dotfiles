@@ -1,13 +1,11 @@
-# antes de tudo, para os aliases daqui valerem sobre os dele; o alias p dele
-# (ps -l) quebraria a definição da função p() mais abaixo
-if [ "$(uname)" = "OpenBSD" ] && [ -n "${KSH_VERSION:-}" ] && [ -f /etc/ksh.kshrc ]; then
-    . /etc/ksh.kshrc
-    unalias p 2>/dev/null
-fi
-
 : "${XDG_CONFIG_HOME:="$HOME/.config"}"
 
 . "$XDG_CONFIG_HOME/sh/lib/core.sh"
+
+# what only one OS has: rc.d/openbsd.sh, rc.d/linux.sh, rc.d/darwin.sh
+_os=$(uname | tr '[:upper:]' '[:lower:]')
+[ -f "$XDG_CONFIG_HOME/sh/rc.d/$_os.sh" ] && . "$XDG_CONFIG_HOME/sh/rc.d/$_os.sh"
+unset _os
 
 if have doas; then DOAS='doas'; else DOAS='sudo'; fi
 
@@ -255,43 +253,17 @@ gcm() { git checkout "$(git get-default-branch)"; }
 gpom() { _b="$(git get-default-branch)"; git pull origin "$_b"; unset _b; }
 newb() { _b="$(git get-default-branch)"; git checkout "$_b" && git pull origin "$_b" && git checkout -b "$1"; unset _b; }
 
-case "$(uname)" in
-    OpenBSD)
-        req() {
-            _in=0
-            printf "%s" "$(pkg_info "$1")" | while IFS= read -r _line; do
-                if [ "$_in" = 0 ] && [ "$_line" = "Required by:" ]; then _in=1; continue; fi
-                [ "$_in" = 1 ] && [ "$_line" = "" ] && _in=0
-                [ "$_in" = 1 ] && printf '%s\n' "$_line"
-            done
-        }
-        req_by() { pkg_info -f "$1" | grep '^@depend' | cut -f 3 -d :; }
-        get_orphans() {
-            for _p in $(pkg_info -mz); do
-                _p="${_p%--}"
-                [ -z "$(req "$_p")" ] && printf '%s\n' "$_p"
-            done
-        }
-        del() { doas pkg_delete "$1" && doas pkg_delete -a; }
-        alias add="doas pkg_add -Dsnap"
-        have ntpctl && alias chkclock="ntpctl -s all"
-        have systat && alias sensors="systat -s 1 sensors"
-        ;;
-esac
 
 have sixiv && alias img="sixiv -t"
 have mpv && alias play="mpv --shuffle ."
 
-# \[ \] keep the colour codes out of the prompt's width. ksh and bash know them;
-# so does FreeBSD sh (root's on Chimera; unlike dash, it has bind), which needs
-# \w as well: it leaves ${PWD} in PS1 unexpanded
+# the prompt's escapes per shell, from rc.d/<shell>.sh: _cwd for the folder,
+# _m1 _m2 around the colour codes
+if [ -n "${BASH_VERSION:-}" ]; then _sh=bash
+elif [ -n "${KSH_VERSION:-}" ]; then _sh=ksh
+else _sh=sh; fi
 _cwd='${PWD}' _m1='' _m2=''
-if [ -n "${KSH_VERSION:-}${BASH_VERSION:-}" ]; then _m1='\[' _m2='\]'
-else
-    case "$(command -V bind 2>/dev/null)" in
-        *builtin*) _cwd='\w' _m1='\[' _m2='\]' ;;
-    esac
-fi
+[ -f "$XDG_CONFIG_HOME/sh/rc.d/$_sh.sh" ] && . "$XDG_CONFIG_HOME/sh/rc.d/$_sh.sh"
 if [ -n "${SSH_CONNECTION:-}" ]; then
     _pid="[${USER:-$(id -un)}@$(hostname 2>/dev/null | cut -d. -f1)] "
 else
@@ -303,6 +275,6 @@ else
     PS1="${_pid}[${_cwd}] \$ "
 fi
 export PS1
-unset _m1 _m2 _pid _cwd
+unset _m1 _m2 _pid _cwd _sh
 
 e
