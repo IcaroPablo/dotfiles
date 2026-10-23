@@ -10,7 +10,7 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
   - `# sysupgrade -s`
 
 - Add wheel to doas.conf
-  - `# cat 'permit persist :wheel' >> /etc/doas.conf`
+  - `# echo 'permit persist :wheel' >> /etc/doas.conf`
 
 - Download fonts
   - [Cozette](https://github.com/slavfox/Cozette) (my go-to for low res monitors)
