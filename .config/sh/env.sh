@@ -21,24 +21,13 @@ _path_prepend "$HOME/.local/bin"
 # --- locale ---
 export LANG="en_US.UTF-8" LC_MESSAGES="en_US.UTF-8" LC_TIME="pt_PT.UTF-8"
 
-# ------------------------------------------------- per-OS env deltas (real ones)
-case "$(uname)" in
-    OpenBSD)
-        export AUDIOPLAYDEVICE="snd/0" AUDIORECDEVICE="snd/1"      # sndio
-        # the newest of the jdk-NN packages
-        if [ -z "${JAVA_HOME:-}" ]; then
-            for _j in /usr/local/jdk-*; do [ -d "$_j" ] && JAVA_HOME=$_j; done
-            unset _j
-        fi
-        [ -n "${JAVA_HOME:-}" ] && export JAVA_HOME && _path_prepend "$JAVA_HOME/bin"
-        _path_prepend /usr/X11R6/bin
-        _path_prepend /usr/games
-        ;;
-    Linux)
-        _path_prepend /var/lib/flatpak/exports/bin
-        export LIBSEAT_BACKEND=logind
-        ;;
-esac
+# flatpak's launchers, wherever flatpak is installed
+_path_prepend /var/lib/flatpak/exports/bin
+
+# what only one OS has: env.d/openbsd.sh, env.d/linux.sh, env.d/darwin.sh
+_os=$(uname | tr '[:upper:]' '[:lower:]')
+[ -f "$XDG_CONFIG_HOME/sh/env.d/$_os.sh" ] && . "$XDG_CONFIG_HOME/sh/env.d/$_os.sh"
+unset _os
 export PATH
 unset -f _path_prepend
 
