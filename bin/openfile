@@ -28,16 +28,10 @@ send_remote() {
 
 noscreen() { printf 'openfile: no screen here for %s\n' "$1" >&2; return 1; }
 
-handlenoextension() {
-    case "$(mimetype "$1")" in
-        inode/directory) echo "$1" ;;
-        *) gui_open "$@" || for _f in "$@"; do preview "$_f"; done ;;
-    esac
-}
-
 first="$1"
 
 case "$(mimetype "$first")" in
+    inode/directory) printf '%s\n' "$first" ;;
     inode/x-empty|text/*|application/json|*shellscript|application/x-empty|application/octet-stream)
         if have nvim && have launch_nvim; then launch_nvim "$@"
         else ${VISUAL:-${EDITOR:-vi}} "$@"; fi ;;
@@ -46,16 +40,21 @@ case "$(mimetype "$first")" in
         if have spdfv && [ -t 0 ]; then for _f in "$@"; do spdfv "$_f"; done
         elif has_x; then gui_open "$@"
         else noscreen "$first"; fi ;;
+    # mpv's exit status says how it was quit, not whether it could play: once
+    # it ran, nothing else opens the files
     audio/*|video/x-ms-asf)
-        send_remote "$@" || { have mpv && mpv --shuffle --no-audio-display "$@"; } ||
-            gui_open "$@" || noscreen "$first" ;;
+        send_remote "$@" && exit
+        if have mpv; then mpv --shuffle --no-audio-display "$@"
+        else gui_open "$@" || noscreen "$first"; fi ;;
     video/*)
-        send_remote "$@" ||
-            if has_x; then have mpv && mpv "$@" >/dev/null 2>&1 || gui_open "$@"
-            else have mpv && mpv --vo=tct --really-quiet "$@" || noscreen "$first"; fi ;;
+        send_remote "$@" && exit
+        if has_x && have mpv; then mpv "$@" >/dev/null 2>&1
+        elif has_x; then gui_open "$@"
+        elif have mpv; then mpv --vo=tct --really-quiet "$@"
+        else noscreen "$first"; fi ;;
     image/*)
         if have sixiv && [ -t 0 ]; then
             if [ $# -gt 1 ]; then sixiv -t -- "$@"; else sixiv -- "$1"; fi
         else gui_open "$@" || for _f in "$@"; do preview "$_f"; done; fi ;;
-	*) handlenoextension "$@" ;;
+    *) gui_open "$@" || for _f in "$@"; do preview "$_f"; done ;;
 esac
