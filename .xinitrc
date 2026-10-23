@@ -48,8 +48,8 @@ xset r rate 300 100
 xset s off
 xset b off
 xset -dpms
+# smawm's lock key (xset dpms force off) turns DPMS back on: no timeouts then
 xset dpms 0 0 0
-#setterm -blank 0 -powerdown 0
 
 # PATH e o resto vêm herdados: o profile carrega o env.sh no login e é o
 # env.sh que dispara o startx. Sem essa herança nada aqui embaixo resolve.
@@ -59,8 +59,6 @@ _w=$(for _f in "$HOME"/.local/wallpapers/*; do
         [ -f "$_f" ] && printf '%s\n' "$_f"
     done | awk 'BEGIN { srand() } { a[NR] = $0 } END { if (NR) print a[int(rand() * NR) + 1] }')
 [ -n "$_w" ] && xwallpaper --zoom "$_w" &
-# setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.\+=\([0-9]\+\).\+/\1/'` br &
-# setxkbmap -device `xinput list | grep "Virtual core XTEST keyboard" | sed -e 's/.*=//' | awk '{print $1}'` br &
 setxkbmap br &
 
 if [ "$(uname)" = OpenBSD ]; then
@@ -85,8 +83,6 @@ dbus-update-activation-environment --all &
 
 # run the WM in the foreground (no exec) so the ssh-agent teardown below runs on logout
 smawm
-# while true; do smawm; done
-# xhost +SI:localuser:$USER
 
 # session ended: drop keys and stop the ssh-agent
 if [ "$SSH_AGENT_PID" ]; then
