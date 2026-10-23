@@ -1,0 +1,128 @@
+#!/bin/sh
+# Fresh OpenBSD on fangorn -> my environment; run by fangorn rebuild, which
+# copies it in with lib.sh, with the host home to NFS-mount at ~/host. Safe to
+# rerun.
+set -e
+
+user=meriadoc
+host=fangorn
+server=192.168.122.1	# the host, on libvirt's default network
+hosthome=${1:-/home/$user}	# what the host exports
+ip=192.168.122.10	# fangorn's reserved address
+home=/home/$user
+ws=$home/Workspace
+
+[ "$(id -u)" -eq 0 ] || { echo "run as root: su root -c 'sh $0'" >&2; exit 1; }
+
+as_user() { su -l "$user" -c "$1"; }
+. "$(dirname "$(realpath "$0")")/lib.sh"
+# sshd_config: drop any line for the key, commented or not, then set it
+sshd_set() {
+	sed -i "/^#*$1 /d" /etc/ssh/sshd_config
+	echo "$1 $2" >> /etc/ssh/sshd_config
+}
+
+# what the installer was answered in the install.conf of fangorn install
+bad=
+check() { eval "$2" >/dev/null 2>&1 || bad="$bad
+  - $1"; }
+check "hostname is $host" '[ "$(hostname -s)" = "$host" ]'
+check "$user exists with uid 1000, the same as on the host (NFS)" '[ "$(id -u $user)" = 1000 ]'
+check "$user is in wheel" 'id -Gn $user | tr " " "\n" | grep -qx wheel'
+check "$user has an authorized ssh key" '[ -s /home/$user/.ssh/authorized_keys ]'
+check "time zone is America/Fortaleza" 'readlink /etc/localtime | grep -q "/America/Fortaleza$"'
+check "sshd is running" 'rcctl check sshd'
+check "root can't log in over ssh" 'grep -qx "PermitRootLogin no" /etc/ssh/sshd_config'
+# no X server used, but the X sets stay: ffmpeg and others link against them
+check "the X sets are installed" '[ -x /usr/X11R6/bin/xauth ]'
+check "xenodm is off" '! rcctl ls on | grep -qx xenodm'
+check "the console is com0" 'grep -q "^set tty com0" /etc/boot.conf'
+check "vio0 has $ip" 'ifconfig vio0 | grep -q "inet $ip "'
+check "the host exports $hosthome" 'showmount -e $server | grep -q "^$hosthome "'
+# mountd alone answers showmount; this calls nfsd itself (rpcbind's list can be stale)
+check "the host's nfsd serves NFSv3 over tcp" 'rpcinfo -t $server 100003 3'
+if [ -n "$bad" ]; then
+	echo "the install doesn't match what fangorn install asked for:$bad" >&2
+	exit 1
+fi
+
+# the installer wrote the plain-http mirror it fetched the sets from
+echo https://openbsd.c3sl.ufpr.br/pub/OpenBSD > /etc/installurl
+# the install ran on the serial console, which never asks for a keyboard layout
+echo br > /etc/kbdtype
+kbd br >/dev/null
+echo 'permit persist :wheel' > /etc/doas.conf
+
+for s in kern.audio.record=1; do
+	grep -qx "$s" /etc/sysctl.conf 2>/dev/null || echo "$s" >> /etc/sysctl.conf
+	sysctl "$s" >/dev/null
+done
+
+sshd_set PermitRootLogin no
+sshd_set X11Forwarding no	# ssh only, no graphical programs
+sshd_set ClientAliveInterval 60
+sshd_set ClientAliveCountMax 120
+rcctl restart sshd
+
+# newest snapshot: sysupgrade stages /bsd.upgrade, which only a reboot applies
+sysupgrade -s -n
+if [ -x /bsd.upgrade ]; then
+	echo
+	echo "rebooting into the newest snapshot; fangorn rebuild carries on by itself"
+	echo "(run by hand instead, run this again once fangorn is back)"
+	reboot
+	exit 0
+fi
+# no fw_update: firmware is for real hardware, and a VM's virtio devices need none
+pkg_add -u
+
+# tools
+pkg_add -I git github-cli neovim fzf fd eza ripgrep tree-sitter-cli tree \
+	curl wget htop fdupes rsync-- 7zip zip unzip-- xz unrar w3m-- \
+	p5-Image-ExifTool chafa ffmpeg tesseract yt-dlp stylua lua-language-server \
+	fastfetch
+# video in the terminal (--vo=tct), for openfile when the host's screen is out of reach
+pkg_add -I mpv
+# spdfv's deps: PDF, DjVu, EPUB (via mutool), and ImageMagick 6's convert
+pkg_add -I poppler-utils djvulibre mupdf-- ImageMagick
+
+# build deps (clang, make and pkg-config are in base)
+pkg_add -I gmake cmake ninja autoconf%2.72 automake%1.17 libtool libvterm
+
+# base's clang has no clangd; this ships /usr/local/bin/clangd (nvim's C LSP)
+pkg_add -I clang-tools-extra
+
+pkg_add -I jdk%21 maven
+
+# the host's home, read-write as $user (the host squashes root, so root can't touch it)
+as_user 'mkdir -p $HOME/host'
+grep -q " /home/$user/host " /etc/fstab ||
+	echo "$server:$hosthome /home/$user/host nfs rw,nodev,nosuid,tcp,intr,bg 0 0" >> /etc/fstab
+# bg makes a failed mount retry in the background and still exit 0: check it took
+mount | grep -q " /home/$user/host " || mount "/home/$user/host"
+mount | grep -q " /home/$user/host " || {
+	echo "couldn't mount $server:$hosthome at ~/host; fix the host's NFS, then rerun" >&2
+	exit 1
+}
+
+# repos are cloned over ssh with the host home's key
+for f in id_ed25519 id_ed25519.pub known_hosts; do
+	[ -e "/home/$user/.ssh/$f" ] || as_user "cp -p \$HOME/host/.ssh/$f \$HOME/.ssh/$f"
+done
+
+as_user "mkdir -p $ws"
+github_url
+clone dvtm dvtm
+clone dotfiles dotfiles
+
+# no st or smawm: the terminal and the WM are the host's, this is reached over ssh
+
+# dvtm's config.mk needs GNU make
+as_user "cd $ws/dvtm && gmake install"
+as_user "cd $ws/dotfiles && make install HOST=$host"
+
+profile_block
+
+# no OpenBSD build of carapace, and zoxide needs Rust: doctor lists them
+
+as_user "PATH=\$HOME/.local/bin:\$PATH; cd $ws/dotfiles && make doctor HOST=$host"
