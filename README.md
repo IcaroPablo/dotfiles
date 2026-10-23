@@ -6,9 +6,9 @@ Small set (hopefully) of dotfiles I keep for dealing with my basic *nix needs
 
 An ordinary git repository plus symlinks: each directory under `.config/` is linked into `~/.config`, `.xinitrc` into `$HOME`, and each script in `bin/` into `~/.local/bin`. Nothing is copied, so whatever a tool writes into its own config (nvim's `nvim-pack-lock.json`, for one) lands back in the repository and shows up in `git status`, and editing a script takes effect at once.
 
-- `MANIFEST` lists everything that can be linked, with what each one needs and uses.
+- `MANIFEST` lists everything that can be linked, with the capabilities each one needs.
 - `.config/sh/` is the shell: `env.sh` (login environment), `rc.sh` (interactive shells), `lib/` (helpers the scripts source: `core.sh`, `term.sh`, `x11.sh`), and what only one OS or shell has in `env.d/<os>.sh` and `rc.d/<os>.sh`, `rc.d/<shell>.sh`. `.config/x11/xinitrc.d/<os>.sh` does the same for `.xinitrc`.
-- `.config/sh/hosts/<host>.sh` describes one machine (below).
+- `.config/sh/hosts/<hostname>.sh` holds one machine's own settings, which `env.sh` sources at login.
 - `setup/` takes a fresh system to this environment, one script per OS.
 
 The graphical tools are for X only.
@@ -18,20 +18,33 @@ The graphical tools are for X only.
 - `$ git clone https://github.com/IcaroPablo/dotfiles ~/Workspace/dotfiles`
 - `$ cd ~/Workspace/dotfiles && make install`
 
-`make install` links what `MANIFEST` gives this machine and removes this repository's links to anything it no longer gives. `make list` shows what that is, and what is left out and why; `make doctor` checks the links, whether the shell loads `rc.sh`, and the tools each linked file uses. `make uninstall` removes only links that point back at the repository, found by scanning the targets, so the link of a file deleted from here goes too.
+`make install` links what `MANIFEST` gives this machine and removes this repository's links to anything it no longer gives. `make list` shows what that is, and what is left out and why; `make doctor` checks the links, whether the shell loads `rc.sh`, and each declared capability. `make uninstall` removes only links that point back at the repository, found by scanning the targets, so the link of a file deleted from here goes too.
 
 >`make install` refuses to clobber: anything already sitting where a link belongs is reported and skipped, the rest still install, and the target exits non-zero. `FORCE=1` displaces the occupant into `~/.local/share/dotfiles/displaced` — dated, not deleted — rather than overwriting it.
 
 >The Makefile is POSIX make, so it runs under bmake and OpenBSD's make as well as GNU make — no `wildcard`, `notdir` or `CURDIR`, and the lists come from shell globs. Use `cd` rather than `make -C`: OpenBSD's make has no `-C`.
 
-### Machines
+### Capabilities
 
-Each line of `MANIFEST` is `path : needs : uses`. A file is linked when the machine meets everything in its needs, where each word is either a tag or a command that must be installed (`a|b`: either one):
+What a machine gets depends on the capabilities it declares, one word each in `~/.config/dotfiles/capabilities`. That file belongs to the machine, not to this repository: the setup scripts write it (below), or it can be written by hand. Without it, `make` stops and says so; an empty one declares nothing.
 
-- the OS tag (`linux`, `openbsd`, `macos`) comes from `uname`;
-- `host` (a physical machine), `x11` and `sixel` (a terminal that shows sixel images) come from the machine's `.config/sh/hosts/<host>.sh`, as `HAS='host x11 sixel'`.
+| Capability | What it is | Checked by |
+|---|---|---|
+| `x11` | an X session: Xorg, st, smawm, scrot, slop | `startx xrandr xsetroot xdpyinfo xclip st smawm scrot slop` |
+| `sixel` | the sixel viewers' tools | `chafa ffmpeg ffprobe python3 pdfinfo pdftoppm djvused ddjvu` |
+| `text-editing` | nvim and vis | `nvim tree-sitter rg vis-open` |
+| `dvtm` | dvtm, for shpad | `dvtm` |
+| `phone` | adb, for pull-files | `adb` |
+| `host` | a physical machine's disks | `rsync cryptsetup\|bioctl` |
+| `ocr` | tesseract, for scrotocr | `tesseract mogrify` |
+| `yt-dlp` | yt-dlp, for igsaved | `yt-dlp` |
+| `ghostty` | the Ghostty terminal | `ghostty\|/Applications/Ghostty.app` |
 
-The host is `hostname -s`, or `make install HOST=name`. A machine with no host file still gets everything that needs no host tags, and `make` says so; a new machine only needs its file for X, sixel or hardware tools. The same file holds the machine's own settings, which `env.sh` sources at login.
+Each line of `MANIFEST` is `path : needs`, where needs are capabilities and OS tags (`linux`, `openbsd`, `macos`, from `uname`), `a|b` meaning either one; a file with no needs is linked everywhere. Only the declared capabilities are checked, against the commands above (in the Makefile's `CHECKS`), and if a declared one fails its check, `make install` stops before linking anything and names what's missing. What is installed but not declared is ignored.
+
+vis is checked by its `vis-open`: the BSDs, Chimera's userland among them, have a `vis(1)` of their own, and name the editor `vise`.
+
+>TODO: a declared `sixel` trusts the terminal. Only the viewers' tools are checked, as there is no reliable way to ask a terminal whether it draws sixel images.
 
 ### The shell
 
@@ -59,10 +72,18 @@ emulate sh -c '. "$HOME/.config/sh/rc.sh"'
 
 ### Setting up a machine
 
-`setup/chimera` (shire), `setup/openbsd` (fangorn, run by `fangorn rebuild`) and `setup/macos` take a fresh system to this environment: packages, the user, this repository cloned and installed, and the `.profile` lines. They source `setup/lib.sh`, so run them from a clone or from a copy of the whole `setup/` folder:
+`setup/chimera` (shire), `setup/openbsd` (fangorn, run by `fangorn rebuild`) and `setup/macos` take a fresh system to this environment: the base system and shell tools, the user, this repository cloned, the `.profile` lines, and then the capabilities chosen. Each script offers the capabilities it can install on its OS, asks about them one by one unless they're given as arguments (a rerun defaults to what's declared), installs the chosen ones, declares them, and runs `make install`. Dropping a capability on a rerun undeclares it without uninstalling anything; what isn't on a script's menu, declared by hand, stays declared.
 
-- `# sh setup/chimera` (as root, also from the installer's chroot)
-- `$ sh setup/macos` (as yourself; no X, just the shell and Ghostty)
+| Script | Its capabilities |
+|---|---|
+| `setup/chimera` | `x11 sixel text-editing host phone ocr yt-dlp` |
+| `setup/openbsd` | `sixel text-editing dvtm yt-dlp` |
+| `setup/macos` | `ghostty text-editing` |
+
+They source `setup/lib.sh`, so run them from a clone or from a copy of the whole `setup/` folder:
+
+- `# sh setup/chimera [capability...]` (as root, also from the installer's chroot)
+- `$ sh setup/macos [capability...]` (as yourself; no X)
 
 Each is safe to rerun; `setup/chimera` and `setup/macos` end listing what was already installed but isn't theirs.
 
