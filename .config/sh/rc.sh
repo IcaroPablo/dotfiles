@@ -216,9 +216,17 @@ bulkrename() (
     "${EDITOR:-vi}" "$new"
     [ "$(wc -l < "$old")" -eq "$(wc -l < "$new")" ] ||
         { echo "bulkrename: line count changed, aborting" >&2; exit 1; }
-    paste "$old" "$new" | while IFS="$(printf '\t')" read -r src dst; do
-        [ "$src" = "$dst" ] || [ -e "$dst" ] || mv -- "$src" "$dst"
-    done
+    paste "$old" "$new" | {
+        while IFS="$(printf '\t')" read -r src dst; do
+            [ "$src" != "$dst" ] || continue
+            if [ -e "$dst" ] || [ -L "$dst" ]; then
+                echo "bulkrename: $dst exists, $src left as is" >&2; r=1
+            else
+                mv -- "$src" "$dst" || r=1
+            fi
+        done
+        exit "${r:-0}"
+    }
 )
 
 # shadows POSIX compress(1) at the prompt
