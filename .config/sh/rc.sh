@@ -75,35 +75,21 @@ c() {
     unset _c_start _c_hits _c_hit
 }
 
+# without fzf: the numbered matches, for fc or r
 hist() {
-    if have fzf; then
-        _h="$(fc -ln 1 2>/dev/null | sed 's/^[[:space:]]*//' | awk 'NF && !seen[$0]++' \
-            | fzf --tac --no-sort --query="${1:-}" --prompt='hist> ' \
-                  --height=40% --reverse --expect=ctrl-e)" || return 0
-        _k="$(printf '%s\n' "$_h" | sed -n 1p)"
-        _c="$(printf '%s\n' "$_h" | sed -n '2,$p')"
-        [ -n "$_c" ] || return 0
-        if [ "$_k" = ctrl-e ]; then
-            _t="$(mktemp)"; printf '%s\n' "$_c" > "$_t"
-            "${EDITOR:-vi}" "$_t"; _c="$(cat "$_t")"; rm -f "$_t"
-        fi
-        eval "$_c"
-        unset _h _k _c _t
-    else
-        case "$1" in
-            -)  shift
-                fc -l 1 | grep -F -- "$1" || return 0
-                printf 'number (prefix with e to edit): '
-                read -r _n || return 0
-                case "$_n" in
-                    "") : ;;
-                    e*) fc "${_n#e}" ;;
-                    *)  _c="$(fc -ln "$_n" "$_n" 2>/dev/null)"; [ -n "$_c" ] && eval "$_c" ;;
-                esac
-                unset _n _c ;;
-            *)  fc -ln 1 | grep -F -- "$1" || return 0 ;;
-        esac
+    if ! have fzf; then fc -l 1 | grep -F -- "${1:-}"; return 0; fi
+    _h="$(fc -ln 1 2>/dev/null | sed 's/^[[:space:]]*//' | awk 'NF && !seen[$0]++' \
+        | fzf --tac --no-sort --query="${1:-}" --prompt='hist> ' \
+              --height=40% --reverse --expect=ctrl-e)" || return 0
+    _k="$(printf '%s\n' "$_h" | sed -n 1p)"
+    _c="$(printf '%s\n' "$_h" | sed -n '2,$p')"
+    [ -n "$_c" ] || return 0
+    if [ "$_k" = ctrl-e ]; then
+        _t="$(mktemp)"; printf '%s\n' "$_c" > "$_t"
+        "${EDITOR:-vi}" "$_t"; _c="$(cat "$_t")"; rm -f "$_t"
     fi
+    eval "$_c"
+    unset _h _k _c _t
 }
 
 see() { tee /dev/tty; }
