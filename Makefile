@@ -3,7 +3,7 @@
 #   make install     links the SETS into ~/.config, $HOME and ~/.local/bin
 #   make uninstall   removes only the links that point here
 #   make list        shows what SETS would link
-#   make doctor      the links, the shell block, and the tools SETS needs
+#   make doctor      the links, whether rc.sh loads, and the tools SETS needs
 #
 # SETS="0 1" (default: all) picks the sets: 0 common, 1 shire, 2 fangorn; 1
 # and 2 depend only on 0. install removes our links to what is outside them.
@@ -31,13 +31,14 @@ SET1 = .config/ghostty .xinitrc \
 SET2 = .config/nvim .config/spdfv .config/vis \
 	bin/igsaved bin/launch_nvim bin/shpad bin/sixiv bin/spdfv
 
-# Missing, these fail the doctor; the groups below only inform.
-REQUIRED = git fzf eza file mktemp
+# Missing, these fail the doctor; everything else falls back, and the groups
+# below only inform.
+REQUIRED = git
 
 # label:tools, one list per set
 GROUPS0 = \
-	"NÚCLEO (degradam, mas fazem falta; rc.sh):fd fdfind zoxide readlink realpath make lsof" \
-	"ARQUIVO (compress, extract do rc.sh):tar gzip bzip2 xz zip unzip unrar 7z" \
+	"NÚCLEO (degradam, mas fazem falta; rc.sh, openfile, preview):fzf eza file fd fdfind zoxide realpath" \
+	"ARQUIVO (compress, extract do rc.sh):tar gzip bzip2 xz zip unzip rar unrar 7z" \
 	"PREVIEW (preview):chafa ffmpeg ffprobe w3m exiftool"
 GROUPS1 = \
 	"X11 (xinitrc, bar, fzfmenu, monitor, as teclas do smawm):xwallpaper xsetroot xset xrdb xmodmap setxkbmap xinput xrandr xdpyinfo smawm st scrot xclip xdg-open" \
@@ -46,8 +47,8 @@ GROUPS1 = \
 	"CELULAR (pull-files):adb"
 GROUPS2 = \
 	"EDITOR (nvim, launch_nvim):nvim tree-sitter rg" \
-	"SHPAD (dvtm, e o carapace completa no nvim):dvtm carapace" \
-	"IMAGEM (sixiv, igsaved):ffmpeg ffprobe chafa python3 less" \
+	"SHPAD (dvtm, e o carapace completa no nvim):dvtm carapace lsof" \
+	"IMAGEM (sixiv, igsaved):ffmpeg ffprobe chafa python3 less yt-dlp xclip mpv" \
 	"DOCUMENTO (spdfv):pdfinfo pdftoppm ddjvu djvused mutool magick convert chafa python3"
 
 # $pick: what SETS links; warns about files in no set. dest: where a file links.
