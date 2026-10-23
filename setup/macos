@@ -4,7 +4,9 @@
 # Safe to rerun.
 set -e
 
-ws=$HOME/Workspace
+user=$(id -un) home=$HOME ws=$HOME/Workspace
+as_user() { sh -c "$1"; }
+. "$(dirname "$(realpath "$0")")/lib.sh"
 
 [ "$(uname)" = Darwin ] || { echo "setup/macos is for macOS" >&2; exit 1; }
 [ "$(id -u)" -ne 0 ] || { echo "run as yourself, not root: Homebrew refuses root" >&2; exit 1; }
@@ -53,38 +55,13 @@ cask ghostty font-monaspice-nerd-font
 
 mkdir -p "$ws"
 
-# GitHub over ssh with a key it accepts; otherwise over https, or abort
-key=$HOME/.ssh/id_ed25519
-url=git@github.com:IcaroPablo
-# ssh -T exits 1 even when it logs in: what tells is GitHub's greeting
-case $([ -f "$key" ] && ssh -T -i "$key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new git@github.com 2>&1) in
-*"successfully authenticated"*) ;;
-*)
-	[ -t 0 ] || { echo "GitHub doesn't take $key, and no terminal to ask about https" >&2; exit 1; }
-	printf "GitHub doesn't take %s (missing or not added); clone over https or abort? [h/A] " "$key"
-	read -r ans
-	case $ans in
-	[Hh]*) url=https://github.com/IcaroPablo ;;
-	*) echo "aborted" >&2; exit 1 ;;
-	esac
-	;;
-esac
-
-if [ ! -d "$ws/dotfiles" ]; then git clone "$url/dotfiles.git" "$ws/dotfiles"
-# an https clone moves to ssh once GitHub takes the key
-elif [ "${url#git@}" != "$url" ]; then git -C "$ws/dotfiles" remote set-url origin "$url/dotfiles.git"
-fi
+github_url
+clone dotfiles
 
 # no host file needed: macOS, plus what's installed, picks what gets linked
 (cd "$ws/dotfiles" && make install HOST="$(hostname -s)")
 
-# shell entry block from the dotfiles README
-grep -q icaro-dotfiles "$HOME/.profile" 2>/dev/null || cat >> "$HOME/.profile" <<'EOF'
-# >>> icaro-dotfiles >>>
-ENV="$HOME/.config/sh/rc.sh"; export ENV
-. "$HOME/.config/sh/env.sh"
-# <<< icaro-dotfiles <<<
-EOF
+profile_block
 
 # oksh as the login shell: chsh takes only what /etc/shells lists
 oksh=$(brew --prefix)/bin/oksh
@@ -94,8 +71,5 @@ grep -qx "$oksh" /etc/shells || echo "$oksh" | sudo tee -a /etc/shells >/dev/nul
 
 # ==== 6. leftovers ====
 
-in_list() { x=$1; shift; for w; do [ "$w" = "$x" ] && return 0; done; return 1; }
-extra=$(for p in $before; do in_list "$p" $wanted || echo "$p"; done)
-extra_casks=$(for c in $before_casks; do in_list "$c" $casks || echo "$c"; done)
-[ -z "$extra" ] || printf '\nalready installed, not by this script (brew uninstall by hand if unwanted):\n%s\n' "$extra"
-[ -z "$extra_casks" ] || printf '\ncasks not from this script (brew uninstall --cask by hand if unwanted):\n%s\n' "$extra_casks"
+leftovers "already installed, not by this script (brew uninstall by hand if unwanted)" "$before" $wanted
+leftovers "casks not from this script (brew uninstall --cask by hand if unwanted)" "$before_casks" $casks
