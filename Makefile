@@ -37,20 +37,20 @@ REQUIRED = git
 
 # label:tools, one list per set
 GROUPS0 = \
-	"NÚCLEO (degradam, mas fazem falta; rc.sh, openfile, preview):fzf eza file fd fdfind zoxide realpath" \
-	"ARQUIVO (compress, extract do rc.sh):tar gzip bzip2 xz zip unzip rar unrar 7z" \
+	"CORE (they fall back, but are missed; rc.sh, openfile, preview):fzf eza file fd fdfind zoxide realpath" \
+	"ARCHIVES (rc.sh's compress, extract):tar gzip bzip2 xz zip unzip rar unrar 7z" \
 	"PREVIEW (preview):chafa ffmpeg ffprobe w3m exiftool"
 GROUPS1 = \
-	"X11 (xinitrc, bar, fzfmenu, monitor, as teclas do smawm):xwallpaper xsetroot xset xrdb xmodmap setxkbmap xinput xrandr xdpyinfo smawm st scrot xclip xdg-open" \
-	"IMAGEM E VÍDEO (rec-gif, scrotocr):ffmpeg slop tesseract mogrify" \
-	"DISCO (backuphd, wipe-ssd):rsync doas cryptsetup lsof udisksctl blkdiscard sfdisk mkfs.ext4" \
-	"CELULAR (pull-files):adb" \
+	"X11 (xinitrc, bar, fzfmenu, monitor, smawm's keys):xwallpaper xsetroot xset xrdb xmodmap setxkbmap xinput xrandr xdpyinfo smawm st scrot xclip xdg-open" \
+	"IMAGE AND VIDEO (rec-gif, scrotocr):ffmpeg slop tesseract mogrify" \
+	"DISK (backuphd, wipe-ssd):rsync doas cryptsetup lsof udisksctl blkdiscard sfdisk mkfs.ext4" \
+	"PHONE (pull-files):adb" \
 	"INSTAGRAM (igsaved):python3 yt-dlp chafa ffmpeg xclip mpv less"
 GROUPS2 = \
 	"EDITOR (nvim, launch_nvim):nvim tree-sitter rg" \
-	"SHPAD (dvtm, e o carapace completa no nvim):dvtm carapace lsof" \
-	"IMAGEM (sixiv):ffmpeg ffprobe chafa python3" \
-	"DOCUMENTO (spdfv):pdfinfo pdftoppm ddjvu djvused mutool magick convert chafa python3"
+	"SHPAD (dvtm, and carapace completes in nvim):dvtm carapace lsof" \
+	"IMAGE (sixiv):ffmpeg ffprobe chafa python3" \
+	"DOCUMENT (spdfv):pdfinfo pdftoppm ddjvu djvused mutool magick convert chafa python3"
 
 # $pick: what SETS links; warns about files in no set. dest: where a file links.
 PICK = all=" $(SET0) $(SET1) $(SET2) "; \
@@ -86,7 +86,7 @@ doctor:
 		printf '  \342\234\223 %s\n' "$$r"; \
 	else printf '  \342\234\227 %s -i does not load rc.sh (ENV, see the README)\n' "$${SHELL:-/bin/sh}"; fi; \
 	printf '\n'; \
-	bad=0; printf 'OBRIGATÓRIO\n  '; \
+	bad=0; printf 'REQUIRED\n  '; \
 	for t in $(REQUIRED); do \
 		if command -v "$$t" >/dev/null 2>&1; then printf '\342\234\223 %s  ' "$$t"; \
 		else printf '\342\234\227 %s  ' "$$t"; bad=1; fi; \
@@ -102,7 +102,7 @@ doctor:
 		echo "== SET $$k"; echo ""; \
 		case $$k in 0) show $(GROUPS0) ;; 1) show $(GROUPS1) ;; 2) show $(GROUPS2) ;; esac; \
 	done; \
-	if [ $$bad = 0 ]; then echo "obrigatórios presentes."; else echo "falta obrigatório."; fi; \
+	if [ $$bad = 0 ]; then echo "all required tools present."; else echo "a required tool is missing."; fi; \
 	exit $$bad
 
 # Doesn't trample what's there: the target is the real ~/.config, and a clash
@@ -120,13 +120,13 @@ install:
 		fi; \
 		if [ -e "$$d" ] || [ -L "$$d" ]; then \
 			if [ -z "$(FORCE)" ]; then \
-				echo "  ! $$rel: `echo "$$d" | sed "s|^$(HOME_DIR)|~|"` já existe e não é nosso (FORCE=1 para deslocar)"; \
+				echo "  ! $$rel: `echo "$$d" | sed "s|^$(HOME_DIR)|~|"` already exists and is not ours (FORCE=1 to displace it)"; \
 				bad=1; continue; \
 			fi; \
 			mkdir -p "$(DISPLACED)" || { bad=1; continue; }; \
 			flat=`echo "$$rel" | sed -e 's|^\.||' -e 's|/|_|g'`; \
 			mv "$$d" "$(DISPLACED)/$$flat.`date +%Y%m%d%H%M%S`" || { bad=1; continue; }; \
-			echo "  ~ $$rel (o que estava lá foi para $(DISPLACED))"; \
+			echo "  ~ $$rel (what was there moved to $(DISPLACED))"; \
 		fi; \
 		mkdir -p "`dirname "$$d"`"; \
 		ln -sfn "$$s" "$$d" && echo "  + $$rel"; \
@@ -141,8 +141,8 @@ uninstall:
 	done; \
 	if [ -d "$(DISPLACED)" ] && [ -n "`ls -A "$(DISPLACED)" 2>/dev/null`" ]; then \
 		echo ""; \
-		echo "  nota: `ls -A "$(DISPLACED)" | wc -l | tr -d ' '` arquivo(s) em $(DISPLACED)"; \
-		echo "  foram deslocados por um FORCE=1 e não voltam sozinhos."; \
+		echo "  note: `ls -A "$(DISPLACED)" | wc -l | tr -d ' '` file(s) in $(DISPLACED)"; \
+		echo "  were displaced by a FORCE=1 and don't come back by themselves."; \
 	fi
 
 list:
