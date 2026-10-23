@@ -44,7 +44,18 @@ ENV="$HOME/.config/sh/rc.sh"; export ENV
 
 >Order matters: `env.sh` ends in the tty1 auto-`startx`, which blocks until the X session dies, so exporting `ENV` afterwards would only take effect at logout and every terminal inside X would come up with no rc at all.
 
-For bash, keep the same two lines in `~/.profile` (bash reads it when there is no `~/.bash_profile`) and add `. "$HOME/.config/sh/rc.sh"` to `~/.bashrc`: bash reads `ENV` only in POSIX mode. zsh isn't covered yet: it would need its own `rc.d/zsh.sh` for the prompt.
+For bash, keep the same two lines in `~/.profile` (bash reads it when there is no `~/.bash_profile`) and add `. "$HOME/.config/sh/rc.sh"` to `~/.bashrc`: bash reads `ENV` only in POSIX mode.
+
+zsh reads neither `~/.profile` nor `ENV`, so it gets them in its own files:
+
+```sh
+# ~/.zprofile
+emulate sh -c '. "$HOME/.config/sh/env.sh"'
+# ~/.zshrc
+emulate sh -c '. "$HOME/.config/sh/rc.sh"'
+```
+
+>`emulate sh -c` loads them under sh's rules, and the functions they define keep those rules whenever they run; `rc.d/zsh.sh` gives the prompt zsh's escapes, vi keys and a history file of its own.
 
 ### Setting up a machine
 

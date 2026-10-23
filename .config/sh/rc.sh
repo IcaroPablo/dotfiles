@@ -23,7 +23,9 @@ if [ "$(id -u)" -eq 0 ]; then
     unset _ru _rd
 fi
 
-set -o vi 2>/dev/null
+# command: zsh's sh emulation refuses the option, and a failing special builtin
+# would end rc.sh there
+command set -o vi 2>/dev/null
 # ksh-family shells keep no history file unless HISTFILE is set
 : "${HISTFILE:=$HOME/.sh_history}" "${HISTSIZE:=10000}"
 ulimit -c 0 2>/dev/null
@@ -259,7 +261,8 @@ have mpv && alias play="mpv --shuffle ."
 
 # the prompt's escapes per shell, from rc.d/<shell>.sh: _cwd for the folder,
 # _m1 _m2 around the colour codes
-if [ -n "${BASH_VERSION:-}" ]; then _sh=bash
+if [ -n "${ZSH_VERSION:-}" ]; then _sh=zsh
+elif [ -n "${BASH_VERSION:-}" ]; then _sh=bash
 elif [ -n "${KSH_VERSION:-}" ]; then _sh=ksh
 else _sh=sh; fi
 _cwd='${PWD}' _m1='' _m2=''
