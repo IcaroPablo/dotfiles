@@ -348,7 +348,20 @@ esac
 MANIFEST=$MNT/.backuphd/manifest
 DAMAGED=$MNT/.backuphd/damaged	# what check found corrupt
 
-sum256() { sha256 -q "$1" 2>/dev/null; }
+# sha256 and stat differ between userlands: BSD (Chimera's too), GNU, macOS.
+if command -v sha256 >/dev/null; then
+	sum256() { sha256 -q "$1" 2>/dev/null; }
+elif command -v sha256sum >/dev/null; then
+	sum256() { _s=$(sha256sum 2>/dev/null <"$1") && printf '%s\n' "${_s%% *}"; }
+else
+	sum256() { _s=$(shasum -a 256 2>/dev/null <"$1") && printf '%s\n' "${_s%% *}"; }
+fi
+# stat's flag, and its formats for "size mtime" and "size mtime path"
+if stat -c %s / >/dev/null 2>&1; then
+	st=-c st_sm='%s %Y' st_smp='%s %Y %n'
+else
+	st=-f st_sm='%z %m' st_smp='%z %m %N'
+fi
 
 # "N/M" on the terminal, overwritten in place.
 progress() {
@@ -375,7 +388,7 @@ update_manifest() {
 	fi
 	# What is on the disk now: "size mtime path".
 	(cd "$MNT" && find ".$r" -type f ! -name '*
-*' -exec stat -f '%z %m %N' {} +) |
+*' -exec stat "$st" "$st_smp" {} +) |
 		sed 's/^\([0-9]* [0-9]*\) \./\1 /' > "$work/now"
 
 	awk -v r="$r" -v keep="$work/keep" -v todo="$work/todo" '
@@ -402,7 +415,7 @@ update_manifest() {
 			copy=$(sum256 "$MNT$p") || copy=
 			orig=$(sum256 "$p") || orig=
 			if [ -n "$copy" ] && [ "$copy" = "$orig" ]; then
-				printf '%s %s\n' "$copy" "$(stat -f '%z %m' "$MNT$p") $p" >> "$work/keep"
+				printf '%s %s\n' "$copy" "$(stat "$st" "$st_sm" "$MNT$p") $p" >> "$work/keep"
 			else
 				printf '\nbackuphd: the copy of %s does not match the original (changed during the backup, or written badly); removed it, run the backup again\n' "$p" >&2
 				rm -f "$MNT$p"
