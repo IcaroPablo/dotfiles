@@ -30,8 +30,12 @@ export LANG="en_US.UTF-8" LC_MESSAGES="en_US.UTF-8" LC_TIME="pt_PT.UTF-8"
 case "$(uname)" in
     OpenBSD)
         export AUDIOPLAYDEVICE="snd/0" AUDIORECDEVICE="snd/1"      # sndio
-        [ -d /usr/local/jdk-17 ] && export JAVA_HOME=/usr/local/jdk-17
-        [ -n "${JAVA_HOME:-}" ] && _path_prepend "$JAVA_HOME/bin"
+        # the newest of the jdk-NN packages
+        if [ -z "${JAVA_HOME:-}" ]; then
+            for _j in /usr/local/jdk-*; do [ -d "$_j" ] && JAVA_HOME=$_j; done
+            unset _j
+        fi
+        [ -n "${JAVA_HOME:-}" ] && export JAVA_HOME && _path_prepend "$JAVA_HOME/bin"
         _path_prepend /usr/X11R6/bin
         _path_prepend /usr/games
         ;;
