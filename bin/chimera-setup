@@ -115,7 +115,7 @@ for k in $sets; do case $k in 1|2) ;; *) echo "no set $k" >&2; exit 1 ;; esac; d
 
 has_set() { case " $sets " in *" $1 "*) ;; *) return 1 ;; esac; }
 # what only a set's scripts use; set 0's comes with the shell above
-has_set 1 && add rsync tesseract imagemagick android-tools python
+has_set 1 && add rsync tesseract imagemagick android-tools
 has_set 2 && add python poppler djvulibre imagemagick
 as_user "cd $ws/dotfiles && make install SETS='0 $sets'"
 
