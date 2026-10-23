@@ -32,4 +32,3 @@ bin/rec-gif                   : x11                : ffmpeg slop xclip
 bin/scrotocr                  : x11                : scrot mogrify tesseract xclip
 bin/backuphd                  : host linux|openbsd : doas rsync cryptsetup|bioctl udisksctl
 bin/wipe-ssd                  : host linux         : doas lsblk findmnt losetup blkdiscard sfdisk mkfs.ext4 udevadm
-bin/chimera-setup             : host linux         :

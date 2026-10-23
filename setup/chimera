@@ -1,11 +1,12 @@
 #!/bin/sh
-# Fresh Chimera install -> my environment. Run as root: doas sh chimera-setup
-# Safe to rerun.
+# Fresh Chimera install -> my environment. Run as root, from a dotfiles clone
+# or a copy of setup/: doas sh setup/chimera. Safe to rerun.
 set -e
 
 user=meriadoc
 host=shire
-ws=/home/$user/Workspace
+home=/home/$user
+ws=$home/Workspace
 
 [ "$(id -u)" -eq 0 ] || { echo "run as root: doas sh $0" >&2; exit 1; }
 
@@ -21,6 +22,7 @@ grep -q "^$user:[!*]" /etc/shadow && passwd "$user"
 usermod -a -G wheel "$user"
 
 as_user() { doas -u "$user" sh -c "$1"; }
+. "$(dirname "$(realpath "$0")")/lib.sh"
 
 # what was installed before, to show at the end what this script doesn't install
 before=$(cat /etc/apk/world)
@@ -81,30 +83,7 @@ add oksh github-cli fzf fd eza ripgrep zoxide file lsof htop llvm-binutils \
 
 as_user "mkdir -p $ws"
 
-# GitHub over ssh with a key it accepts; otherwise over https, or abort
-key=/home/$user/.ssh/id_ed25519
-url=git@github.com:IcaroPablo
-# ssh -T exits 1 even when it logs in: what tells is GitHub's greeting
-case $([ -f "$key" ] && as_user "ssh -T -i $key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new git@github.com 2>&1") in
-*"successfully authenticated"*) ;;
-*)
-	[ -t 0 ] || { echo "GitHub doesn't take $key, and no terminal to ask about https" >&2; exit 1; }
-	printf "GitHub doesn't take %s (missing or not added); clone over https or abort? [h/A] " "$key"
-	read -r ans
-	case $ans in
-	[Hh]*) url=https://github.com/IcaroPablo ;;
-	*) echo "aborted" >&2; exit 1 ;;
-	esac
-	;;
-esac
-
-clone() {
-	if [ ! -d "$ws/$1" ]; then as_user "git clone $url/$1.git $ws/$1"
-	# an https clone moves to ssh once GitHub takes the key
-	elif [ "${url#git@}" != "$url" ]; then as_user "git -C $ws/$1 remote set-url origin $url/$1.git"
-	fi
-}
-
+github_url
 clone dotfiles
 
 # what only some scripts use: backuphd, scrotocr, pull-files, and python for
@@ -114,13 +93,7 @@ add rsync tesseract imagemagick android-tools python poppler djvulibre
 # HOST: in the installer's chroot, hostname still names the live system
 as_user "cd $ws/dotfiles && make install HOST=$host"
 
-# shell entry block from the dotfiles README
-grep -q icaro-dotfiles "/home/$user/.profile" 2>/dev/null || as_user 'cat >> $HOME/.profile' <<'EOF'
-# >>> icaro-dotfiles >>>
-ENV="$HOME/.config/sh/rc.sh"; export ENV
-. "$HOME/.config/sh/env.sh"
-# <<< icaro-dotfiles <<<
-EOF
+profile_block
 
 chsh -s /usr/bin/oksh "$user"
 
@@ -179,8 +152,6 @@ flatpak install -y --system flathub com.teamspeak.TeamSpeak ||
 # ==== 5. leftovers ====
 
 # version constraints and repo tags off: foo>=1.2@user -> foo
-in_list() { x=$1; shift; for w; do [ "$w" = "$x" ] && return 0; done; return 1; }
-extra=$(for p in $before; do in_list "${p%%[<>=~@]*}" $wanted || echo "$p"; done)
-extra_apps=$(for a in $before_apps; do in_list "$a" $apps || echo "$a"; done)
-[ -z "$extra" ] || printf '\nalready installed, not by this script (apk del by hand if unwanted):\n%s\n' "$extra"
-[ -z "$extra_apps" ] || printf '\nflatpaks not from this script (flatpak uninstall by hand if unwanted):\n%s\n' "$extra_apps"
+leftovers "already installed, not by this script (apk del by hand if unwanted)" \
+	"$(for p in $before; do echo "${p%%[<>=~@]*}"; done)" $wanted
+leftovers "flatpaks not from this script (flatpak uninstall by hand if unwanted)" "$before_apps" $apps
