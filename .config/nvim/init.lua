@@ -269,7 +269,7 @@ map.set("n", "<c-n>", ":cnext<CR>zz")
 map.set("n", "<C-d>", "<C-d>zz")
 map.set("n", "<C-u>", "<C-u>zz")
 map.set("n", "<C-o>", "<C-o>zz")
-map.set("n", "<C-i>", "<C-i>zz")
+-- no <C-i>zz: st sends Ctrl-I as a Tab, and Tab is :bnext above
 -- vim.keymap.set("n", "#", "#zz", { silent = true, noremap = true })
 -- vim.keymap.set("n", "g*", "g*zz", { silent = true, noremap = true })
 -- vim.keymap.set("n", "g#", "g#zz", { silent = true, noremap = true })
