@@ -39,9 +39,9 @@ if [ -z "$SSH_AGENT_PID" ] && command -v ssh-agent >/dev/null 2>&1; then
     unset _pub _key _keys
 fi
 
-if [ "$(xrandr | grep HDMI)" != "" ]; then
-    monitor same
-    monitor off
+# xrandr lists disconnected outputs too; the panel goes off only once mirrored
+if xrandr | grep -q '^HDMI[^ ]* connected'; then
+    monitor same && monitor off
 fi
 
 xset r rate 300 100
