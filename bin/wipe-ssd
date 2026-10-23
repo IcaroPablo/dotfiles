@@ -85,7 +85,7 @@ read -r answer
 echo '==> 1/4 overwriting with random data'
 full=$((sectors / 2048))	# whole 1 MiB blocks
 rem=$((sectors % 2048))		# leftover 512-byte sectors
-dd if=/dev/urandom of="$DEV" bs=1m count="$full" iflag=fullblock status=progress
+dd if=/dev/urandom of="$DEV" bs=1048576 count="$full" iflag=fullblock status=progress
 if [ "$rem" -gt 0 ]; then
 	dd if=/dev/urandom of="$DEV" bs=512 count="$rem" seek=$((full * 2048))
 fi
