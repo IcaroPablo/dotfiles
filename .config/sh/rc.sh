@@ -158,9 +158,12 @@ sel() {
 $_sel_out
 EOF
 
+    unset _sel_ls _sel_all _sel_pv _sel_out _sel_l
+    [ -n "$_sel_cmd" ] || { unset _sel_cmd; return 0; }
     while IFS= read -r _sel_e; do set -- "$@" "$_sel_e"; done < "$CLIPFILE"
-    [ -n "$_sel_cmd" ] && "$_sel_cmd" "$@"
-    unset _sel_cmd _sel_ls _sel_all _sel_pv _sel_out _sel_l _sel_e
+    set -- "$_sel_cmd" "$@"
+    unset _sel_cmd _sel_e
+    "$@"
 }
 
 # -c makes the command fifo nvim opens panes through. DVTM_OUTER_TERM, set per
