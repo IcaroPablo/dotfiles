@@ -11,7 +11,10 @@ if have doas; then DOAS='doas'; else DOAS='sudo'; fi
 
 # root through doas/sudo/su: the invoking user's ~/.local/bin, after the system's
 if [ "$(id -u)" -eq 0 ]; then
-    _ru="${DOAS_USER:-${SUDO_USER:-$(logname 2>/dev/null)}}"
+    # su leaves no other trace of who ran it: logname is just $LOGNAME on musl,
+    # and su sets that to root. The terminal is still owned by them
+    _ru="${DOAS_USER:-${SUDO_USER:-}}"
+    [ -n "$_ru" ] || _ru=$(ls -ld "$(tty 2>/dev/null)" 2>/dev/null | awk '{ print $3 }')
     case "$_ru" in
         ''|root|*[!A-Za-z0-9._-]*) : ;;
         *)  eval "_rd=~$_ru/.local/bin"
