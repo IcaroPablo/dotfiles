@@ -1,0 +1,101 @@
+#!/bin/sh
+# Fresh macOS -> my shell environment and Ghostty; no X, no window manager.
+# Run as yourself, not root (Homebrew refuses root): sh setup/macos
+# Safe to rerun.
+set -e
+
+ws=$HOME/Workspace
+
+[ "$(uname)" = Darwin ] || { echo "setup/macos is for macOS" >&2; exit 1; }
+[ "$(id -u)" -ne 0 ] || { echo "run as yourself, not root: Homebrew refuses root" >&2; exit 1; }
+
+# ==== 1. Apple's command line tools: git, make, cc ====
+
+if ! xcode-select -p >/dev/null 2>&1; then
+	xcode-select --install || :
+	echo "finish the Command Line Tools install in its dialog, then run this again" >&2
+	exit 1
+fi
+
+# ==== 2. Homebrew ====
+
+# /opt/homebrew on Apple silicon, /usr/local on Intel
+brew=
+for b in /opt/homebrew/bin/brew /usr/local/bin/brew; do [ -x "$b" ] && { brew=$b; break; }; done
+if [ -z "$brew" ]; then
+	/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+	for b in /opt/homebrew/bin/brew /usr/local/bin/brew; do [ -x "$b" ] && { brew=$b; break; }; done
+	[ -n "$brew" ] || { echo "Homebrew didn't install" >&2; exit 1; }
+fi
+eval "$("$brew" shellenv)"
+
+# what was installed before, to show at the end what this script doesn't install
+before=$(brew leaves)
+before_casks=$(brew list --cask)
+wanted= casks=
+add() { brew install "$@"; wanted="$wanted $*"; }
+cask() { brew install --cask "$@"; casks="$casks $*"; }
+
+brew update
+
+# ==== 3. shell ====
+
+# macOS already has file, zip, unzip, tar (with xz), realpath and man; p7zip,
+# not sevenzip, is the one that installs a 7z command
+add oksh git gh fzf eza fd ripgrep zoxide xz p7zip w3m exiftool chafa \
+	ffmpeg yt-dlp
+
+# ==== 4. Ghostty, with the font its config names ====
+
+cask ghostty font-monaspice-nerd-font
+
+# ==== 5. dotfiles ====
+
+mkdir -p "$ws"
+
+# GitHub over ssh with a key it accepts; otherwise over https, or abort
+key=$HOME/.ssh/id_ed25519
+url=git@github.com:IcaroPablo
+# ssh -T exits 1 even when it logs in: what tells is GitHub's greeting
+case $([ -f "$key" ] && ssh -T -i "$key" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new git@github.com 2>&1) in
+*"successfully authenticated"*) ;;
+*)
+	[ -t 0 ] || { echo "GitHub doesn't take $key, and no terminal to ask about https" >&2; exit 1; }
+	printf "GitHub doesn't take %s (missing or not added); clone over https or abort? [h/A] " "$key"
+	read -r ans
+	case $ans in
+	[Hh]*) url=https://github.com/IcaroPablo ;;
+	*) echo "aborted" >&2; exit 1 ;;
+	esac
+	;;
+esac
+
+if [ ! -d "$ws/dotfiles" ]; then git clone "$url/dotfiles.git" "$ws/dotfiles"
+# an https clone moves to ssh once GitHub takes the key
+elif [ "${url#git@}" != "$url" ]; then git -C "$ws/dotfiles" remote set-url origin "$url/dotfiles.git"
+fi
+
+# no host file needed: macOS, plus what's installed, picks what gets linked
+(cd "$ws/dotfiles" && make install HOST="$(hostname -s)")
+
+# shell entry block from the dotfiles README
+grep -q icaro-dotfiles "$HOME/.profile" 2>/dev/null || cat >> "$HOME/.profile" <<'EOF'
+# >>> icaro-dotfiles >>>
+ENV="$HOME/.config/sh/rc.sh"; export ENV
+. "$HOME/.config/sh/env.sh"
+# <<< icaro-dotfiles <<<
+EOF
+
+# oksh as the login shell: chsh takes only what /etc/shells lists
+oksh=$(brew --prefix)/bin/oksh
+grep -qx "$oksh" /etc/shells || echo "$oksh" | sudo tee -a /etc/shells >/dev/null
+[ "$(dscl . -read "/Users/$(id -un)" UserShell | sed 's/^UserShell: //')" = "$oksh" ] ||
+	chsh -s "$oksh"
+
+# ==== 6. leftovers ====
+
+in_list() { x=$1; shift; for w; do [ "$w" = "$x" ] && return 0; done; return 1; }
+extra=$(for p in $before; do in_list "$p" $wanted || echo "$p"; done)
+extra_casks=$(for c in $before_casks; do in_list "$c" $casks || echo "$c"; done)
+[ -z "$extra" ] || printf '\nalready installed, not by this script (brew uninstall by hand if unwanted):\n%s\n' "$extra"
+[ -z "$extra_casks" ] || printf '\ncasks not from this script (brew uninstall --cask by hand if unwanted):\n%s\n' "$extra_casks"
