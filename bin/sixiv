@@ -95,17 +95,6 @@ trap 'exit 1' INT TERM HUP
 printf '\033[?1049h\033[?25l'; alt=1
 stty -icanon -echo min 1 >/dev/null
 
-# Text area size in cells and in pixels. st doesn't answer the CSI 14t/16t
-# queries (chafa guesses wrong without them), but it fills the pixels in
-# TIOCGWINSZ, and stty only shows rows and columns.
-geom() {
-    set -- $(python3 -c 'import fcntl,termios,struct
-print(*struct.unpack("4H",fcntl.ioctl(0,termios.TIOCGWINSZ,bytes(8))))')
-    rows=$1 cols=$2 W=$3
-    cw=$(($3 / cols)) ch=$(($4 / rows))
-    H=$(((rows - 1) * ch))  # whole cells: chafa adds no margin
-}
-
 sixel() { chafa -f sixels --probe=off --exact-size=on --polite=on "$1"; }
 
 status() {
@@ -195,7 +184,7 @@ last=           # what's on screen, to skip redrawing the same picture
 
 # The view: a crop of the image, scaled, centered on the screen.
 view() {
-    geom
+    termsize
     f=$(nth "$i")
     if ! dims; then
         stopanim
@@ -261,7 +250,7 @@ view() {
 # Thumbnails fit in a tbw x tbh pixel box, a multiple of the 6-pixel sixel
 # band, so the image never spills onto its label.
 gridgeom() {
-    geom
+    termsize
     C=$((W / 240)); [ "$C" -lt 1 ] && C=1
     tc=$((cols / C))
     tbw=$(((tc - 1) * cw))

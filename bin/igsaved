@@ -376,15 +376,6 @@ printf '\033[?1049h\033[?25l'; alt=1
 # segundo (time 5), e o laço confere o tamanho.
 stty -icanon -echo min 0 time 5
 
-# Como no spdfv: o st não responde às consultas de tamanho em pixels, mas
-# preenche o TIOCGWINSZ.
-geom() {
-    set -- $(python3 -c 'import fcntl,termios,struct
-print(*struct.unpack("4H",fcntl.ioctl(0,termios.TIOCGWINSZ,bytes(8))))')
-    rows=$1 cols=$2 W=$3
-    ch=$(($4 / rows))
-}
-
 # Lê o post $code em user/n/date/kinds e a legenda curta em $tmp/cap.
 load() {
     j=0 acts= msg=
@@ -466,13 +457,13 @@ esc=$(printf '\033') nl='
 i=1 cur=
 while [ "$i" -le "$total" ]; do
     code=$(sed -n "${i}p" "$tmp/queue")
-    geom
+    termsize
     [ "$code" = "$cur" ] || { load; cur=$code; }
     draw
     msg=
     size=$rows.$cols.$W
     while c=$(key); c=${c%.}; [ -z "$c" ]; do
-        geom
+        termsize
         [ "$rows.$cols.$W" = "$size" ] || break
     done
     if [ "$c" = "$esc" ]; then
