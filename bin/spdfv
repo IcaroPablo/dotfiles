@@ -23,15 +23,15 @@
 # recolor-lightcolor, recolor-darkcolor, recolor-keephue.
 set -u
 . "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" || exit 1
-f=${1:?uso: spdfv documento [página]}
+f=${1:?usage: spdfv document [page]}
 name=${f##*/}
-[ -r "$f" ] || { echo "spdfv: não consigo ler $f" >&2; exit 1; }
+[ -r "$f" ] || { echo "spdfv: can't read $f" >&2; exit 1; }
 
-# need ferramenta...: sai dizendo qual falta (o host, por exemplo, não tem leitor)
+# need tool...: exits naming the one missing (a host with no reader, say)
 need() {
     for _t; do
         have "$_t" ||
-            { echo "spdfv: falta o $_t para abrir $name" >&2; exit 1; }
+            { echo "spdfv: $_t is needed to open $name" >&2; exit 1; }
     done
 }
 need chafa python3
@@ -79,9 +79,9 @@ case $(dd bs=4 count=1 <"$f" 2>/dev/null) in
 'AT&T') kind=djvu ;;
 *)
     need mutool pdfinfo pdftoppm
-    echo "spdfv: convertendo $name ..." >&2
+    echo "spdfv: converting $name ..." >&2
     mutool convert -o "$tmp/doc.pdf" "$f" >/dev/null 2>&1 ||
-        { echo "spdfv: o mutool não converteu $name" >&2; exit 1; }
+        { echo "spdfv: mutool couldn't convert $name" >&2; exit 1; }
     f=$tmp/doc.pdf kind=pdf ;;
 esac
 
@@ -91,7 +91,7 @@ pdf) need pdfinfo pdftoppm
 djvu) need djvused ddjvu
     total=$(djvused -e n "$f" 2>/dev/null) ;;
 esac
-[ -n "$total" ] || { echo "spdfv: não consigo ler $name" >&2; exit 1; }
+[ -n "$total" ] || { echo "spdfv: can't read $name" >&2; exit 1; }
 
 # só agora a tela alternativa: o que deu errado até aqui fica visível na volta
 printf '\033[?1049h\033[?25l'; alt=1
@@ -223,7 +223,7 @@ draw() {
     # o $(...) come o \n que o chafa põe depois da imagem, que rolaria a tela
     printf '\033[H%s' "$(chafa -f sixels --probe=off --exact-size=on \
         --polite=on "$tmp/view.$ext")"
-    z=$zoom%; [ "$zoom" -eq 0 ] && z=página
+    z=$zoom%; [ "$zoom" -eq 0 ] && z=page
     printf "\\033[%d;1H$status %s  %d/%d  %s \\033[K\\033[m" \
         "$rows" "$name" "$shown" "$total" "$z"
     [ -n "${pre:-}" ] && kill -0 "$pre" 2>/dev/null && return
