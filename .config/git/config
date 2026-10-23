@@ -159,7 +159,7 @@
 
     ## status (st*)
     st = status -sb
-    sp = --paginate status
+    stp = --paginate status
     us = restore --staged .
     rsp = restore --staged -p .
     rp = restore -p
@@ -251,7 +251,6 @@
                     BRANCH=$2; \
                     TRACKING=$1;; \
             esac; \
-            git stash -S; \
             BEFORE=$(git stash list | wc -l); \
             git stash; \
             AFTER=$(git stash list | wc -l); \
