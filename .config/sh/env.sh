@@ -34,7 +34,7 @@ unset -f _path_prepend
 # this machine's settings: hosts/<hostname>.sh
 _h=$(hostname -s 2>/dev/null || hostname)
 [ -f "$XDG_CONFIG_HOME/sh/hosts/${_h%%.*}.sh" ] && . "$XDG_CONFIG_HOME/sh/hosts/${_h%%.*}.sh"
-unset _h HAS
+unset _h
 
 if command -v nvim >/dev/null 2>&1; then EDITOR='nvim'; MANPAGER='nvim +Man!'; else EDITOR='vi'; unset MANPAGER; fi
 FCEDIT="$EDITOR"
