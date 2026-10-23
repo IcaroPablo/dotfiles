@@ -7,8 +7,7 @@ fi
 
 : "${XDG_CONFIG_HOME:="$HOME/.config"}"
 
-[ -f "$XDG_CONFIG_HOME/sh/lib/guard.sh" ] && . "$XDG_CONFIG_HOME/sh/lib/guard.sh"
-command -v have >/dev/null 2>&1 || have() { command -v "$1" >/dev/null 2>&1; }
+. "$XDG_CONFIG_HOME/sh/lib/guard.sh"
 
 if have doas; then DOAS='doas'; else DOAS='sudo'; fi
 
@@ -26,17 +25,17 @@ if [ "$(id -u)" -eq 0 ]; then
     unset _ru _rd
 fi
 
-set -o vi 2>/dev/null || true
+set -o vi 2>/dev/null
 # ksh-family shells keep no history file unless HISTFILE is set
 : "${HISTFILE:=$HOME/.sh_history}" "${HISTSIZE:=10000}"
-ulimit -c 0 2>/dev/null || true
+ulimit -c 0 2>/dev/null
 
 [ -n "${INITIAL_FOLDER:-}" ] && cd "$INITIAL_FOLDER"
 
 # o eza é o normal, mas o ls precisa servir: numa máquina recém-instalada o
 # rc.sh carrega antes de existir pacote nenhum, e o e() é a última linha daqui
 e() {
-    clear 2>/dev/null || true
+    clear 2>/dev/null
     if have eza; then
         eza -lh "$@" --group-directories-first --no-quotes --icons always --color always
     else
