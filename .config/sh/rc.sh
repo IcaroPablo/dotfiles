@@ -162,11 +162,12 @@ have dvtm && dvtm() {
     fi
 }
 
-# ( ) bodies keep exit, traps and variables inside
-findfile() {
+f() {
     if have fd; then fd "$1"; elif have fdfind; then fdfind "$1"; else find . -iname "*$1*"; fi
 }
-simplegrep() { grep -nRIi -- "$1" .; }
+g() { grep -nRIi -- "$1" .; }
+
+# the file helpers below run in ( ): exit, traps and variables stay inside
 
 # a name already in ~/.trash gets .1, .2, ...
 trash() (
@@ -184,7 +185,7 @@ shredtrash() (
     printf '\nempty %s? [y/N] ' "$HOME/.trash"
     read -r ans && case $ans in [yY]) rm -rf -- "$HOME/.trash" && mkdir -p -- "$HOME/.trash" ;; esac
 )
-delete() (
+d() (
     [ "$#" -gt 0 ] || exit 0
     clear 2>/dev/null
     printf '\n\t%s' "$@"
@@ -228,7 +229,7 @@ compress() (
         *) echo "compress: unknown archive type: $out" >&2; exit 1 ;;
     esac
 )
-extract() {
+extract() (
     case $1 in
         *.tar.bz|*.tar.bz2|*.tbz|*.tbz2) tar xjvf "$1" ;;
         *.tar.gz|*.tgz)                  tar xzvf "$1" ;;
@@ -239,15 +240,12 @@ extract() {
         *.7z)                            7z x "$1" ;;
         *.gz)                            gunzip "$1" ;;
         *.bz2)                           bunzip2 "$1" ;;
-        *) echo "extract: unknown archive type: $1" >&2; return 1 ;;
+        *) echo "extract: unknown archive type: $1" >&2; exit 1 ;;
     esac
-}
+)
 
 alias doas="${DOAS} "
 alias ea="e -a"
-alias f="findfile"
-alias g="simplegrep"
-alias d="delete"
 alias s="sel"
 alias sc="sel c"
 alias t="trash"
