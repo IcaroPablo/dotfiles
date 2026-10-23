@@ -1,4 +1,5 @@
-require('vis-fzf-open')
+-- optional until vis-fzf-open is back in the repo: it's an empty gitlink for now
+pcall(require, 'vis-fzf-open')
 
 vis:command_register('xsp', function(argv)
 	local file = vis.win.file
