@@ -1,13 +1,15 @@
 #!/bin/sh
 # Fresh OpenBSD on fangorn -> my environment; run by fangorn rebuild, which
-# copies it in with lib.sh, with the host home to NFS-mount at ~/host. Safe to
-# rerun.
+# copies it in with lib.sh: sh setup/openbsd HOSTHOME [capability...], HOSTHOME
+# being the host home to NFS-mount at ~/host. Without capabilities it asks
+# which to install. Safe to rerun.
 set -e
 
 user=meriadoc
 host=fangorn
 server=192.168.122.1	# the host, on libvirt's default network
 hosthome=${1:-/home/$user}	# what the host exports
+[ $# -eq 0 ] || shift
 ip=192.168.122.10	# fangorn's reserved address
 home=/home/$user
 ws=$home/Workspace
@@ -16,6 +18,7 @@ ws=$home/Workspace
 
 as_user() { su -l "$user" -c "$1"; }
 . "$(dirname "$(realpath "$0")")/lib.sh"
+choose_caps sixel text-editing dvtm yt-dlp -- "$@"
 # sshd_config: drop any line for the key, commented or not, then set it
 sshd_set() {
 	sed -i "/^#*$1 /d" /etc/ssh/sshd_config
@@ -77,22 +80,23 @@ fi
 pkg_add -u
 
 # tools
-pkg_add -I git github-cli neovim fzf fd eza ripgrep tree-sitter-cli tree \
+pkg_add -I git github-cli fzf fd eza ripgrep tree \
 	curl wget htop fdupes rsync-- 7zip zip unzip-- xz unrar w3m-- \
-	p5-Image-ExifTool chafa ffmpeg tesseract yt-dlp stylua lua-language-server \
-	fastfetch
+	p5-Image-ExifTool chafa ffmpeg fastfetch
 # video in the terminal (--vo=tct), for openfile when the host's screen is out of reach
 pkg_add -I mpv
-# spdfv's deps: PDF, DjVu, EPUB (via mutool), and ImageMagick 6's convert
-pkg_add -I poppler-utils djvulibre mupdf-- ImageMagick
 
 # build deps (clang, make and pkg-config are in base)
 pkg_add -I gmake cmake ninja autoconf%2.72 automake%1.17 libtool libvterm
 
-# base's clang has no clangd; this ships /usr/local/bin/clangd (nvim's C LSP)
-pkg_add -I clang-tools-extra
-
-pkg_add -I jdk%21 maven
+# capabilities: what was chosen
+# base's clang has no clangd: clang-tools-extra ships it (nvim's C LSP); jdk and
+# maven are jdtls's
+declared text-editing && pkg_add -I neovim tree-sitter-cli vis stylua \
+	lua-language-server clang-tools-extra jdk%21 maven
+# spdfv's: PDF, DjVu, EPUB (through mutool), and ImageMagick 6's convert
+declared sixel && pkg_add -I python%3 poppler-utils djvulibre mupdf-- ImageMagick
+declared yt-dlp && pkg_add -I yt-dlp
 
 # the host's home, read-write as $user (the host squashes root, so root can't touch it)
 as_user 'mkdir -p $HOME/host'
@@ -112,17 +116,22 @@ done
 
 as_user "mkdir -p $ws"
 github_url
-clone dvtm dvtm
 clone dotfiles dotfiles
 
 # no st or smawm: the terminal and the WM are the host's, this is reached over ssh
 
 # dvtm's config.mk needs GNU make
-as_user "cd $ws/dvtm && gmake install"
-as_user "cd $ws/dotfiles && make install HOST=$host"
+if declared dvtm; then
+	clone dvtm dvtm
+	as_user "cd $ws/dvtm && gmake install"
+fi
+
+declare_caps
+# ~/.local/bin on the PATH, for make's checks: dvtm lives there
+as_user "PATH=\$HOME/.local/bin:\$PATH; cd $ws/dotfiles && make install"
 
 profile_block
 
-# no OpenBSD build of carapace, and zoxide needs Rust: doctor lists them
+# no OpenBSD build of carapace, and zoxide needs Rust: shpad and rc.sh do without
 
-as_user "PATH=\$HOME/.local/bin:\$PATH; cd $ws/dotfiles && make doctor HOST=$host"
+as_user "PATH=\$HOME/.local/bin:\$PATH; cd $ws/dotfiles && make doctor"
