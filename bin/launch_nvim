@@ -2,7 +2,7 @@
 # Inside an nvim's terminal ($NVIM set), opens the files in that nvim instead of
 # a nested one; anywhere else it's plain nvim.
 
-. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" || exit 1
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/core.sh" || exit 1
 
 if [ -n "$NVIM" ] && [ "$#" -gt 0 ]; then
 	n=$#

@@ -7,7 +7,7 @@ fi
 
 : "${XDG_CONFIG_HOME:="$HOME/.config"}"
 
-. "$XDG_CONFIG_HOME/sh/lib/guard.sh"
+. "$XDG_CONFIG_HOME/sh/lib/core.sh"
 
 if have doas; then DOAS='doas'; else DOAS='sudo'; fi
 

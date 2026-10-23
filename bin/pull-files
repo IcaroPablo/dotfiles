@@ -6,7 +6,7 @@
 #   -k  keep files on the phone (don't delete)
 
 set -eu
-. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" || exit 1
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/core.sh" || exit 1
 
 src=/sdcard/Download
 

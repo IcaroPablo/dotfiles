@@ -1,6 +1,6 @@
 #!/bin/sh
 
-. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" || exit 1
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/core.sh" || exit 1
 
 os_open() {
     case "$(uname)" in

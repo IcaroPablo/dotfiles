@@ -26,7 +26,8 @@
 #
 # CHROMIUM_DIR escolhe a instalação.
 set -u
-. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" || exit 1
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/core.sh" || exit 1
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/term.sh" || exit 1
 
 die() { echo "igsaved: $*" >&2; exit 1; }
 

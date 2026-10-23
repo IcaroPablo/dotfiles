@@ -22,7 +22,8 @@
 # com as chaves dele: default-bg, statusbar-bg, statusbar-fg, recolor,
 # recolor-lightcolor, recolor-darkcolor, recolor-keephue.
 set -u
-. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" || exit 1
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/core.sh" || exit 1
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/term.sh" || exit 1
 f=${1:?usage: spdfv document [page]}
 name=${f##*/}
 [ -r "$f" ] || { echo "spdfv: can't read $f" >&2; exit 1; }

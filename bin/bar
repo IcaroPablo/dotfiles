@@ -2,7 +2,7 @@
 # requires X11
 
 battery="${BATTERY:-BAT0}"
-. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/guard.sh" || exit 1
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/core.sh" || exit 1
 
 get_uptime()     { printf 'uptime: %s | ' "$(uptime | sed -e 's/^.*up //' -e 's/,.*$//' -e 's/^ *//')"; }
 
