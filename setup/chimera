@@ -1,6 +1,7 @@
 #!/bin/sh
 # Fresh Chimera install -> my environment. Run as root, from a dotfiles clone
-# or a copy of setup/: doas sh setup/chimera. Safe to rerun.
+# or a copy of setup/: doas sh setup/chimera [capability...]. Without them it
+# asks which to install. Safe to rerun.
 set -e
 
 user=meriadoc
@@ -23,6 +24,9 @@ usermod -a -G wheel "$user"
 
 as_user() { doas -u "$user" sh -c "$1"; }
 . "$(dirname "$(realpath "$0")")/lib.sh"
+
+# asked first, so the rest runs unattended
+choose_caps x11 sixel text-editing host phone ocr yt-dlp -- "$@"
 
 # what was installed before, to show at the end what this script doesn't install
 before=$(cat /etc/apk/world)
@@ -79,77 +83,86 @@ done
 # ==== 3. shell ====
 
 add oksh github-cli fzf fd eza ripgrep zoxide file lsof htop llvm-binutils \
-	7zip zip unzip xz unrar w3m exiftool chafa ffmpeg yt-dlp
+	7zip zip unzip xz unrar w3m exiftool chafa ffmpeg
 
 as_user "mkdir -p $ws"
 
 github_url
 clone dotfiles
 
-# what only some scripts use: backuphd, scrotocr, pull-files, and python for
-# igsaved and the sixel viewers; no mupdf in apk, so spdfv opens PDF and DjVu
-# here, not EPUB. The rest comes with the shell above
-add rsync tesseract imagemagick android-tools python poppler djvulibre
-# HOST: in the installer's chroot, hostname still names the live system
-as_user "cd $ws/dotfiles && make install HOST=$host"
-
 profile_block
 
 chsh -s /usr/bin/oksh "$user"
 
-# ==== 4. graphical environment ====
+# ==== 4. capabilities: what was chosen ====
 
-add xserver-xorg xinit mesa-dri xrandr xinput xset xrdb xmodmap xsetroot \
-	xdpyinfo setxkbmap xclip xwallpaper dbus polkit elogind \
-	xdg-desktop-portal xdg-desktop-portal-gtk pipewire pipewire-alsa \
-	alsa-utils xdg-utils mpv thunar luakit gvfs thunar-volman udisks
-# rec-gif's region picker
-add slop
+declared text-editing && add neovim tree-sitter-cli vis
+# no mupdf in apk, so spdfv opens PDF and DjVu here, not EPUB
+declared sixel && add chafa ffmpeg python poppler djvulibre imagemagick
+declared host && add rsync udisks
+declared phone && add android-tools
+declared ocr && add tesseract imagemagick
+declared yt-dlp && add yt-dlp
 
-# st, sowm and scrot's build deps
-add clang gmake pkgconf linux-headers \
-	libx11-devel libxft-devel libxinerama-devel imlib2-devel \
-	libxcomposite-devel libxfixes-devel libxrandr-devel
+if declared x11; then
+	add xserver-xorg xinit mesa-dri xrandr xinput xset xrdb xmodmap xsetroot \
+		xdpyinfo setxkbmap xclip xwallpaper dbus polkit elogind \
+		xdg-desktop-portal xdg-desktop-portal-gtk pipewire pipewire-alsa \
+		alsa-utils xdg-utils mpv thunar luakit gvfs thunar-volman udisks
+	# rec-gif's region picker
+	add slop
 
-clone st
-clone sowm
+	# st, sowm and scrot's build deps
+	add clang gmake pkgconf linux-headers \
+		libx11-devel libxft-devel libxinerama-devel imlib2-devel \
+		libxcomposite-devel libxfixes-devel libxrandr-devel
 
-# /usr/local: build as user, install as root
-for r in st sowm; do
-	as_user "cd $ws/$r && make"
-	(cd "$ws/$r" && make install)
-done
+	clone st
+	clone sowm
 
-# checked as user so a copy in ~/.local/share/fonts counts
-if ! as_user 'fc-list : family | grep -q CozetteVector'; then
-	mkdir -p /usr/local/share/fonts/cozette
-	for f in CozetteVector.ttf CozetteVectorBold.ttf LICENSE; do
-		curl -fL -o "/usr/local/share/fonts/cozette/$f" \
-			"https://github.com/slavfox/Cozette/releases/download/v.1.30.0/$f"
+	# /usr/local: build as user, install as root
+	for r in st sowm; do
+		as_user "cd $ws/$r && make"
+		(cd "$ws/$r" && make install)
 	done
-	fc-cache -f
+
+	# checked as user so a copy in ~/.local/share/fonts counts
+	if ! as_user 'fc-list : family | grep -q CozetteVector'; then
+		mkdir -p /usr/local/share/fonts/cozette
+		for f in CozetteVector.ttf CozetteVectorBold.ttf LICENSE; do
+			curl -fL -o "/usr/local/share/fonts/cozette/$f" \
+				"https://github.com/slavfox/Cozette/releases/download/v.1.30.0/$f"
+		done
+		fc-cache -f
+	fi
+
+	# build scrot from its release tarball into ~/.local (not in apk)
+	[ -x "/home/$user/.local/bin/scrot" ] || as_user 'd=$(mktemp -d) && cd "$d" &&
+		curl -fsSL https://github.com/resurrecting-open-source-projects/scrot/releases/download/2.0.0/scrot-2.0.0.tar.gz |
+		tar -xz --strip-components=1 && ./configure --prefix=$HOME/.local && make install; s=$?; rm -rf "$d"; exit $s'
+
+	# flatpaks
+	add flatpak
+
+	flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+	apps="io.github.ungoogled_software.ungoogled_chromium com.discordapp.Discord
+		org.telegram.desktop com.stremio.Stremio org.godotengine.Godot
+		com.github.tchx84.Flatseal com.valvesoftware.Steam"
+	flatpak install -y --system flathub $apps
+
+	# fails inside a chroot; rerun after boot
+	apps="$apps com.teamspeak.TeamSpeak"
+	flatpak install -y --system flathub com.teamspeak.TeamSpeak ||
+		echo "warning: TeamSpeak not installed; rerun outside the chroot" >&2
 fi
 
-# build scrot from its release tarball into ~/.local (not in apk)
-[ -x "/home/$user/.local/bin/scrot" ] || as_user 'd=$(mktemp -d) && cd "$d" &&
-	curl -fsSL https://github.com/resurrecting-open-source-projects/scrot/releases/download/2.0.0/scrot-2.0.0.tar.gz |
-	tar -xz --strip-components=1 && ./configure --prefix=$HOME/.local && make install; s=$?; rm -rf "$d"; exit $s'
+# ==== 5. dotfiles ====
 
-# flatpaks
-add flatpak
+declare_caps
+# ~/.local/bin on the PATH, for make's checks: scrot lives there
+as_user "PATH=\$HOME/.local/bin:\$PATH; cd $ws/dotfiles && make install"
 
-flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-apps="io.github.ungoogled_software.ungoogled_chromium com.discordapp.Discord
-	org.telegram.desktop com.stremio.Stremio org.godotengine.Godot
-	com.github.tchx84.Flatseal com.valvesoftware.Steam"
-flatpak install -y --system flathub $apps
-
-# fails inside a chroot; rerun after boot
-apps="$apps com.teamspeak.TeamSpeak"
-flatpak install -y --system flathub com.teamspeak.TeamSpeak ||
-	echo "warning: TeamSpeak not installed; rerun outside the chroot" >&2
-
-# ==== 5. leftovers ====
+# ==== 6. leftovers ====
 
 # version constraints and repo tags off: foo>=1.2@user -> foo
 leftovers "already installed, not by this script (apk del by hand if unwanted)" \
