@@ -28,6 +28,7 @@
 set -u
 . "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/core.sh" || exit 1
 . "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/term.sh" || exit 1
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/x11.sh" || exit 1
 
 die() { echo "igsaved: $*" >&2; exit 1; }
 
@@ -369,7 +370,7 @@ total=$(wc -l <"$tmp/queue" | tr -d ' ')
 if [ -n "${BROWSER:-}" ]; then web=$BROWSER
 elif [ "$dir" = "$HOME/.var/app/$app/config/chromium" ]; then web="flatpak run $app"
 elif have chromium; then web=chromium
-else web=xdg-open; fi
+else web=gui_open; fi
 browse() { $web "$1" </dev/null >/dev/null 2>&1 & }
 
 printf '\033[?1049h\033[?25l'; alt=1
@@ -434,15 +435,12 @@ get() {
     fi
 }
 
-# PNG, e não o JPEG que o Instagram serve: muito programa só cola image/png.
-# O xclip fica de pé servindo a seleção; o nohup o livra do SIGHUP de quando
-# a janela do terminal fecha, que levaria a imagem junto.
+# PNG, not the JPEG Instagram serves: many programs only paste image/png
 yank() {
     status "copying..."
     if py img "$code" "$j" "$tmp/clip.jpg" 2>"$tmp/err" &&
         ffmpeg -v error -y -i "$tmp/clip.jpg" "$tmp/clip.png" 2>"$tmp/err" &&
-        nohup xclip -selection clipboard -t image/png -i "$tmp/clip.png" \
-            >/dev/null 2>"$tmp/err"; then
+        clip_copy "$tmp/clip.png" image/png 2>"$tmp/err"; then
         msg="copied"
     else
         msg=$(tail -1 "$tmp/err")

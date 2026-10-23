@@ -6,10 +6,11 @@
 # --list-langs` mostra os instalados.
 
 . "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/core.sh" || exit 1
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/x11.sh" || exit 1
 
 lang="${1:-eng}"
 
-for dep in scrot mogrify tesseract xclip; do
+for dep in scrot mogrify tesseract; do
     have "$dep" || {
         printf 'scrotocr: %s not found\n' "$dep" >&2
         exit 1
@@ -30,4 +31,4 @@ tesseract "$img.png" "$img" -l "$lang" >/dev/null 2>&1 || {
     exit 1
 }
 
-xclip -selection clipboard -i "$img.txt"
+clip_copy "$img.txt"
