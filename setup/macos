@@ -1,7 +1,7 @@
 #!/bin/sh
-# Fresh macOS -> my shell environment and Ghostty; no X, no window manager.
-# Run as yourself, not root (Homebrew refuses root): sh setup/macos
-# Safe to rerun.
+# Fresh macOS -> my shell environment; no X, no window manager. Run as yourself,
+# not root (Homebrew refuses root): sh setup/macos [capability...]. Without
+# them it asks which to install. Safe to rerun.
 set -e
 
 user=$(id -un) home=$HOME ws=$HOME/Workspace
@@ -10,6 +10,9 @@ as_user() { sh -c "$1"; }
 
 [ "$(uname)" = Darwin ] || { echo "setup/macos is for macOS" >&2; exit 1; }
 [ "$(id -u)" -ne 0 ] || { echo "run as yourself, not root: Homebrew refuses root" >&2; exit 1; }
+
+# asked first, so the rest runs unattended
+choose_caps ghostty text-editing -- "$@"
 
 # ==== 1. Apple's command line tools: git, make, cc ====
 
@@ -44,12 +47,14 @@ brew update
 
 # macOS already has file, zip, unzip, tar (with xz), realpath and man; p7zip,
 # not sevenzip, is the one that installs a 7z command
-add oksh git gh fzf eza fd ripgrep zoxide xz p7zip w3m exiftool chafa \
-	ffmpeg yt-dlp
+add oksh git gh fzf eza fd ripgrep zoxide xz p7zip w3m exiftool chafa ffmpeg
 
-# ==== 4. Ghostty, with the font its config names ====
+# ==== 4. capabilities: what was chosen ====
 
-cask ghostty font-monaspice-nerd-font
+# Homebrew's vis is vis, ahead of macOS's own vis(1) on the PATH
+declared text-editing && add neovim tree-sitter-cli vis lua-language-server stylua
+# with the font its config names
+declared ghostty && cask ghostty font-monaspice-nerd-font
 
 # ==== 5. dotfiles ====
 
@@ -58,8 +63,8 @@ mkdir -p "$ws"
 github_url
 clone dotfiles
 
-# no host file needed: macOS, plus what's installed, picks what gets linked
-(cd "$ws/dotfiles" && make install HOST="$(hostname -s)")
+declare_caps
+(cd "$ws/dotfiles" && make install)
 
 profile_block
 
