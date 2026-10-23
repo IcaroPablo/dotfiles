@@ -1,34 +1,33 @@
 # What make links, and where: one line per file or folder.
 #
-#   path : needs : uses
+#   path : needs
 #
-# needs decides whether this machine gets it. A tag (host x11 sixel, from
-# .config/sh/hosts/<host>.sh; linux openbsd macos, from uname) must be one of
-# the machine's; any other word is a command that must be installed. a|b is
-# either one. uses only feeds make doctor. Ghostty's macOS app puts no ghostty
-# command on the PATH, hence ghostty|macos.
+# needs are capabilities this machine declared (~/.config/dotfiles/capabilities,
+# written by setup/<os>; their checks are in the Makefile) and OS tags (linux
+# openbsd macos, from uname); a|b is either one. A file with no needs is linked
+# everywhere.
 
-.config/git                   : git                :
-.config/sh                    :                    : fzf eza file fd|fdfind zoxide realpath tar gzip bzip2 xz zip unzip rar unrar 7z
-.config/nvim                  : nvim               : git tree-sitter rg lsof clangd lua-language-server
-.config/spdfv                 : sixel              :
-.config/vis                   : vis                :
-.config/ghostty               : ghostty|macos      :
-.config/x11                   : x11                :
-.xinitrc                      : x11                : startx smawm st xset xwallpaper setxkbmap xinput xrandr xrdb xmodmap
-bin/openfile                  :                    : file mpv xdg-open
-bin/preview                   :                    : chafa ffmpeg ffprobe exiftool w3m unzip unrar 7z
-bin/pull-files                : adb                :
-bin/launch_nvim               : nvim               :
-bin/shpad                     : dvtm nvim          :
-bin/sixiv                     : sixel              : chafa ffmpeg ffprobe python3
-bin/spdfv                     : sixel              : chafa python3 magick|convert pdfinfo pdftoppm djvused ddjvu mutool
-bin/igsaved                   : x11 sixel          : chafa python3 yt-dlp ffmpeg xclip mpv less
-bin/bar                       : x11                : xsetroot
-bin/fzfmenu                   : x11                : st xdpyinfo fzf
-bin/run-program               : x11                : fzf
-bin/monitor                   : x11                : xrandr
-bin/rec-gif                   : x11                : ffmpeg slop xclip
-bin/scrotocr                  : x11                : scrot mogrify tesseract xclip
-bin/backuphd                  : host linux|openbsd : doas rsync cryptsetup|bioctl udisksctl
-bin/wipe-ssd                  : host linux         : doas lsblk findmnt losetup blkdiscard sfdisk mkfs.ext4 udevadm
+.config/git                   :
+.config/sh                    :
+.config/nvim                  : text-editing
+.config/vis                   : text-editing
+.config/spdfv                 : sixel
+.config/ghostty               : ghostty
+.config/x11                   : x11
+.xinitrc                      : x11
+bin/openfile                  :
+bin/preview                   :
+bin/pull-files                : phone
+bin/launch_nvim               : text-editing
+bin/shpad                     : dvtm text-editing
+bin/sixiv                     : sixel
+bin/spdfv                     : sixel
+bin/igsaved                   : x11 sixel yt-dlp
+bin/bar                       : x11
+bin/fzfmenu                   : x11
+bin/run-program               : x11
+bin/monitor                   : x11
+bin/rec-gif                   : x11
+bin/scrotocr                  : x11 ocr
+bin/backuphd                  : host linux|openbsd
+bin/wipe-ssd                  : host linux

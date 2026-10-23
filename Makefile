@@ -4,10 +4,11 @@
 #                    $HOME and ~/.local/bin, and removes our other links
 #   make uninstall   removes only the links that point here
 #   make list        shows what this machine gets, and what it doesn't and why
-#   make doctor      the links, whether rc.sh loads, and the tools each one uses
+#   make doctor      the links, whether rc.sh loads, and the declared capabilities
 #
-# The machine is `hostname -s`, or HOST=name; its .config/sh/hosts/<name>.sh
-# gives its tags. With no such file, only what needs no host tags is linked.
+# What this machine gets comes from the capabilities setup/<os> declared in
+# CAPSFILE. Only declared capabilities are checked, and install stops, linking
+# nothing, if one of them fails its check.
 #
 # POSIX make, so also bmake and OpenBSD's make: no wildcard, notdir, addprefix
 # or CURDIR; lists come from shell globs and the root from `pwd`. `cd` here
@@ -16,30 +17,49 @@
 
 HOME_DIR ?= $(HOME)
 BINDIR ?= $(HOME_DIR)/.local/bin
-HOST = `hostname -s 2>/dev/null || hostname`
+
+# the capabilities setup/<os> installed and declared here, this machine's only
+CAPSFILE = $(HOME_DIR)/.config/dotfiles/capabilities
 
 # Displaced by FORCE=1. Outside ~/.config and the PATH on purpose: neither is a
 # place for stale copies.
 DISPLACED = $(HOME_DIR)/.local/share/dotfiles/displaced
 
-# what a host file can say a machine has; the OS tag comes from uname
-TAGS = host x11 sixel linux openbsd macos
+# what each capability needs to be there, when declared: commands, or /paths
+# for what puts none on the PATH; a|b is either one. sixel can't be checked in
+# the terminal, only in the viewers' tools: the rest is trusted
+CHECKS = \
+	"x11:startx xrandr xsetroot xdpyinfo xclip st smawm scrot slop" \
+	"sixel:chafa ffmpeg ffprobe python3 pdfinfo pdftoppm djvused ddjvu" \
+	"text-editing:nvim tree-sitter rg vis" \
+	"dvtm:dvtm" \
+	"phone:adb" \
+	"host:rsync cryptsetup|bioctl" \
+	"ocr:tesseract mogrify" \
+	"yt-dlp:yt-dlp" \
+	"ghostty:ghostty|/Applications/Ghostty.app"
 
-# $pick: what this machine links; $skip: "path: no need;" for what it doesn't.
-# Warns about files MANIFEST doesn't list. dest: where a file links.
-PICK = host=$(HOST); host=$${host%%.*}; \
-	os=`uname | tr '[:upper:]' '[:lower:]'`; [ "$$os" != darwin ] || os=macos; \
-	hf=.config/sh/hosts/$$host.sh; has=; \
-	if [ -f "$$hf" ]; then has=`sh -c '. "./$$1" >/dev/null 2>&1; printf %s "$$HAS"' sh "$$hf"`; \
-	else echo "  note: no $$hf, so only what needs no host tags" >&2; fi; \
-	caps=" $$os $$has "; \
-	met() { case " $(TAGS) " in *" $$1 "*) case "$$caps" in *" $$1 "*) return 0 ;; esac; return 1 ;; esac; \
-		command -v "$$1" >/dev/null 2>&1; }; \
-	unmet() { for w in $$1; do o=; for a in `echo "$$w" | tr '|' ' '`; do met "$$a" && { o=1; break; }; done; \
-		[ -n "$$o" ] || { echo "$$w"; return; }; done; }; \
+# $decl: what's declared; $failed: "cap (missing: x y);" per declared one that
+# fails its check; $pick: what this machine links; $skip: "path: no need;".
+# Stops on a missing CAPSFILE or a name nobody knows. dest: where a file links.
+PICK = os=`uname | tr '[:upper:]' '[:lower:]'`; [ "$$os" != darwin ] || os=macos; \
+	[ -f "$(CAPSFILE)" ] || { echo "no $(CAPSFILE): run setup/<os>, or list this machine's capabilities in it (empty: none)" >&2; exit 1; }; \
+	decl=`cat "$(CAPSFILE)"`; decl=`echo $$decl`; \
+	known=; for c in $(CHECKS); do known="$$known $${c%%:*}"; done; \
+	for c in $$decl; do case " $$known " in *" $$c "*) ;; *) echo "$(CAPSFILE): no capability $$c (known:$$known)" >&2; exit 1 ;; esac; done; \
+	there() { case $$1 in /*) [ -e "$$1" ] ;; *) command -v "$$1" >/dev/null 2>&1 ;; esac; }; \
+	missing() { for w in $$1; do o=; for a in `echo "$$w" | tr '|' ' '`; do there "$$a" && { o=1; break; }; done; \
+		[ -n "$$o" ] || printf '%s ' "$$w"; done; }; \
+	failed=; for c in $(CHECKS); do n=$${c%%:*}; case " $$decl " in *" $$n "*) ;; *) continue ;; esac; \
+		m=`missing "$${c\#*:}"`; [ -z "$$m" ] || failed="$$failed$$n (missing: $${m% });"; done; \
+	caps=" $$os $$decl "; \
+	unmet() { for w in $$1; do o=; for a in `echo "$$w" | tr '|' ' '`; do \
+		case "$$caps" in *" $$a "*) o=1; break ;; esac; done; [ -n "$$o" ] || { echo "$$w"; return; }; done; }; \
 	all=' ' pick= skip=; \
-	while IFS=: read -r p n u; do \
+	while IFS=: read -r p n; do \
 		case $$p in '\#'*|'') continue ;; esac; set -- $$p; p=$$1; all="$$all$$p "; \
+		for w in `echo "$$n" | tr '|' ' '`; do case " $$known linux openbsd macos " in *" $$w "*) ;; \
+			*) echo "MANIFEST: $$p needs $$w, which is neither a capability nor an OS" >&2; exit 1 ;; esac; done; \
 		w=`unmet "$$n"`; if [ -z "$$w" ]; then pick="$$pick $$p"; else skip="$$skip$$p: no $$w;"; fi; \
 	done < MANIFEST; \
 	for s in .config/* .xinitrc bin/*; do \
@@ -55,15 +75,16 @@ OURS = for d in "$(HOME_DIR)"/.config/* "$(HOME_DIR)"/.xinitrc "$(BINDIR)"/*; do
 .PHONY: all install uninstall list doctor
 
 all:
-	@echo "make install | make uninstall | make list | make doctor   [HOST=name]"
+	@echo "make install | make uninstall | make list | make doctor"
 
 list:
-	@$(PICK); echo "$$host: `echo $$caps`"; \
+	@$(PICK); echo "$$os: `echo $$decl`"; \
+	printf '%s' "$$failed" | tr ';' '\n' | sed 's/^/  ! not fully there: /'; \
 	for rel in $$pick; do echo "  $$rel -> `dest $$rel`"; done; \
 	printf '%s' "$$skip" | tr ';' '\n' | sed 's/^/  . /'
 
 doctor:
-	@src=`pwd`; $(PICK); echo "dotfiles :: doctor ($$host: `echo $$caps`)"; echo ""; \
+	@src=`pwd`; $(PICK); echo "dotfiles :: doctor ($$os: `echo $$decl`)"; echo ""; \
 	bad=0; printf 'links\n'; \
 	for rel in $$pick; do \
 		d=`dest "$$rel"`; \
@@ -74,15 +95,13 @@ doctor:
 	if r=`$${SHELL:-/bin/sh} -i -c rc_loaded </dev/null 2>/dev/null | sed -n 's/.*\(rc\.sh loaded by\)/\1/p'`; [ -n "$$r" ]; then \
 		printf '  \342\234\223 %s\n' "$$r"; \
 	else printf '  \342\234\227 %s -i does not load rc.sh (ENV, see the README)\n' "$${SHELL:-/bin/sh}"; fi; \
-	printf '\ntools\n'; \
-	while IFS=: read -r p n u; do \
-		case $$p in '#'*|'') continue ;; esac; set -- $$p; p=$$1; \
-		case " $$pick " in *" $$p "*) ;; *) continue ;; esac; [ -n "`echo $$u`" ] || continue; \
-		printf '  %s\n    ' "$$p"; \
-		for w in $$u; do o=; for a in `echo "$$w" | tr '|' ' '`; do met "$$a" && { o=1; break; }; done; \
-			if [ -n "$$o" ]; then printf '\342\234\223 %s  ' "$$w"; else printf '\342\234\227 %s  ' "$$w"; fi; \
+	printf '\ncapabilities\n'; \
+	for c in $(CHECKS); do n=$${c%%:*}; case " $$decl " in *" $$n "*) ;; *) continue ;; esac; \
+		printf '  %s\n    ' "$$n"; \
+		for w in $${c#*:}; do o=; for a in `echo "$$w" | tr '|' ' '`; do there "$$a" && { o=1; break; }; done; \
+			if [ -n "$$o" ]; then printf '\342\234\223 %s  ' "$$w"; else printf '\342\234\227 %s  ' "$$w"; bad=1; fi; \
 		done; printf '\n'; \
-	done < MANIFEST; \
+	done; \
 	if [ -n "$$skip" ]; then printf '\nnot for this machine\n'; printf '%s' "$$skip" | tr ';' '\n' | sed 's/^/  /'; fi; \
 	exit $$bad
 
@@ -91,6 +110,10 @@ doctor:
 # FORCE=1 displaces the occupant, dated, instead of deleting it.
 install:
 	@src=`pwd`; bad=0; $(PICK); \
+	if [ -n "$$failed" ]; then \
+		printf '%s' "$$failed" | tr ';' '\n' | sed 's/^/  ! declared but not fully there: /' >&2; \
+		echo "  nothing linked: install what's missing (setup/<os>), or undeclare it in $(CAPSFILE)" >&2; exit 1; \
+	fi; \
 	$(OURS); \
 		case " $$pick " in *" $$rel "*) ;; *) rm -f "$$d" && echo "  - $$rel" ;; esac; \
 	done; \
