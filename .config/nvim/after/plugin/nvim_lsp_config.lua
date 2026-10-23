@@ -105,9 +105,8 @@ vim.lsp.config("lua_ls", {
 })
 
 vim.lsp.config("clangd", {
-    -- Um binário só, já no PATH (Apple clangd 21) — nada do bootstrap que o
-    -- jdtls precisa. Por isso mora aqui, junto dos outros, e não em arquivo
-    -- separado.
+    -- A single binary already on the PATH (clang-tools-extra on OpenBSD), with
+    -- none of the bootstrap jdtls needs, so it lives here with the others.
     cmd = {
         "clangd",
         "--background-index",

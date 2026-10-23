@@ -1,8 +1,8 @@
 #!/bin/sh
 # Pull every file with an extension in $exts from the phone's Download
-# folder via adb, then delete
-# each one from the phone once a local copy of the same size exists.
-# Usage: pull-videos [-k] [destination-dir]   (default: current directory)
+# folder via adb, then delete each one from the phone once a local copy of
+# the same size exists.
+# Usage: pull-files [-k] [destination-dir]   (default: current directory)
 #   -k  keep files on the phone (don't delete)
 
 set -eu
