@@ -180,7 +180,17 @@ findfile() {
 }
 simplegrep() { grep -nRIi -- "$1" .; }
 
-trash() { [ "$#" -gt 0 ] || return 0; mkdir -p -- "$HOME/.trash" && mv -- "$@" "$HOME/.trash"; }
+# a name already in ~/.trash gets .1, .2, ...
+trash() (
+    [ "$#" -gt 0 ] || exit 0
+    mkdir -p -- "$HOME/.trash" || exit 1
+    for f; do
+        b=$HOME/.trash/$(basename -- "$f") d=$b n=1
+        while [ -e "$d" ] || [ -L "$d" ]; do d=$b.$n; n=$((n + 1)); done
+        mv -- "$f" "$d" || r=1
+    done
+    exit "${r:-0}"
+)
 shredtrash() (
     clear 2>/dev/null
     printf '\nempty %s? [y/N] ' "$HOME/.trash"
