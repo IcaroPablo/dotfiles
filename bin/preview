@@ -62,7 +62,7 @@ case "$(printf "%s\n" "$name" | awk '{print tolower($0)}')" in
 	*.rar) have unrar && unrar l "$1" || desc "$1" ;;
 	*.md) have glow && glow "$1" || cat "$1" ;;
 	*.7z) have 7z && 7z l "$1" || desc "$1" ;;
-	*.[1-8]) have man && man "$1" | col -b || desc "$1" ;;
+	*.[1-8]) have man && man -l "$1" | col -b || desc "$1" ;;
 	*.o) have nm && nm "$1" || desc "$1" ;;
 	*.torrent) have transmission-show && transmission-show "$1" || desc "$1" ;;
 	*.iso) have iso-info && iso-info --no-header -l "$1" || desc "$1" ;;
