@@ -2,32 +2,11 @@
     name = Ícaro Andrade
     email = ic4ro.p4blo@gmail.com
 
-# [sendemail]
-#     confirm = auto
-#     smtpEncryption = ssl
-#     smtpServerPort = 465
-#     chainReplyTo = false
-
-# [include]
-#     path = ~/.gitconfig-common
-
-# [includeIf "gitdir:~/repos/redhat/"]
-#     path = ~/.gitconfig-work
-
 [init]
     defaultBranch = main
 
 [push]
     default = current
-#    gpgSign = if-asked
-
-# [core]
-#     autocrlf = input
-#     pager = delta
-#     quotePath = false
-
-# [color]
-#     status = always
 
 [pull]
     rebase = true
@@ -35,18 +14,10 @@
 [fetch]
     prune = true
 
-# [credential]
-#     helper = !pass-git-helper
-
-# [delta]
-#     navigate = true
-#     light = false
-
 [format]
     signOff = true
 
 [interactive]
-#     diffFilter = delta --color-only
     singleKey = true
 
 [log]
@@ -64,9 +35,7 @@
     enabled = true
 
 [alias]
-    ## am (a+)
     aa = add --all
-    # aa = am --abort
     acmp = "!f(){ \
             git aa; \
             git cm \"$1\"; \
@@ -111,8 +80,7 @@
     lpm = log -p
     lnns = ln --name-status
     lg = log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
-	; ls = log --pretty=format:\"%C(yellow)%h %C(blue)%ad%C(red)%d %C(reset)%s%C(green) [%cn]\" --decorate --date=short
-	lg-full = log --name-status --pretty=fuller
+    lg-full = log --name-status --pretty=fuller
 
     # no-merges
     ln = lnm --no-merges
@@ -269,9 +237,3 @@
                 echo \"updated\"; \
             }; \
         };f"
-
-# [filter "lfs"]
-# 	clean = git-lfs clean -- %f
-# 	smudge = git-lfs smudge -- %f
-# 	process = git-lfs filter-process
-# 	required = true   us = restore --staged .
