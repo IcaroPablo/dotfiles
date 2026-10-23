@@ -23,5 +23,5 @@ coords="$(slop -f '%x %y %w %h')" || exit 1
 set -- $coords
 X=$1; Y=$2; W=$3; H=$4
 
-ffmpeg -y -f x11grab -framerate "$FPS" -video_size "${W}x${H}" -i ":0.0+$X,$Y" -c:v ffv1 "$RAW" >/dev/null 2>&1 &
+ffmpeg -y -f x11grab -framerate "$FPS" -video_size "${W}x${H}" -i "${DISPLAY:-:0}+$X,$Y" -c:v ffv1 "$RAW" >/dev/null 2>&1 &
 echo $! > "$PIDFILE"
