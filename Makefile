@@ -25,11 +25,11 @@ SET0 = .config/git .config/sh \
 	bin/openfile bin/preview
 SET1 = .config/ghostty .xinitrc \
 	bin/backuphd bin/bar bin/chimera-setup \
-	bin/fzfmenu bin/monitor \
+	bin/fzfmenu bin/igsaved bin/monitor \
 	bin/pull-files bin/rec-gif bin/run-program bin/scrotocr \
 	bin/wipe-ssd
 SET2 = .config/nvim .config/spdfv .config/vis \
-	bin/igsaved bin/launch_nvim bin/shpad bin/sixiv bin/spdfv
+	bin/launch_nvim bin/shpad bin/sixiv bin/spdfv
 
 # Missing, these fail the doctor; everything else falls back, and the groups
 # below only inform.
@@ -44,11 +44,12 @@ GROUPS1 = \
 	"X11 (xinitrc, bar, fzfmenu, monitor, as teclas do smawm):xwallpaper xsetroot xset xrdb xmodmap setxkbmap xinput xrandr xdpyinfo smawm st scrot xclip xdg-open" \
 	"IMAGEM E VÍDEO (rec-gif, scrotocr):ffmpeg slop tesseract mogrify" \
 	"DISCO (backuphd, wipe-ssd):rsync doas cryptsetup lsof udisksctl blkdiscard sfdisk mkfs.ext4" \
-	"CELULAR (pull-files):adb"
+	"CELULAR (pull-files):adb" \
+	"INSTAGRAM (igsaved):python3 yt-dlp chafa ffmpeg xclip mpv less"
 GROUPS2 = \
 	"EDITOR (nvim, launch_nvim):nvim tree-sitter rg" \
 	"SHPAD (dvtm, e o carapace completa no nvim):dvtm carapace lsof" \
-	"IMAGEM (sixiv, igsaved):ffmpeg ffprobe chafa python3 less yt-dlp xclip mpv" \
+	"IMAGEM (sixiv):ffmpeg ffprobe chafa python3" \
 	"DOCUMENTO (spdfv):pdfinfo pdftoppm ddjvu djvused mutool magick convert chafa python3"
 
 # $pick: what SETS links; warns about files in no set. dest: where a file links.

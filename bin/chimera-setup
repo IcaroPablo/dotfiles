@@ -119,7 +119,7 @@ clone dotfiles
 
 has_set() { case " $sets " in *" $1 "*) ;; *) return 1 ;; esac; }
 # what only a set's scripts use; set 0's comes with the shell above
-has_set 1 && add rsync tesseract imagemagick android-tools
+has_set 1 && add rsync tesseract imagemagick android-tools python
 # no mupdf in apk: spdfv opens PDF and DjVu here, not EPUB
 has_set 2 && add python poppler djvulibre imagemagick neovim tree-sitter-cli
 as_user "cd $ws/dotfiles && make install SETS='0 $sets'"
