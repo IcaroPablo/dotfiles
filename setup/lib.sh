@@ -50,3 +50,39 @@ leftovers() {
 	_e=$(for _p in $_b; do in_list "$_p" "$@" || echo "$_p"; done)
 	[ -z "$_e" ] || printf '\n%s:\n%s\n' "$_t" "$_e"
 }
+
+# choose_caps menu... -- args...: sets caps, what to install and declare. The
+# args when there are any, else asked about each menu item, defaulting to what
+# capsfile declares now
+choose_caps() {
+	capsfile=$home/.config/dotfiles/capabilities
+	capmenu=
+	while [ $# -gt 0 ] && [ "$1" != -- ]; do capmenu="$capmenu $1"; shift; done
+	[ $# -eq 0 ] || shift
+	capnow=$(cat "$capsfile" 2>/dev/null) || capnow=
+	caps=
+	if [ $# -gt 0 ]; then
+		for _c; do
+			in_list "$_c" $capmenu || { echo "this setup has no $_c (it has:$capmenu)" >&2; exit 1; }
+		done
+		caps=$*
+	else
+		[ -t 0 ] || { echo "no terminal to ask which capabilities; pass them:$capmenu" >&2; exit 1; }
+		for _c in $capmenu; do
+			if in_list "$_c" $capnow; then _d=y _q='[Y/n]'; else _d=n _q='[y/N]'; fi
+			printf '%s? %s ' "$_c" "$_q"
+			read -r _a
+			case ${_a:-$_d} in [Yy]*) caps="$caps $_c" ;; esac
+		done
+	fi
+	caps=$(echo $caps)
+}
+
+# declare_caps: caps into capsfile; what isn't on this setup's menu (declared
+# by hand, say) stays declared
+declare_caps() {
+	_k=$(for _c in $capnow; do in_list "$_c" $capmenu || echo "$_c"; done)
+	as_user "mkdir -p '${capsfile%/*}' && echo $(echo $_k $caps) > '$capsfile'"
+}
+
+declared() { in_list "$1" $caps; }
