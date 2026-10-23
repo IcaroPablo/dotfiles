@@ -80,7 +80,7 @@ def cookies():
         if c.domain.endswith("instagram.com"):
             jar.set_cookie(c)
     if not any(c.name == "sessionid" for c in jar):
-        die("o Chromium não está logado no Instagram")
+        die("Chromium isn't logged in to Instagram")
     os.umask(0o077)
     jar.save(ignore_discard=True, ignore_expires=True)
 
@@ -105,13 +105,13 @@ def api(path, data=None, headers={}):
             return json.load(r)
     except urllib.error.HTTPError as e:
         if e.code == 429:
-            die("o Instagram pediu calma (429): espere uns minutos")
+            die("Instagram is rate limiting (429): wait a few minutes")
         if e.code in (401, 403):
-            die("sessão recusada: entre de novo no Instagram pelo Chromium")
+            die("session refused: log in to Instagram again in Chromium")
         raise
     except json.JSONDecodeError:
         # sessão vencida devolve a página de login, não JSON
-        die("sessão recusada: entre de novo no Instagram pelo Chromium")
+        die("session refused: log in to Instagram again in Chromium")
 
 def save(m):
     p = os.path.join(st, "posts", m["code"] + ".json")
@@ -137,7 +137,7 @@ def load(code, force=False):
         m = api("/api/v1/media/%s/info/" % pk)["items"][0]
     except urllib.error.HTTPError as e:
         if e.code in (400, 404):
-            die("o post não existe mais (ou o perfil ficou privado)")
+            die("the post is gone (or the profile went private)")
         raise
     save(m)
     return m
@@ -196,7 +196,7 @@ def web(fresh=False):
     def g(k):
         m = re.search(r'"%s":"?([^",}]+)' % re.escape(k), h)
         if not m:
-            die("a página do Instagram mudou: não achei %s" % k)
+            die("Instagram's page changed: %s not found" % k)
         return m.group(1)
     w["dtsg"] = re.search(r'"DTSGInitialData",\[\],\{"token":"([^"]+)"', h).group(1)
     w["lsd"] = re.search(r'"LSD",\[\],\{"token":"([^"]+)"', h).group(1)
@@ -251,7 +251,7 @@ elif cmd == "sync":
         with open(lst, "a") as f:
             f.writelines(c + "\n" for c in new)
         n += len(new)
-        print("\r%d novos, %d na lista" % (n, len(known)), end="", file=sys.stderr)
+        print("\r%d new, %d in the list" % (n, len(known)), end="", file=sys.stderr)
         max_id = d.get("next_max_id")
         if not d.get("more_available") or not max_id:
             break
@@ -269,7 +269,7 @@ elif cmd == "import":
             new.append(c)
     with open(lst, "a") as f:
         f.writelines(c + "\n" for c in new)
-    print("%d novos, %d na lista" % (len(new), len(known)), file=sys.stderr)
+    print("%d new, %d in the list" % (len(new), len(known)), file=sys.stderr)
 
 elif cmd == "show":
     m = load(args[0])
@@ -329,7 +329,7 @@ elif cmd == "unsave":
         if (d.get("data") or {}).get("xig_media_unsave"):
             break
     else:
-        die("o Instagram não tirou dos salvos: %s" % json.dumps(d)[:200])
+        die("Instagram didn't unsave it: %s" % json.dumps(d)[:200])
 
 elif cmd == "img":
     fetch(args[0], lambda m: best(items(m)[int(args[1])], video=False), args[2])
@@ -341,13 +341,13 @@ PY
 
 case ${1:-} in
 sync) py cookies && py sync; exit ;;
-import) [ -r "${2:-}" ] || die "uso: igsaved import arquivo.json"
+import) [ -r "${2:-}" ] || die "usage: igsaved import file.json"
     py import "$2"; exit ;;
 '') ;;
-*) die "uso: igsaved [sync | import arquivo.json]" ;;
+*) die "usage: igsaved [sync | import file.json]" ;;
 esac
 
-have chafa || die "falta o chafa"
+have chafa || die "chafa is needed"
 py cookies || exit 1
 [ -s "$state/list" ] || py sync || exit 1
 
@@ -362,7 +362,7 @@ trap 'exit 1' INT TERM HUP
 awk -F'\t' 'FILENAME == ARGV[1] { done[$1]; next } !($1 in done)' \
     "$state/done" "$state/list" >"$tmp/queue"
 total=$(wc -l <"$tmp/queue" | tr -d ' ')
-[ "$total" -gt 0 ] || { echo "igsaved: fila vazia, nada salvo por ver"; exit 0; }
+[ "$total" -gt 0 ] || { echo "igsaved: the queue is empty, no saved post left to see"; exit 0; }
 
 # Navegador: $BROWSER, senão o Chromium de onde vêm os cookies (logado).
 if [ -n "${BROWSER:-}" ]; then web=$BROWSER
@@ -396,7 +396,7 @@ draw() {
     fold -s -w "$cols" "$tmp/cap" | head -2
     if [ "$n" -gt 0 ]; then
         k=$(printf %s "$kinds" | cut -c$((j + 1)))
-        [ "$k" = v ] && t=vídeo || t=foto
+        [ "$k" = v ] && t=video || t=photo
         [ "$n" -gt 1 ] && t="$t $((j + 1))/$n"
         # 4 linhas de texto em cima, 1 de status embaixo, 1 de folga. O chafa
         # tira o tamanho da célula do TIOCGWINSZ e encaixa a foto nessa caixa.
@@ -409,25 +409,25 @@ draw() {
             --polite=on -s "${cols}x$((rows - 6))" "$f")"
     fi
     printf '\033[%d;1H\033[7m %s \033[m %s\033[K' "$rows" \
-        "d a w y c p o n · Enter pronto · r remove · s depois · k volta · q" "${msg:-$acts}"
+        "d a w y c p o n · Enter done · r remove · s later · k back · q" "${msg:-$acts}"
 }
 
 status() { msg=$1; printf '\033[%d;1H\033[K%s' "$rows" "$msg"; }
 
 note() {
-    stty "$old"; printf '\033[%d;1H\033[K\033[?25hnota: ' "$rows"
+    stty "$old"; printf '\033[%d;1H\033[K\033[?25hnote: ' "$rows"
     IFS= read -r t
     stty -icanon -echo min 0 time 5; printf '\033[?25l'
     [ -n "$t" ] || return
     printf -- '- [@%s](%s): %s\n' "$user" "$url" "$t" >>"$out/notas.md"
-    acts="$acts nota"
+    acts="$acts note"
 }
 
 get() {
-    status "baixando..."
+    status "downloading..."
     if py get "$code" "$1" "$out" >"$tmp/got" 2>"$tmp/err"; then
-        acts="$acts baixou($(wc -l <"$tmp/got" | tr -d ' '))"
-        msg=  # o "baixando..." do status, que senão tapava o acts
+        acts="$acts downloaded($(wc -l <"$tmp/got" | tr -d ' '))"
+        msg=  # the status's "downloading...", which would hide acts
     else
         msg=$(tail -1 "$tmp/err")
     fi
@@ -437,12 +437,12 @@ get() {
 # O xclip fica de pé servindo a seleção; o nohup o livra do SIGHUP de quando
 # a janela do terminal fecha, que levaria a imagem junto.
 yank() {
-    status "copiando..."
+    status "copying..."
     if py img "$code" "$j" "$tmp/clip.jpg" 2>"$tmp/err" &&
         ffmpeg -v error -y -i "$tmp/clip.jpg" "$tmp/clip.png" 2>"$tmp/err" &&
         nohup xclip -selection clipboard -t image/png -i "$tmp/clip.png" \
             >/dev/null 2>"$tmp/err"; then
-        msg="copiada"
+        msg="copied"
     else
         msg=$(tail -1 "$tmp/err")
     fi
@@ -478,7 +478,7 @@ while [ "$i" -le "$total" ]; do
     y) [ "$n" -gt 0 ] && yank ;;
     w) case $(printf %s "$kinds" | cut -c$((j + 1))) in
         v) mpv "$(py url "$code" "$j")" </dev/null >/dev/null 2>&1 & ;;
-        *) msg="esta não é vídeo" ;;
+        *) msg="this one isn't a video" ;;
         esac ;;
     c) stty "$old"; printf '\033[?25h'
         py caption "$code" 2>&1 | fold -s -w "$cols" | less
@@ -487,14 +487,14 @@ while [ "$i" -le "$total" ]; do
         p=https://www.instagram.com/$user/
         grep -qxF -- "- $p" "$out/perfis.md" 2>/dev/null ||
             echo "- $p" >>"$out/perfis.md"
-        browse "$p"; acts="$acts perfil" ;;
+        browse "$p"; acts="$acts profile" ;;
     o) browse "$url" ;;
     n) note ;;
     "$nl"|' ') printf '%s\t%s\n' "$code" "${acts# }" >>"$state/done"
         i=$((i + 1)) ;;
-    r) status "tirando dos salvos..."
+    r) status "unsaving..."
         if py unsave "$code" 2>"$tmp/err"; then
-            acts="$acts removido"
+            acts="$acts removed"
             printf '%s\t%s\n' "$code" "${acts# }" >>"$state/done"
             i=$((i + 1))
         else
