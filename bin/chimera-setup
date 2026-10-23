@@ -45,9 +45,10 @@ case $(grep -m1 vendor_id /proc/cpuinfo) in
 *) ucode= ;;
 esac
 # loaded early from the initramfs, which needs a rebuild once it's installed
-if [ -n "$ucode" ] && ! apk info -e "$ucode" >/dev/null 2>&1; then
+if [ -n "$ucode" ]; then
+	apk info -e "$ucode" >/dev/null 2>&1 || fresh=1
 	add "$ucode"
-	update-initramfs -c -k all
+	[ -z "${fresh:-}" ] || update-initramfs -c -k all
 fi
 for d in /sys/bus/pci/devices/*; do
 	case $(cat "$d/class"):$(cat "$d/vendor") in 0x03*:0x8086) add intel-media-driver ;; esac
