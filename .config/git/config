@@ -89,6 +89,21 @@
 
     ## push (p+)
     pf = push -f
+    # fast-forward a remote branch to the current commit, e.g. to merge a PR
+    # without a merge commit; git refuses if it is not a fast-forward
+    pff = "!f(){\
+            TRACKING=origin; \
+            case $# in \
+                0) \
+                    BRANCH=$(git get-default-branch);; \
+                1) \
+                    BRANCH=$1;; \
+                2) \
+                    BRANCH=$2; \
+                    TRACKING=$1;; \
+            esac; \
+            git push $TRACKING HEAD:refs/heads/$BRANCH; \
+        };f"
 
     # pull
     psn = "!f(){\
