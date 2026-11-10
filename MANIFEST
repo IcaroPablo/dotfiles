@@ -14,6 +14,7 @@
 .config/spdfv                 : sixel
 .config/ghostty               : ghostty
 .config/dinit.d               : x11 linux
+.config/luakit                : x11
 .config/x11                   : x11
 .xinitrc                      : x11
 bin/openfile                  :
