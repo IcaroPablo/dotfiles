@@ -32,7 +32,8 @@ What a machine gets depends on the capabilities it declares, one word each in `~
 |---|---|---|
 | `x11` | an X session: Xorg, st, smawm, scrot, slop | `startx xrandr xsetroot xdpyinfo xclip st smawm scrot slop` |
 | `sixel` | the sixel viewers' tools | `chafa ffmpeg ffprobe python3 pdfinfo pdftoppm djvused ddjvu` |
-| `text-editing` | nvim and vis | `nvim tree-sitter rg vis-open` |
+| `text-editing` | nvim | `nvim tree-sitter rg` |
+| `vis` | the vis editor | `vis-open` |
 | `dvtm` | dvtm, for shpad | `dvtm` |
 | `phone` | adb, for pull-files | `adb` |
 | `host` | a physical machine's disks | `rsync cryptsetup\|bioctl` |
@@ -76,9 +77,9 @@ emulate sh -c '. "$HOME/.config/sh/rc.sh"'
 
 | Script | Its capabilities |
 |---|---|
-| `setup/chimera` | `x11 sixel text-editing host phone ocr yt-dlp` |
-| `setup/openbsd` | `sixel text-editing dvtm yt-dlp` |
-| `setup/macos` | `ghostty text-editing` |
+| `setup/chimera` | `x11 sixel text-editing vis host phone ocr yt-dlp` |
+| `setup/openbsd` | `sixel text-editing vis dvtm yt-dlp` |
+| `setup/macos` | `ghostty text-editing vis` |
 
 They source `setup/lib.sh`, so run them from a clone or from a copy of the whole `setup/` folder:
 

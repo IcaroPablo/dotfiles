@@ -26,7 +26,7 @@ as_user() { doas -u "$user" sh -c "$1"; }
 . "$(dirname "$(realpath "$0")")/lib.sh"
 
 # asked first, so the rest runs unattended
-choose_caps x11 sixel text-editing host phone ocr yt-dlp -- "$@"
+choose_caps x11 sixel text-editing vis host phone ocr yt-dlp -- "$@"
 
 # what was installed before, to show at the end what this script doesn't install
 before=$(cat /etc/apk/world)
@@ -96,12 +96,12 @@ chsh -s /usr/bin/oksh "$user"
 
 # ==== 4. capabilities: what was chosen ====
 
-if declared text-editing; then
-	add neovim tree-sitter-cli lua5.4-lpeg
+declared text-editing && add neovim tree-sitter-cli
+if declared vis; then
 	# vis isn't in apk: built into ~/.local from master at a pinned commit, as
 	# the 0.9 release needs a libtermkey apk lacks too. Installed as vise, its
 	# BSD name, since chimerautils already has a vis(1)
-	add clang gmake pkgconf ncurses-devel lua5.4-devel
+	add lua5.4-lpeg clang gmake pkgconf ncurses-devel lua5.4-devel
 	[ -x "$home/.local/bin/vise" ] || as_user 'd=$(mktemp -d) && cd "$d" &&
 		curl -fsSL https://github.com/martanne/vis/archive/10b630af09404cf2c887e2d7e6e24ecda9d05ea7.tar.gz |
 		tar -xz --strip-components=1 && ./configure --prefix=$HOME/.local && make && make install &&

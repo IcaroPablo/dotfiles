@@ -32,7 +32,8 @@ DISPLACED = $(HOME_DIR)/.local/share/dotfiles/displaced
 CHECKS = \
 	"x11:startx xrandr xsetroot xdpyinfo xclip st smawm scrot slop" \
 	"sixel:chafa ffmpeg ffprobe python3 pdfinfo pdftoppm djvused ddjvu" \
-	"text-editing:nvim tree-sitter rg vis-open" \
+	"text-editing:nvim tree-sitter rg" \
+	"vis:vis-open" \
 	"dvtm:dvtm" \
 	"phone:adb" \
 	"host:rsync cryptsetup|bioctl" \

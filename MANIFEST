@@ -10,7 +10,7 @@
 .config/git                   :
 .config/sh                    :
 .config/nvim                  : text-editing
-.config/vis                   : text-editing
+.config/vis                   : vis
 .config/spdfv                 : sixel
 .config/ghostty               : ghostty
 .config/x11                   : x11

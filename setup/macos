@@ -12,7 +12,7 @@ as_user() { sh -c "$1"; }
 [ "$(id -u)" -ne 0 ] || { echo "run as yourself, not root: Homebrew refuses root" >&2; exit 1; }
 
 # asked first, so the rest runs unattended
-choose_caps ghostty text-editing -- "$@"
+choose_caps ghostty text-editing vis -- "$@"
 
 # ==== 1. Apple's command line tools: git, make, cc ====
 
@@ -51,8 +51,9 @@ add oksh git gh fzf eza fd ripgrep zoxide xz p7zip w3m exiftool chafa ffmpeg
 
 # ==== 4. capabilities: what was chosen ====
 
+declared text-editing && add neovim tree-sitter-cli lua-language-server stylua
 # Homebrew's vis is vis, ahead of macOS's own vis(1) on the PATH
-declared text-editing && add neovim tree-sitter-cli vis lua-language-server stylua
+declared vis && add vis
 # with the font its config names
 declared ghostty && cask ghostty font-monaspice-nerd-font
 

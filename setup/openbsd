@@ -18,7 +18,7 @@ ws=$home/Workspace
 
 as_user() { su -l "$user" -c "$1"; }
 . "$(dirname "$(realpath "$0")")/lib.sh"
-choose_caps sixel text-editing dvtm yt-dlp -- "$@"
+choose_caps sixel text-editing vis dvtm yt-dlp -- "$@"
 # sshd_config: drop any line for the key, commented or not, then set it
 sshd_set() {
 	sed -i "/^#*$1 /d" /etc/ssh/sshd_config
@@ -92,8 +92,9 @@ pkg_add -I gmake cmake ninja autoconf%2.72 automake%1.17 libtool libvterm
 # capabilities: what was chosen
 # base's clang has no clangd: clang-tools-extra ships it (nvim's C LSP); jdk and
 # maven are jdtls's
-declared text-editing && pkg_add -I neovim tree-sitter-cli vis stylua \
+declared text-editing && pkg_add -I neovim tree-sitter-cli stylua \
 	lua-language-server clang-tools-extra jdk%21 maven
+declared vis && pkg_add -I vis
 # spdfv's: PDF, DjVu, EPUB (through mutool), and ImageMagick 6's convert
 declared sixel && pkg_add -I python%3 poppler-utils djvulibre mupdf-- ImageMagick
 declared yt-dlp && pkg_add -I yt-dlp
