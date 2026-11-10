@@ -44,7 +44,7 @@ if xrandr | grep -q '^HDMI[^ ]* connected'; then
     monitor same && monitor off
 fi
 
-xset r rate 300 100
+# keyboard layout and repeat rate are system config, from setup/<os>
 xset s off
 xset b off
 xset -dpms
@@ -59,7 +59,6 @@ _w=$(for _f in "$HOME"/.local/wallpapers/*; do
         [ -f "$_f" ] && printf '%s\n' "$_f"
     done | awk 'BEGIN { srand() } { a[NR] = $0 } END { if (NR) print a[int(rand() * NR) + 1] }')
 [ -n "$_w" ] && xwallpaper --zoom "$_w" &
-setxkbmap br &
 
 # what only one OS has: ~/.config/x11/xinitrc.d/<os>.sh
 _os=$(uname | tr '[:upper:]' '[:lower:]')
