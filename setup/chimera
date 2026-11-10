@@ -122,6 +122,8 @@ if declared x11; then
 		alsa-utils xdg-utils mpv thunar luakit gvfs thunar-volman udisks
 	# rec-gif and rec-video's region picker
 	add slop
+	# audio-mirror reads PipeWire's events through it
+	add jq
 
 	# X applies this to every keyboard it adds, USB ones plugged in later too;
 	# setxkbmap and xset in .xinitrc would only reach those already there
@@ -178,6 +180,8 @@ EOF
 	apps="$apps com.teamspeak.TeamSpeak"
 	flatpak install -y --system flathub com.teamspeak.TeamSpeak ||
 		echo "warning: TeamSpeak not installed; rerun outside the chroot" >&2
+	# screen-share audio capture talks to PipeWire directly, not through pulse
+	flatpak override --system --filesystem=xdg-run/pipewire-0 com.teamspeak.TeamSpeak
 fi
 
 # ==== 5. dotfiles ====

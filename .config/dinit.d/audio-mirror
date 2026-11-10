@@ -1,0 +1,6 @@
+# mirrors flatpak apps' sound for TeamSpeak's screen share; see bin/audio-mirror
+type = process
+command = $HOME/.local/bin/audio-mirror
+waits-for = wireplumber
+restart = true
+log-type = buffer

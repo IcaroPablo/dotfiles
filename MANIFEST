@@ -13,6 +13,7 @@
 .config/vis                   : vis
 .config/spdfv                 : sixel
 .config/ghostty               : ghostty
+.config/dinit.d               : x11 linux
 .config/x11                   : x11
 .xinitrc                      : x11
 bin/openfile                  :
@@ -30,5 +31,6 @@ bin/monitor                   : x11
 bin/rec-gif                   : x11
 bin/rec-video                 : x11
 bin/scrotocr                  : x11 ocr
+bin/audio-mirror              : x11 linux
 bin/backuphd                  : host linux|openbsd
 bin/wipe-ssd                  : host linux

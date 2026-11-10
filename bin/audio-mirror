@@ -1,0 +1,87 @@
+#!/bin/sh
+# requires PipeWire with WirePlumber, and jq
+# audio-mirror: lets TeamSpeak's screen share capture flatpak apps' sound.
+# TeamSpeak lists no stream with media.category = Manager, and pipewire-pulse
+# tags every flatpak with devices=all that way. While TeamSpeak runs, each such
+# stream gets a mirror: a loopback fed a copy of its sound, named after the app
+# and untagged. The app keeps playing where it did; the copy goes nowhere until
+# TeamSpeak captures it. Run by the dinit user service of the same name.
+
+TS=com.teamspeak.TeamSpeak
+run=${XDG_RUNTIME_DIR:-/tmp}/audio-mirror
+
+# $run holds node.ID ("serial name" of a stream to mirror), mirror.ID (its
+# loopback's pid) and ts.ID (one per PipeWire client of TeamSpeak's)
+
+mirror() {
+    read -r serial name < "$run/node.$1"
+    pw-loopback --channels 2 \
+        --capture-props="{ node.name = audio-mirror.in.$1 target.object = $serial
+            node.dont-reconnect = true node.passive = true audio.position = [ FL FR ]
+            media.category = Manager }" \
+        --playback-props="{ node.name = audio-mirror.$1 node.description = \"$name\"
+            application.name = \"$name\" node.autoconnect = false audio.position = [ FL FR ]
+            state.restore-props = false state.restore-target = false }" \
+        </dev/null &
+    echo $! > "$run/mirror.$1"
+    echo "mirroring $name (node $1)"
+}
+
+unmirror() {
+    [ -e "$run/mirror.$1" ] || return 0
+    pid=$(cat "$run/mirror.$1")
+    # a pid left by an earlier run may belong to something else by now
+    [ "$(cat "/proc/$pid/comm" 2>/dev/null)" = pw-loopback ] && kill "$pid"
+    rm -f "$run/mirror.$1"
+    echo "unmirrored node $1"
+}
+
+ts_running() { set -- "$run"/ts.*; [ -e "$1" ]; }
+
+# each KIND FUNCTION: FUNCTION ID for every KIND.ID file
+each() { for f in "$run/$1".*; do [ -e "$f" ] && "$2" "${f##*.}"; done; }
+
+reset() { each mirror unmirror; rm -rf "$run"; mkdir -p "$run"; }
+
+# one line per event: "node ID SERIAL NAME", "ts ID" or "gone ID"
+events() {
+    pw-dump -m | jq -r --unbuffered --arg ts "$TS" '.[] | .info.props as $p |
+        if .type == null then "gone \(.id)"
+        elif .type == "PipeWire:Interface:Client"
+            and $p["pipewire.access.portal.app_id"] == $ts then "ts \(.id)"
+        elif .type == "PipeWire:Interface:Node"
+            and $p["media.class"] == "Stream/Output/Audio"
+            and $p["media.category"] == "Manager"
+            and $p["pipewire.access.portal.app_id"] != $ts
+        then "node \(.id) \($p["object.serial"]) \($p["application.name"] // "app"
+            | gsub("[^A-Za-z0-9 ._-]"; ""))"
+        else empty end'
+}
+
+trap 'pkill -P $$; reset; rm -rf "$run"; exit 0' INT TERM
+
+while :; do
+    reset
+    events | while read -r kind id serial name; do
+        case $kind in
+        node)
+            [ -e "$run/node.$id" ] && continue
+            echo "$serial $name" > "$run/node.$id"
+            ts_running && mirror "$id" ;;
+        ts)
+            [ -e "$run/ts.$id" ] && continue
+            ts_running && first= || first=1
+            : > "$run/ts.$id"
+            [ -n "$first" ] && each node mirror ;;
+        gone)
+            if [ -e "$run/node.$id" ]; then unmirror "$id"; rm -f "$run/node.$id"; fi
+            if [ -e "$run/ts.$id" ]; then
+                rm -f "$run/ts.$id"
+                ts_running || each mirror unmirror
+            fi ;;
+        esac
+    done &
+    wait $!
+    # pw-dump ended: PipeWire restarted or went away
+    sleep 2
+done
