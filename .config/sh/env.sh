@@ -36,7 +36,10 @@ _h=$(hostname -s 2>/dev/null || hostname)
 [ -f "$XDG_CONFIG_HOME/sh/hosts/${_h%%.*}.sh" ] && . "$XDG_CONFIG_HOME/sh/hosts/${_h%%.*}.sh"
 unset _h
 
-if command -v nvim >/dev/null 2>&1; then EDITOR='nvim'; MANPAGER='nvim +Man!'; else EDITOR='vi'; unset MANPAGER; fi
+# vis by its vise name only: a bare vis is the BSD userland's vis(1)
+if command -v nvim >/dev/null 2>&1; then EDITOR='nvim'; MANPAGER='nvim +Man!'
+elif command -v vise >/dev/null 2>&1; then EDITOR='vise'; unset MANPAGER
+else EDITOR='vi'; unset MANPAGER; fi
 FCEDIT="$EDITOR"
 export EDITOR FCEDIT
 [ -n "${MANPAGER:-}" ] && export MANPAGER
