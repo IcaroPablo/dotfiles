@@ -120,7 +120,7 @@ if declared x11; then
 		xdpyinfo setxkbmap xclip xwallpaper dbus polkit elogind \
 		xdg-desktop-portal xdg-desktop-portal-gtk pipewire pipewire-alsa \
 		alsa-utils xdg-utils mpv thunar luakit gvfs thunar-volman udisks
-	# rec-gif's region picker
+	# rec-gif and rec-video's region picker
 	add slop
 
 	# X applies this to every keyboard it adds, USB ones plugged in later too;

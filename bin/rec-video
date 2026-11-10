@@ -1,0 +1,56 @@
+#!/bin/sh
+# requires X11 and a PulseAudio server (pipewire-pulse will do)
+# rec-video [full]: records a region picked with slop, or the whole screen,
+# with the system's audio; run it again to stop
+
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/core.sh" || exit 1
+. "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/x11.sh" || exit 1
+
+FPS=30
+PIDFILE="${TMPDIR:-/tmp}/rec-video.pid"
+RAW="${TMPDIR:-/tmp}/rec-video.mkv"
+LOG="${TMPDIR:-/tmp}/rec-video.log"
+
+if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+    kill -INT "$(cat "$PIDFILE")"
+    while kill -0 "$(cat "$PIDFILE")" 2>/dev/null; do sleep 0.2; done
+    rm -f "$PIDFILE"
+
+    # recorded into mkv, which survives a crash; remuxed, not re-encoded
+    out="$HOME/$(date +%Y-%m-%d_%H-%M-%S).mp4"
+    ffmpeg -y -i "$RAW" -c copy -movflags +faststart "$out" >/dev/null 2>&1 || exit 1
+    uri="${TMPDIR:-/tmp}/rec-video.uri"
+    printf 'file://%s\n' "$out" > "$uri"
+    clip_copy "$uri" text/uri-list
+    rm -f "$RAW" "$uri"
+    exit 0
+fi
+
+if [ "$1" = full ]; then
+    X=0; Y=0
+    set -- $(xdpyinfo | awk '/dimensions:/ { sub("x", " ", $2); print $2 }')
+    W=$1; H=$2
+else
+    coords="$(slop -f '%x %y %w %h')" || exit 1
+    set -- $coords
+    X=$1; Y=$2; W=$3; H=$4
+fi
+# yuv420p needs even sides
+W=$((W / 2 * 2)); H=$((H / 2 * 2))
+
+ffmpeg -y \
+    -f x11grab -thread_queue_size 512 -framerate "$FPS" -show_region 1 \
+        -video_size "${W}x${H}" -i "${DISPLAY:-:0}+$X,$Y" \
+    -f pulse -thread_queue_size 512 -i @DEFAULT_MONITOR@ \
+    -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p \
+    -c:a aac -b:a 160k \
+    "$RAW" >"$LOG" 2>&1 &
+echo $! > "$PIDFILE"
+
+# a missing pulse server or a bad region kills ffmpeg at once
+sleep 1
+if ! kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+    rm -f "$PIDFILE"
+    printf 'rec-video: ffmpeg failed, see %s\n' "$LOG" >&2
+    exit 1
+fi

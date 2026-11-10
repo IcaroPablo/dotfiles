@@ -28,6 +28,7 @@ bin/fzfmenu                   : x11
 bin/run-program               : x11
 bin/monitor                   : x11
 bin/rec-gif                   : x11
+bin/rec-video                 : x11
 bin/scrotocr                  : x11 ocr
 bin/backuphd                  : host linux|openbsd
 bin/wipe-ssd                  : host linux
