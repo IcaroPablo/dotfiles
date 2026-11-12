@@ -13,6 +13,7 @@ local _M = {}
 _M.lists = {
     ["easylist.txt"] = "https://easylist.to/easylist/easylist.txt",
     ["easyprivacy.txt"] = "https://easylist.to/easylist/easyprivacy.txt",
+    ["easylist-cookie.txt"] = "https://secure.fanboy.co.nz/fanboy-cookiemonster.txt",
 }
 
 local dir = luakit.data_dir .. "/adblock/"
