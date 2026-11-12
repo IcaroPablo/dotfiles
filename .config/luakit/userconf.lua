@@ -12,6 +12,13 @@ engines.kagi = "https://kagi.com/search?q=%s"
 settings.set_setting("window.search_engines", engines)
 settings.set_setting("window.default_search_engine", "kagi")
 
+-- the completion menu opens while typing, not only on Tab; Tab and Shift-Tab
+-- move through it. Only luakit builds with completion.as_you_type have it
+-- (IcaroPablo/luakit, branch completion-as-you-type)
+if settings.get_settings()["completion.as_you_type"] then
+    settings.set_setting("completion.as_you_type", true)
+end
+
 -- J and K as in Vimium: J goes one tab left, K one tab right
 modes.remove_binds("normal", { "J", "K" })
 modes.add_binds("normal", {
