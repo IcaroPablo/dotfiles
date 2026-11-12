@@ -26,6 +26,12 @@ modes.add_binds("normal", {
     { "K", "Go to next tab.", function (w) w:next_tab() end },
 })
 
+-- Control-z turns pass-through mode off too, not only on; in it, every other
+-- key but Escape goes to the page
+modes.add_binds("passthrough", {
+    { "<Control-z>", "Return to `normal` mode.", function (w) w:set_prompt(); w:set_mode() end },
+})
+
 -- yanks go to the clipboard as well, not only to the primary selection
 local function yank(w, text, what)
     luakit.selection.primary = text
