@@ -1,0 +1,6 @@
+#!/bin/sh
+# requires X11
+# mpv-dlna: opens mpv on its DLNA browser (.config/mpv/scripts/dlna), which
+# finds the media servers on the local network; mpv stays open between files
+
+exec mpv --player-operation-mode=pseudo-gui "$@" >/dev/null 2>&1

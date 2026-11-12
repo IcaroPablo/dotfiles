@@ -124,6 +124,8 @@ if declared x11; then
 	add slop
 	# audio-mirror reads PipeWire's events through it
 	add jq
+	# mpv's DLNA browser (.config/mpv/scripts/dlna) talks through it
+	add python
 
 	# X applies this to every keyboard it adds, USB ones plugged in later too;
 	# setxkbmap and xset in .xinitrc would only reach those already there

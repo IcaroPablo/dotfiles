@@ -15,6 +15,7 @@
 .config/ghostty               : ghostty
 .config/dinit.d               : x11 linux
 .config/luakit                : x11
+.config/mpv                   : x11
 .config/x11                   : x11
 .xinitrc                      : x11
 bin/openfile                  :
@@ -28,6 +29,7 @@ bin/igsaved                   : x11 sixel yt-dlp
 bin/bar                       : x11
 bin/fzfmenu                   : x11
 bin/run-program               : x11
+bin/mpv-dlna                  : x11
 bin/monitor                   : x11
 bin/rec-gif                   : x11
 bin/rec-video                 : x11
