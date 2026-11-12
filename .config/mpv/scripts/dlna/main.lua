@@ -5,6 +5,9 @@
 -- Picking a file queues its whole folder, so > and < move through it, and a
 -- subtitle the server offers with a file is loaded with it. dlna.py, next to
 -- this file, does the talking; it needs python3.
+-- Ctrl+x keeps the subtitle delay set with z and x for good: the shift command
+-- (erebor shift: nas-shift on the NAS) moves that subtitle in the file on the
+-- server, then the video reopens where it was, with no delay.
 
 local input = require "mp.input"
 local msg = require "mp.msg"
@@ -15,6 +18,9 @@ local opts = {
     auto_open = true,
     -- seconds to wait for servers to answer the search
     timeout = 1.5,
+    -- run as: shift ADDRESS SECONDS [TRACK], TRACK the subtitle's number
+    -- among the file's own
+    shift = "erebor shift",
 }
 options.read_options(opts, "dlna")
 
@@ -161,4 +167,57 @@ mp.observe_property("idle-active", "bool", function(_, idle)
     if idle and opts.auto_open then browse() end
 end)
 
+local reopen -- where to pick up again once a delay is in the file
+
+local function save_delay()
+    local path, delay = mp.get_property("path", ""), mp.get_property_number("sub-delay", 0)
+    local sub = mp.get_property_native("current-tracks/sub")
+    if not path:match("^https?://.*/MediaItems/") then
+        return mp.osd_message("Not a video from a DLNA server", 3)
+    end
+    if not sub then return mp.osd_message("No subtitle on", 3) end
+    if math.abs(delay) < 0.001 then return mp.osd_message("No subtitle delay to keep", 3) end
+    local secs = string.format("%.3f", delay)
+    local cmd = {}
+    for word in opts.shift:gmatch("%S+") do cmd[#cmd + 1] = word end
+    if sub.external then
+        cmd[#cmd + 1] = sub["external-filename"]
+        cmd[#cmd + 1] = secs
+    else
+        local n = 0
+        for _, t in ipairs(mp.get_property_native("track-list")) do
+            if t.type == "sub" and not t.external then n = n + 1 end
+            if t.id == sub.id and t.type == "sub" then break end
+        end
+        cmd[#cmd + 1] = path
+        cmd[#cmd + 1] = secs
+        cmd[#cmd + 1] = tostring(n)
+    end
+    mp.osd_message("Moving the subtitle " .. secs .. " s in the file…", 120)
+    mp.command_native_async({
+        name = "subprocess", args = cmd, capture_stdout = true,
+        capture_stderr = true, playback_only = false,
+    }, function(ok, r)
+        if not ok or r.status ~= 0 then
+            local err = ok and r.stderr:match("([^\n]+)%s*$") or "couldn't run " .. cmd[1]
+            msg.error(err)
+            return mp.osd_message("Not saved: " .. err, 8)
+        end
+        mp.osd_message("Saved: the subtitle is " .. secs .. " s moved in the file", 4)
+        if mp.get_property("path") ~= path then return end
+        -- reading on from the old file's data would move it twice
+        reopen = {start = mp.get_property_number("time-pos", 0), sid = sub.id}
+        mp.set_property_number("sub-delay", 0)
+        mp.commandv("playlist-play-index", "current")
+    end)
+end
+
+mp.add_hook("on_load", 50, function()
+    if not reopen then return end
+    mp.set_property("file-local-options/start", tostring(reopen.start))
+    mp.set_property("file-local-options/sid", tostring(reopen.sid))
+    reopen = nil
+end)
+
 mp.add_key_binding("B", "browse", browse)
+mp.add_key_binding("Ctrl+x", "save-sub-delay", save_delay)
