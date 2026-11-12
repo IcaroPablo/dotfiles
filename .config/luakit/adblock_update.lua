@@ -7,8 +7,9 @@ local modes = require("modes")
 
 local _M = {}
 
--- file name in the adblock folder -> where it comes from; luakit only reads
--- Adblock Plus lists, and of those only the rules that block requests
+-- file name in the adblock folder -> where it comes from: Adblock Plus lists,
+-- whose blocking rules luakit's adblock module reads, and whose ## hiding
+-- rules adblock_hide does
 _M.lists = {
     ["easylist.txt"] = "https://easylist.to/easylist/easylist.txt",
     ["easyprivacy.txt"] = "https://easylist.to/easylist/easyprivacy.txt",
@@ -66,7 +67,16 @@ local function update(w)
             for _, list in pairs(adblock.rules) do
                 rules = rules + (list.black or 0) + (list.white or 0)
             end
-            report(w, string.format("adblock: lists updated, %d rules loaded", rules), failed)
+            -- adblock_hide rereads the lists on idle, so count after it
+            luakit.idle_add(function ()
+                local text = string.format("adblock: lists updated, %d rules loaded", rules)
+                local hide = package.loaded.adblock_hide
+                if hide then
+                    text = text .. string.format("; hiding: %d generic rules, rules for %d sites", hide.generic, hide.sites)
+                end
+                report(w, text, failed)
+                return false
+            end)
         end)
     end
 end
