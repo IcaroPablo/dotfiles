@@ -122,7 +122,8 @@ if declared x11; then
 		alsa-utils xdg-utils mpv thunar luakit gvfs thunar-volman udisks
 	# rec-gif and rec-video's region picker
 	add slop
-	# audio-mirror reads PipeWire's events through it
+	# audio-mirror reads PipeWire's events through it, and mpv's yt-dlp-wait
+	# yt-dlp's answers
 	add jq
 	# mpv's DLNA browser (.config/mpv/scripts/dlna) talks through it
 	add python

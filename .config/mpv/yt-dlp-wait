@@ -1,0 +1,22 @@
+#!/bin/sh
+# yt-dlp for mpv's ytdl_hook (script-opts/ytdl_hook.conf). YouTube refuses a
+# video's streams (HTTP 403) until its pre-roll ad would have ended, or could
+# have been skipped; yt-dlp gives that time as the formats' available_at, but
+# mpv opens the streams at once, and fails. This holds yt-dlp's answer back
+# until then.
+
+json=$(yt-dlp "$@")
+status=$?
+
+if [ "$status" -eq 0 ]; then
+	at=$(printf '%s\n' "$json" | jq '[.available_at, .requested_formats[]?.available_at]
+		| map(numbers) | max // 0 | ceil' 2>/dev/null) || at=0
+	wait=$((${at:-0} - $(date +%s)))
+	if [ "$wait" -gt 0 ]; then
+		echo "yt-dlp-wait: the video is served in ${wait}s, after its ad" >&2
+		sleep "$wait"
+	fi
+fi
+
+printf '%s\n' "$json"
+exit "$status"
