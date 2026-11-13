@@ -6,6 +6,7 @@ set -eu
 
 MNT=/mnt/backup
 MAPNAME=backup		# Linux: /dev/mapper/$MAPNAME
+MARK=.exclude-from-backuphd	# a directory holding it is not backed up
 
 die() { printf 'backuphd: %s\n' "$*" >&2; exit 1; }
 usage() {
@@ -38,6 +39,17 @@ the disk when needed, and then unmount it only if they mounted it.
 
 Everything runs as root through doas: unlocking needs it, and so does
 reading every path and keeping every file's owner.
+
+EXCLUDING
+
+A directory that holds a file named $MARK is left out of
+the backup, with everything under it, and a copy of it already on the disk
+is deleted. The file can be empty:
+
+  touch /extra/library/cache/$MARK
+
+backup refuses a PATH that is excluded itself or lies inside an excluded
+directory.
 
 CHECKSUMS
 
@@ -495,6 +507,28 @@ do_check() {
 
 ### backup and restore ########################################################
 
+# The $MARK file that excludes $1: in $1 itself or in a directory above it.
+marked_by() {
+	d=$1
+	while :; do
+		[ ! -f "$d/$MARK" ] || { printf '%s\n' "$d/$MARK"; return 0; }
+		[ "$d" != / ] || return 1
+		d=$(dirname "$d")
+	done
+}
+
+# An rsync pattern per directory under $1 that holds a $MARK file. With -R
+# the transfer root is /, so the absolute path anchors it; the trailing slash
+# matches only a directory. rsync reads a backslash as an escape only in a
+# pattern with wildcards, so only those get *, ?, [ and \ escaped.
+excludes() {
+	find "$1" -xdev -type f -name "$MARK" -path '*
+*' -exec printf 'backuphd: line break in the name of %s, not excluded\n' {} \; >&2
+	find "$1" -xdev -type f -name "$MARK" ! -path '*
+*' |
+		sed -e '/[[*?]/s/[[*?\\]/\\&/g' -e 's|/[^/]*$|/|'
+}
+
 do_backup() {
 	# Check every path before copying any: a typo stops the run up front.
 	for p; do
@@ -502,6 +536,7 @@ do_backup() {
 		r=$(realpath "$p")
 		[ "$r" != / ] || die "refusing to back up / (it contains $MNT)"
 		case $MNT/ in "$r"/*) die "$p contains $MNT" ;; esac
+		if m=$(marked_by "$r"); then die "$p is excluded from backups by $m"; fi
 	done
 	ensure_mounted
 	for p; do
@@ -509,8 +544,10 @@ do_backup() {
 		printf '==> %s\n' "$r"
 		[ -n "$dry" ] || recopy_damaged "$r"
 		# -R keeps the absolute path under $MNT; -x stays on PATH's filesystem.
-		rsync "$keep" -Rx --numeric-ids --delete --exclude=lost+found/ \
-			$opts "$r" "$MNT/"
+		# --delete-excluded removes the copies of what is excluded now.
+		excludes "$r" |
+			rsync "$keep" -Rx --numeric-ids --delete --delete-excluded \
+				--exclude=lost+found/ --exclude-from=- $opts "$r" "$MNT/"
 		[ -n "$dry" ] || update_manifest "$r"
 	done
 	[ "$bad" -eq 0 ] || die "$bad file(s) did not copy correctly and were removed; run the same backup again"
