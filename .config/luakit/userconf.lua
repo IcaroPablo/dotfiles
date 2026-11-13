@@ -6,6 +6,9 @@ local modes = require "modes"
 -- sites' dark CSS (prefers-color-scheme) and dark GTK widgets; needs a restart
 settings.set_setting("application.prefer_dark_mode", true)
 
+-- WebGL on for every site; luakit turns it off by default, WebKit doesn't
+settings.set_setting("webview.enable_webgl", true)
+
 -- what :open and :tabopen search for text that isn't an address
 local engines = settings.get_setting("window.search_engines")
 engines.kagi = "https://kagi.com/search?q=%s"
