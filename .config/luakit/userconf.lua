@@ -6,6 +6,9 @@ local modes = require "modes"
 -- sites' dark CSS (prefers-color-scheme) and dark GTK widgets; needs a restart
 settings.set_setting("application.prefer_dark_mode", true)
 
+-- closing a window's last tab closes the window, and luakit with its last one
+settings.set_setting("window.close_with_last_tab", true)
+
 -- WebGL on for every site; luakit turns it off by default, WebKit doesn't
 settings.set_setting("webview.enable_webgl", true)
 
