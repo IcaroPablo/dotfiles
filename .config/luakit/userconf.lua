@@ -66,6 +66,7 @@ modes.add_binds("ex-follow", {
 })
 
 require "tabfiles"
+require "tabfiles_page"
 require "keep_cookies"
 require "forget"
 require "adblock_update"
