@@ -6,6 +6,7 @@ pcall(require, 'vis-fzf-open')
 vis.events.subscribe(vis.events.WIN_OPEN, function(win) -- luacheck: no unused args
 	vis:command('set expandtab on')
 	vis:command('set tabwidth 4')
+	vis:command('set autoindent on')
 end)
 
 vis:command_register('xsp', function(argv)
