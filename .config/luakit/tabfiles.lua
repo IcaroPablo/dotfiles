@@ -340,8 +340,10 @@ local function quote(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
 
 -- Picking, with fzf
 
---- The picker window's size, in columns and rows.
-_M.picker_size = "120x30"
+--- The picker window's size, in columns and rows: 250 columns of st's 6
+-- pixels make it 1560 pixels wide, for paths of up to 65 characters
+-- followed by links of up to 180.
+_M.picker_size = "250x30"
 
 -- Runs fzfmenu on lines, with the fzf options given, and calls done with the
 -- lines fzf printed, none when it was cancelled.
@@ -380,7 +382,7 @@ local function pick_links(w, query)
     if #lines == 0 then return w:error("No tab files in " .. short(_M.dir)) end
     pick(w, lines, {
         "--reverse", "--multi", "--print-query", "--expect=ctrl-t,ctrl-w,ctrl-o,ctrl-x",
-        "--tabstop=" .. math.min(width + 2, 40), "--prompt=tab files> ", "--query=" .. (query or ""),
+        "--tabstop=" .. math.min(width + 2, 80), "--prompt=tab files> ", "--query=" .. (query or ""),
         "--header=enter: here  ^t: new tabs  ^w: new window  ^o: whole file  ^x: remove  tab: select",
     }, function (out)
         -- the query, the key that ended it (empty for enter), the links
