@@ -9,6 +9,10 @@ settings.set_setting("application.prefer_dark_mode", true)
 -- WebGL on for every site; luakit turns it off by default, WebKit doesn't
 settings.set_setting("webview.enable_webgl", true)
 
+-- Web Audio on too; luakit turns it off by default, but only from a tab's
+-- second page on, so tetr.io hung loading its sounds after a reload
+settings.set_setting("webview.enable_webaudio", true)
+
 -- what :open and :tabopen search for text that isn't an address
 local engines = settings.get_setting("window.search_engines")
 engines.kagi = "https://kagi.com/search?q=%s"
