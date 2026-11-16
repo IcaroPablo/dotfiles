@@ -172,21 +172,17 @@ g() { grep -nRIi -- "$1" .; }
 
 # the file helpers below run in ( ): exit, traps and variables stay inside
 
-# a name already in ~/.trash gets .1, .2, ...
+# the freedesktop trash, the one gio and file managers use: ~/.local/share/Trash
+# for files on /home, a .Trash-$UID at the top of other filesystems. Each item
+# keeps its original path; gio trash --list shows them, --restore puts one back
 trash() (
     [ "$#" -gt 0 ] || exit 0
-    mkdir -p -- "$HOME/.trash" || exit 1
-    for f; do
-        b=$HOME/.trash/$(basename -- "$f") d=$b n=1
-        while [ -e "$d" ] || [ -L "$d" ]; do d=$b.$n; n=$((n + 1)); done
-        mv -- "$f" "$d" || r=1
-    done
-    exit "${r:-0}"
+    gio trash -- "$@"
 )
 shredtrash() (
     clear 2>/dev/null
-    printf '\nempty %s? [y/N] ' "$HOME/.trash"
-    read -r ans && case $ans in [yY]) rm -rf -- "$HOME/.trash" && mkdir -p -- "$HOME/.trash" ;; esac
+    printf '\nempty the trash (%s items)? [y/N] ' "$(gio trash --list | wc -l | tr -d ' ')"
+    read -r ans && case $ans in [yY]) gio trash --empty ;; esac
 )
 d() (
     [ "$#" -gt 0 ] || exit 0
