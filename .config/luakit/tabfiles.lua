@@ -9,12 +9,16 @@
 -- Relative paths are under ~/Workspace. Tabs other than the first load when
 -- first shown. A bound window's title starts with [file], and [file +] while
 -- its tabs differ from the file; such a window closes only with :q!.
+--
+-- The file name completes a directory at a time, as in a shell.
 
 local window = require("window")
 local webview = require("webview")
 local modes = require("modes")
 local session = require("session")
 local settings = require("settings")
+local completion = require("completion")
+local lousy = require("lousy")
 
 local _M = {}
 
@@ -173,9 +177,38 @@ local function write(w, o)
     w:notify(string.format('"%s" %s written', short(path), count(uris)))
 end
 
+local function quote(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+
+-- The entries of the directory typed so far that start with the rest, a
+-- directory's with a slash at the end; dot files stay out, as in a shell.
+-- Only luakit builds with completion.completers can add a group
+-- (IcaroPablo/luakit, branch completion-groups).
+local format
+if completion.completers then
+    completion.completers.tabfile = {
+        header = { "Tab file", "" },
+        func = function (buf)
+            local dir, name = buf:match("^(.-)([^/]*)$")
+            local rows = {}
+            local ls = io.popen("ls -1p -- " .. quote(resolve(dir)) .. " 2>/dev/null")
+            for entry in ls:lines() do
+                if entry:sub(1, #name) == name then
+                    local path = dir .. entry
+                    rows[#rows + 1] = { lousy.util.escape(path), "", format = {{ lit = path }}, buf = path }
+                end
+            end
+            ls:close()
+            return rows
+        end,
+    }
+    format = "{tabfile}"
+end
+
 modes.add_cmds({
-    { ":te[dit]", "Open a tab file in a window bound to it, or reread the bound one.", edit },
-    { ":tw[rite]", "Write the window's tabs to its tab file, or to a new one.", write },
+    { ":te[dit]", "Open a tab file in a window bound to it, or reread the bound one.",
+        { func = edit, format = format } },
+    { ":tw[rite]", "Write the window's tabs to its tab file, or to a new one.",
+        { func = write, format = format } },
 })
 
 local update_win_title = window.methods.update_win_title
