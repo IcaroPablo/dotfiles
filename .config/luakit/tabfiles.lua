@@ -9,8 +9,8 @@
 --                          opening the file; one open in a window gets it
 --                          as a tab. With no file, pick one; a name that
 --                          matches none makes a new file
---   :tabfiles [query]      pick links from every tab file, by fuzzy search
---                          on the link and the file's path:
+--   :tabfiles [query]      pick links from every tab file (gb does it too),
+--                          by fuzzy search on the link and the file's path:
 --                            enter    open here (the rest in new tabs)
 --                            ctrl-t   open in new tabs
 --                            ctrl-w   open in a new window
@@ -484,6 +484,12 @@ modes.add_cmds({
         { func = add, format = format } },
     { ":tabfiles", "Pick links from every tab file with fzf, to open or remove.",
         function (w, o) pick_links(w, o.arg) end },
+})
+
+-- gb in place of luakit's bookmarks manager, which gB still opens
+modes.add_binds("normal", {
+    { "^gb$", "Pick links from every tab file with fzf, as `:tabfiles`.",
+        function (w) pick_links(w) end },
 })
 
 local update_win_title = window.methods.update_win_title
