@@ -2,11 +2,15 @@
 --
 --   sk sj ss   faster, slower, normal speed     :speed [rate]
 --   vk vj vv   louder, quieter, mute or unmute  :volume [percent]
+--   <Alt-m>    mute or unmute the whole tab
 --   V          play the current page in mpv     :mpv [uri]
 --   ;v         play a hinted link in mpv
 --
 -- Speed and volume reach the media elements of the page itself, not those of
--- a player embedded from another site.
+-- a player embedded from another site. Muting the tab silences everything in
+-- it, embedded players and Web Audio included, but only luakit builds with
+-- view.is_muted can (IcaroPablo/luakit, branch webview-is-muted); without it
+-- <Alt-m> mutes as vv does.
 
 local modes = require("modes")
 
@@ -59,6 +63,13 @@ local function mute(w)
     media(w, "muted", "toggle", nil, function (v) return v == "true" and "Muted" or "Unmuted" end)
 end
 
+local function mute_tab(w)
+    local ok, muted = pcall(function () return w.view.is_muted end)
+    if not ok then return mute(w) end
+    w.view.is_muted = not muted
+    w:notify(muted and "Tab unmuted" or "Tab muted")
+end
+
 local function quote(s)
     return "'" .. s:gsub("'", "'\\''") .. "'"
 end
@@ -81,6 +92,7 @@ modes.add_binds("normal", {
     { "vk", "Turn the page's video and audio up.", function (w) volume(w, "add", 0.1) end },
     { "vj", "Turn the page's video and audio down.", function (w) volume(w, "add", -0.1) end },
     { "vv", "Mute or unmute the page's video and audio.", mute },
+    { "<Mod1-m>", "Mute or unmute the whole tab.", mute_tab },
     { "V", "Play the current page in mpv.", function (w) mpv(w, w.view.uri) end },
 })
 
