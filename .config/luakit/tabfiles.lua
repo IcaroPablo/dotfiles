@@ -10,7 +10,8 @@
 --                          as a tab. With no file, pick one; a name that
 --                          matches none makes a new file
 --   :tabfiles [query]      pick links from every tab file (gb does it too),
---                          by fuzzy search on the link and the file's path:
+--                          by fuzzy search on the file's path and the link's
+--                          title and URI:
 --                            enter    open here (the rest in new tabs)
 --                            ctrl-t   open in new tabs
 --                            ctrl-w   open in a new window
@@ -27,8 +28,12 @@
 -- the tab files and the directories that hold some. Picking runs fzf through
 -- fzfmenu (the dotfiles' bin/), in a floating st window.
 --
--- A tab file is a file under ~/Workspace/tabfiles with a URI on every line
--- that isn't blank, outside dot directories and git work trees.
+-- A tab file is a file under ~/Workspace/tabfiles with a URI starting every
+-- line that isn't blank, outside dot directories and git work trees. After
+-- the URI and a space comes the page's title, which :tw and :tadd write: a
+-- tab not loaded yet keeps the one its file gave it. Whether a window has
+-- unsaved changes depends on its URIs only, as titles change by themselves.
+-- The picker closes with the window that opened it.
 
 local window = require("window")
 local webview = require("webview")
@@ -43,8 +48,8 @@ local _M = {}
 local home = os.getenv("HOME")
 _M.dir = home .. "/Workspace/tabfiles"
 
--- window -> { path, saved }: saved is the file as last read or written, as
--- the text the window's tabs would write
+-- window -> { path, saved, titles }: saved is the file's URIs as last read or
+-- written, as text_of gives them, and titles its titles, by URI
 local bound = setmetatable({}, { __mode = "k" })
 
 local function resolve(path)
@@ -69,15 +74,46 @@ local function is_blank(uri)
         or uri == settings.get_setting("window.new_tab_page")
 end
 
+-- A line of a tab file is a URI, then, after a space, the page's title, if
+-- known. Returns the lines of text as { uri, title }, title being nil when
+-- the line has none.
+local function entries_of(text)
+    local entries = {}
+    for line in (text or ""):gmatch("[^\n]+") do
+        local uri, title = line:match("^%s*(%S+)%s*(.-)%s*$")
+        if not is_blank(uri) then
+            entries[#entries + 1] = { uri = uri, title = title ~= "" and title or nil }
+        end
+    end
+    return entries
+end
+
 local function uris_of(text)
     local uris = {}
-    for line in (text or ""):gmatch("[^\n]+") do
-        local uri = line:match("^%s*(.-)%s*$")
-        if not is_blank(uri) then uris[#uris + 1] = uri end
-    end
+    for i, e in ipairs(entries_of(text)) do uris[i] = e.uri end
     return uris
 end
 
+local function titles_of(text)
+    local titles = {}
+    for _, e in ipairs(entries_of(text)) do titles[e.uri] = e.title end
+    return titles
+end
+
+-- a title as a tab file keeps it: on one line, and nil when it says nothing
+-- the URI doesn't
+local function clean_title(title, uri)
+    title = title and (title:gsub("%s+", " "):match("^ ?(.-) ?$"))
+    if title == "" or title == uri then return nil end
+    return title
+end
+
+local function line_of(uri, title)
+    return title and uri .. " " .. title or uri
+end
+
+-- the URIs as text, one per line: what tells whether a window and its file
+-- have the same tabs, whatever their titles
 local function text_of(uris)
     return #uris > 0 and table.concat(uris, "\n") .. "\n" or ""
 end
@@ -88,6 +124,27 @@ local function tabs_of(w)
         if not view.private and not is_blank(view.uri) then uris[#uris + 1] = view.uri end
     end
     return uris
+end
+
+-- The text w's tabs write: a tab's title is the page's once it has loaded,
+-- and until then the one in known (URI -> title).
+local function render(w, known)
+    local lines = {}
+    for _, view in ipairs(w.tabs.children) do
+        if not view.private and not is_blank(view.uri) then
+            local title = not webview.has_load_block(view) and clean_title(view.title, view.uri)
+            lines[#lines + 1] = line_of(view.uri, title or known[view.uri])
+        end
+    end
+    return #lines > 0 and table.concat(lines, "\n") .. "\n" or ""
+end
+
+local function merge(...)
+    local all = {}
+    for i = 1, select("#", ...) do
+        for k, v in pairs(select(i, ...) or {}) do all[k] = v end
+    end
+    return all
 end
 
 local function has(uris, uri)
@@ -140,8 +197,8 @@ end
 
 -- The tab files
 
--- a regular file of at most 1 MiB with a URI on every line that isn't blank,
--- and at least one
+-- a regular file of at most 1 MiB with a URI starting every line that isn't
+-- blank, and at least one
 local function is_tab_file(path)
     if (lfs.attributes(path, "size") or math.huge) > 1024 * 1024 then return false end
     local fh = io.open(path, "r")
@@ -149,7 +206,7 @@ local function is_tab_file(path)
     local uris = 0
     for line in fh:lines() do
         if line:find("%S") then
-            if not line:match("^%s*%a[%w+.-]*:%S+%s*$") then uris = 0; break end
+            if not line:match("^%s*%a[%w+.-]*:%S") then uris = 0; break end
             uris = uris + 1
         end
     end
@@ -245,7 +302,7 @@ local function edit(w, o)
     local text = read(path)
     local uris = uris_of(text)
     w = show((owner == w or is_scratch(w)) and w or nil, uris)
-    bound[w] = { path = path, saved = text_of(uris) }
+    bound[w] = { path = path, saved = text_of(uris), titles = titles_of(text) }
     w:update_win_title()
     w:notify(string.format('"%s" %s', short(path), text and count(uris) or "[New]"))
 end
@@ -266,18 +323,19 @@ local function write(w, o)
         end
     end
 
+    -- a tab not loaded yet keeps the title its file, or this one, gave it
     local uris = tabs_of(w)
-    local text = text_of(uris)
+    local text = render(w, merge(titles_of(disk), f and f.titles))
     local ok, err = save(path, text)
     if not ok then return w:error(cant_write(path, err)) end
     rescan()
-    bound[w] = { path = path, saved = text }
+    bound[w] = { path = path, saved = text_of(uris), titles = titles_of(text) }
     w:update_win_title()
     w:notify(string.format('"%s" %s written', short(path), count(uris)))
 end
 
--- Adds uri to the tab file name, telling w how it went.
-local function add_to(w, uri, name)
+-- Adds uri, with its title, to the tab file name, telling w how it went.
+local function add_to(w, uri, title, name)
     local path = resolve(name)
 
     -- a file open in a window gets the page as a tab there; the file is
@@ -290,11 +348,13 @@ local function add_to(w, uri, name)
         local f = bound[owner]
         local clean = not modified(owner) and text_of(uris_of(read(path))) == f.saved
         add_lazy_tab(owner, uri)
+        f.titles[uri] = title
         if clean then
-            local text = text_of(tabs_of(owner))
+            local text = render(owner, f.titles)
             local ok, err = save(path, text)
             if not ok then return w:error(cant_write(path, err)) end
-            f.saved = text
+            f.saved = text_of(tabs_of(owner))
+            f.titles = titles_of(text)
         end
         return w:notify(string.format('Added to "%s", %s%s', short(path), count(tabs_of(owner)),
             clean and "" or " (:tw in its window writes it)"))
@@ -308,16 +368,16 @@ local function add_to(w, uri, name)
     local new = not text
     text = text or ""
     if text ~= "" and text:sub(-1) ~= "\n" then text = text .. "\n" end
-    local ok, err = save(path, text .. uri .. "\n")
+    local ok, err = save(path, text .. line_of(uri, title) .. "\n")
     if not ok then return w:error(cant_write(path, err)) end
     rescan()
     uris[#uris + 1] = uri
     w:notify(string.format('Added to "%s"%s, %s', short(path), new and " [New]" or "", count(uris)))
 end
 
--- Removes the first line that is uri from the tab file at path. Returns
--- nothing, or the reason it couldn't. A file open in a window is left alone:
--- the window is where it changes.
+-- Removes the first line with uri from the tab file at path. Returns nothing,
+-- or the reason it couldn't. A file open in a window is left alone: the
+-- window is where it changes.
 local function remove_link(path, uri)
     if window_of(path) then return short(path) .. " is open in a window; close the tab there" end
     local text = read(path)
@@ -325,7 +385,7 @@ local function remove_link(path, uri)
     if text ~= "" and text:sub(-1) ~= "\n" then text = text .. "\n" end
     local lines, removed = {}, false
     for line in text:gmatch("([^\n]*)\n") do
-        if not removed and line:match("^%s*(.-)%s*$") == uri then
+        if not removed and line:match("^%s*(%S*)") == uri then
             removed = true
         else
             lines[#lines + 1] = line
@@ -346,9 +406,18 @@ local function quote(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
 -- followed by links of up to 180.
 _M.picker_size = "250x30"
 
+-- window -> the process group of the picker it opened, which closes with it
+local pickers = setmetatable({}, { __mode = "k" })
+
+local function close_picker(w)
+    if pickers[w] then os.execute("kill -TERM -- -" .. pickers[w] .. " 2>/dev/null") end
+    pickers[w] = nil
+end
+
 -- Runs fzfmenu on lines, with the fzf options given, and calls done with the
 -- lines fzf printed, none when it was cancelled.
 local function pick(w, lines, opts, done)
+    close_picker(w)
     local input, output = os.tmpname(), os.tmpname()
     local fh = io.open(input, "w")
     fh:write(table.concat(lines, "\n"), "\n")
@@ -358,7 +427,11 @@ local function pick(w, lines, opts, done)
     for i, opt in ipairs(opts) do args[i] = quote(quote(opt)) end
     local script = string.format("FZFMENU_SIZE=%s fzfmenu %s < %s > %s",
         _M.picker_size, table.concat(args, " "), quote(input), quote(output))
-    luakit.spawn("sh -c " .. quote(script), function (_, status)
+    -- setsid makes the picker (sh, fzfmenu, st) a process group of its own,
+    -- whose id is the one spawn returns, so close_picker ends all of it
+    local pid
+    pid = luakit.spawn("setsid sh -c " .. quote(script), function (_, status)
+        if pickers[w] == pid then pickers[w] = nil end
         local out = {}
         fh = io.open(output, "r")
         if fh then
@@ -371,25 +444,39 @@ local function pick(w, lines, opts, done)
         if status == 127 then return w:error("No fzfmenu in PATH (the dotfiles' bin/)") end
         done(out)
     end)
+    pickers[w] = pid
 end
 
+-- the length of s in characters, not bytes
+local function chars(s) return select(2, s:gsub("[^\128-\191]", "")) end
+
 local function pick_links(w, query)
-    local lines, width = {}, 0
-    for _, path in ipairs(_M.files()) do
-        local rel = relative(path)
-        width = math.max(width, #rel)
-        for _, uri in ipairs(uris_of(read(path))) do lines[#lines + 1] = rel .. "\t" .. uri end
+    local width, files = 0, {}
+    for i, path in ipairs(_M.files()) do
+        files[i] = { rel = relative(path), entries = entries_of(read(path)) }
+        width = math.max(width, chars(files[i].rel))
+    end
+    width = math.min(width, 60)
+    -- what fzf shows and searches, the file's path, the title and the URI,
+    -- then, hidden, the path and the URI again, to act on
+    local lines = {}
+    for _, f in ipairs(files) do
+        local pad = string.rep(" ", width - chars(f.rel))
+        for _, e in ipairs(f.entries) do
+            lines[#lines + 1] = string.format("\27[36m%s\27[0m%s  %s\27[90m%s\27[0m\t%s\t%s",
+                f.rel, pad, e.title and e.title .. "  " or "", e.uri, f.rel, e.uri)
+        end
     end
     if #lines == 0 then return w:error("No tab files in " .. short(_M.dir)) end
     pick(w, lines, {
         "--reverse", "--multi", "--print-query", "--expect=ctrl-t,ctrl-w,ctrl-o,ctrl-x",
-        "--tabstop=" .. math.min(width + 2, 80), "--prompt=tab files> ", "--query=" .. (query or ""),
+        "--ansi", "--delimiter=\t", "--with-nth=1", "--prompt=tab files> ", "--query=" .. (query or ""),
         "--header=enter: here  ^t: new tabs  ^w: new window  ^o: whole file  ^x: remove  tab: select",
     }, function (out)
         -- the query, the key that ended it (empty for enter), the links
         local key, links = out[2], {}
         for i = 3, #out do
-            local rel, uri = out[i]:match("^(.-)\t(.*)$")
+            local rel, uri = out[i]:match("\t([^\t]*)\t([^\t]*)$")
             if uri then links[#links + 1] = { path = resolve(rel), uri = uri } end
         end
         if #links == 0 then return end
@@ -415,7 +502,8 @@ end
 local function add(w, o)
     local uri = w.view.uri
     if is_blank(uri) then return w:error("No page in this tab") end
-    if o.arg then return add_to(w, uri, o.arg) end
+    local title = clean_title(w.view.title, uri)
+    if o.arg then return add_to(w, uri, title, o.arg) end
     local rels = {}
     for _, path in ipairs(_M.files()) do rels[#rels + 1] = relative(path) end
     pick(w, rels, {
@@ -424,7 +512,7 @@ local function add(w, o)
     }, function (out)
         -- the query, then the file picked, if one matched
         local name = out[2] or out[1]
-        if name and name ~= "" then add_to(w, uri, name) end
+        if name and name ~= "" then add_to(w, uri, title, name) end
     end)
 end
 
@@ -515,7 +603,10 @@ window.methods.close_win = function (w, force)
 end
 
 window.add_signal("init", function (w)
-    w:add_signal("close", function () bound[w] = nil end)
+    w:add_signal("close", function ()
+        bound[w] = nil
+        close_picker(w)
+    end)
     -- tabs added, closed or moved in the background don't retitle the window
     local function retitle()
         luakit.idle_add(function () if w.win then w:update_win_title() end end)
@@ -535,7 +626,8 @@ end)
 session.add_signal("restore", function (state)
     for w, ws in pairs(state) do
         if ws.tabfile then
-            bound[w] = { path = ws.tabfile, saved = text_of(uris_of(read(ws.tabfile))) }
+            local text = read(ws.tabfile)
+            bound[w] = { path = ws.tabfile, saved = text_of(uris_of(text)), titles = titles_of(text) }
             w:update_win_title()
         end
     end
