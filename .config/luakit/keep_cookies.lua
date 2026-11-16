@@ -45,6 +45,12 @@ local function kept(domain, list)
     return false
 end
 
+--- The domains in the list file, or nil when there's no file.
+_M.read_list = read_list
+
+--- Whether list keeps the data of domain, a name of WebKit's site data.
+_M.kept = kept
+
 -- the name of WebKit's site data record for host, which is its registrable
 -- domain; nil when the site has stored nothing yet
 local function site_of(host)
