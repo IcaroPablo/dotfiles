@@ -5,19 +5,26 @@
 --   :te[dit][!]            reread the bound file (! drops unsaved changes)
 --   :tw[rite][!] [file]    write the tabs to the bound file, or to <file>,
 --                          which the window is then bound to
---   :tadd <file>           add the current page to a tab file, without
+--   :tadd [file]           add the current page to a tab file, without
 --                          opening the file; one open in a window gets it
---                          as a tab
+--                          as a tab. With no file, pick one; a name that
+--                          matches none makes a new file
+--   :tabfiles [query]      pick links from every tab file, by fuzzy search
+--                          on the link and the file's path:
+--                            enter    open here (the rest in new tabs)
+--                            ctrl-t   open in new tabs
+--                            ctrl-w   open in a new window
+--                            ctrl-o   open the link's whole file, as :te
+--                            ctrl-x   take the links out of their files
+--                            tab      select more than one
 --
 -- Relative paths are under ~/Workspace. Tabs other than the first load when
 -- first shown. A bound window's title starts with [file], and [file +] while
 -- its tabs differ from the file; such a window closes only with :q!.
 --
 -- The file name completes a directory at a time, as in a shell, offering
--- the tab files and the directories that hold some. :open, :tabopen and
--- :winopen also offer the links in every tab file, matching any part of the
--- link or of the file's path. luakit://tabfiles/ (tabfiles_page.lua) lists
--- them all.
+-- the tab files and the directories that hold some. Picking runs fzf through
+-- fzfmenu (the dotfiles' bin/), in a floating st window.
 --
 -- A tab file is a file under ~/Workspace with a URI on every line that isn't
 -- blank, outside dot directories and git work trees.
@@ -183,24 +190,6 @@ function _M.files()
     return found
 end
 
---- Every tab file, as { path, dir, name, bound, uris }, sorted by directory
--- (relative to the tab file directory, "" for itself) and then by name; bound
--- is whether the file is open in a window.
-function _M.list()
-    rescan()
-    local list = {}
-    for _, path in ipairs(_M.files()) do
-        local dir, name = relative(path):match("^(.-)/?([^/]*)$")
-        list[#list + 1] = { path = path, dir = dir, name = name,
-            bound = window_of(path) ~= nil, uris = uris_of(read(path)) }
-    end
-    table.sort(list, function (a, b)
-        if a.dir ~= b.dir then return a.dir < b.dir end
-        return a.name < b.name
-    end)
-    return list
-end
-
 -- Opening and writing
 
 -- unbound, and showing nothing but blank or home pages
@@ -260,9 +249,6 @@ local function edit(w, o)
     w:notify(string.format('"%s" %s', short(path), text and count(uris) or "[New]"))
 end
 
---- Opens the tab file at path as :te would from w.
-function _M.edit(w, path) edit(w, { arg = path }) end
-
 local function write(w, o)
     local f = bound[w]
     local path = o.arg and resolve(o.arg) or (f and f.path)
@@ -289,11 +275,9 @@ local function write(w, o)
     w:notify(string.format('"%s" %s written', short(path), count(uris)))
 end
 
-local function add(w, o)
-    local uri = w.view.uri
-    if is_blank(uri) then return w:error("No page in this tab") end
-    if not o.arg then return w:error("No file name (:tadd <file>)") end
-    local path = resolve(o.arg)
+-- Adds uri to the tab file name, telling w how it went.
+local function add_to(w, uri, name)
+    local path = resolve(name)
 
     -- a file open in a window gets the page as a tab there; the file is
     -- written too, unless the window or the file has changes of its own
@@ -315,23 +299,25 @@ local function add(w, o)
             clean and "" or " (:tw in its window writes it)"))
     end
 
-    local text = read(path) or ""
+    local text = read(path)
     local uris = uris_of(text)
     if has(uris, uri) then
         return w:notify(string.format('"%s" already has this page', short(path)))
     end
+    local new = not text
+    text = text or ""
     if text ~= "" and text:sub(-1) ~= "\n" then text = text .. "\n" end
     local ok, err = save(path, text .. uri .. "\n")
     if not ok then return w:error(cant_write(path, err)) end
     rescan()
     uris[#uris + 1] = uri
-    w:notify(string.format('Added to "%s", %s', short(path), count(uris)))
+    w:notify(string.format('Added to "%s"%s, %s', short(path), new and " [New]" or "", count(uris)))
 end
 
---- Removes the first line that is uri from the tab file at path. Returns
+-- Removes the first line that is uri from the tab file at path. Returns
 -- nothing, or the reason it couldn't. A file open in a window is left alone:
 -- the window is where it changes.
-function _M.remove(path, uri)
+local function remove_link(path, uri)
     if window_of(path) then return short(path) .. " is open in a window; close the tab there" end
     local text = read(path)
     if not text then return "Can't read " .. short(path) end
@@ -350,10 +336,97 @@ function _M.remove(path, uri)
     rescan()
 end
 
+local function quote(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+
+-- Picking, with fzf
+
+--- The picker window's size, in columns and rows.
+_M.picker_size = "120x30"
+
+-- Runs fzfmenu on lines, with the fzf options given, and calls done with the
+-- lines fzf printed, none when it was cancelled.
+local function pick(w, lines, opts, done)
+    local input, output = os.tmpname(), os.tmpname()
+    local fh = io.open(input, "w")
+    fh:write(table.concat(lines, "\n"), "\n")
+    fh:close()
+    -- fzfmenu has sh parse its arguments again, so each is quoted twice
+    local args = {}
+    for i, opt in ipairs(opts) do args[i] = quote(quote(opt)) end
+    local script = string.format("FZFMENU_SIZE=%s fzfmenu %s < %s > %s",
+        _M.picker_size, table.concat(args, " "), quote(input), quote(output))
+    luakit.spawn("sh -c " .. quote(script), function (_, status)
+        local out = {}
+        fh = io.open(output, "r")
+        if fh then
+            for line in fh:lines() do out[#out + 1] = line end
+            fh:close()
+        end
+        os.remove(input)
+        os.remove(output)
+        if not w.win then return end
+        if status == 127 then return w:error("No fzfmenu in PATH (the dotfiles' bin/)") end
+        done(out)
+    end)
+end
+
+local function pick_links(w, query)
+    local lines, width = {}, 0
+    for _, path in ipairs(_M.files()) do
+        local rel = relative(path)
+        width = math.max(width, #rel)
+        for _, uri in ipairs(uris_of(read(path))) do lines[#lines + 1] = rel .. "\t" .. uri end
+    end
+    if #lines == 0 then return w:error("No tab files in " .. short(_M.dir)) end
+    pick(w, lines, {
+        "--reverse", "--multi", "--print-query", "--expect=ctrl-t,ctrl-w,ctrl-o,ctrl-x",
+        "--tabstop=" .. math.min(width + 2, 40), "--prompt=tab files> ", "--query=" .. (query or ""),
+        "--header=enter: here  ^t: new tabs  ^w: new window  ^o: whole file  ^x: remove  tab: select",
+    }, function (out)
+        -- the query, the key that ended it (empty for enter), the links
+        local key, links = out[2], {}
+        for i = 3, #out do
+            local rel, uri = out[i]:match("^(.-)\t(.*)$")
+            if uri then links[#links + 1] = { path = resolve(rel), uri = uri } end
+        end
+        if #links == 0 then return end
+        if key == "" then
+            w:navigate(links[1].uri)
+            for i = 2, #links do w:new_tab(links[i].uri, { switch = false }) end
+        elseif key == "ctrl-t" then
+            for i, l in ipairs(links) do w:new_tab(l.uri, { switch = i == 1 }) end
+        elseif key == "ctrl-w" then
+            local nw = window.new({ links[1].uri })
+            for i = 2, #links do nw:new_tab(links[i].uri, { switch = false }) end
+        elseif key == "ctrl-o" then
+            edit(w, { arg = links[1].path })
+        elseif key == "ctrl-x" then
+            local err
+            for _, l in ipairs(links) do err = remove_link(l.path, l.uri) or err end
+            if err then w:error(err) end
+            pick_links(w, out[1])
+        end
+    end)
+end
+
+local function add(w, o)
+    local uri = w.view.uri
+    if is_blank(uri) then return w:error("No page in this tab") end
+    if o.arg then return add_to(w, uri, o.arg) end
+    local rels = {}
+    for _, path in ipairs(_M.files()) do rels[#rels + 1] = relative(path) end
+    pick(w, rels, {
+        "--reverse", "--print-query", "--prompt=add to> ",
+        "--header=enter: add to the file  (a name that matches none makes a new file)",
+    }, function (out)
+        -- the query, then the file picked, if one matched
+        local name = out[2] or out[1]
+        if name and name ~= "" then add_to(w, uri, name) end
+    end)
+end
+
 -- Completion. Only luakit builds with completion.completers can add a group
 -- (IcaroPablo/luakit, branch completion-groups).
-
-local function quote(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
 
 -- The entries of dir, a directory as typed: under the tab file directory,
 -- its tab files and the directories that hold some, as name -> path, the
@@ -400,41 +473,6 @@ if completion.completers then
         end,
     }
     format = "{tabfile}"
-
-    -- the links in every tab file whose link or path has all the words typed
-    completion.completers.tablink = {
-        header = { "Tab file", "URI" },
-        func = function (buf)
-            local words = {}
-            for word in buf:lower():gmatch("%S+") do words[#words + 1] = word end
-            if #words == 0 then return {} end
-            local max = settings.get_setting("completion.max_items")
-            local rows = {}
-            for _, path in ipairs(_M.files()) do
-                local rel = relative(path)
-                for _, uri in ipairs(uris_of(read(path))) do
-                    local text = (uri .. " " .. rel):lower()
-                    local all = true
-                    for _, word in ipairs(words) do
-                        if not text:find(word, 1, true) then all = false; break end
-                    end
-                    if all then
-                        rows[#rows + 1] = { lousy.util.escape(rel), lousy.util.escape(uri),
-                            format = {{ lit = uri }}, buf = uri }
-                        if #rows >= max then return rows end
-                    end
-                end
-            end
-            return rows
-        end,
-    }
-
-    local uri_groups = completion.completers.uri.func
-    completion.completers.uri.func = function (...)
-        local groups = uri_groups(...)
-        groups[#groups + 1] = { format = "{tablink}" }
-        return groups
-    end
 end
 
 modes.add_cmds({
@@ -442,8 +480,10 @@ modes.add_cmds({
         { func = edit, format = format } },
     { ":tw[rite]", "Write the window's tabs to its tab file, or to a new one.",
         { func = write, format = format } },
-    { ":tadd", "Add the current page to a tab file, without opening the file.",
+    { ":tadd", "Add the current page to a tab file, picked with fzf if not given.",
         { func = add, format = format } },
+    { ":tabfiles", "Pick links from every tab file with fzf, to open or remove.",
+        function (w, o) pick_links(w, o.arg) end },
 })
 
 local update_win_title = window.methods.update_win_title

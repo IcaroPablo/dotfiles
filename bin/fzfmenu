@@ -1,15 +1,21 @@
 #!/bin/sh
 # requires X11
+# fzf in a floating st window, as dmenu: lines on stdin, the choice on stdout.
+# The arguments go to fzf, parsed again by sh, so quote them for it.
+# FZFMENU_SIZE is the window's size in columns and rows (50x30).
 
 in="$(mktemp)"; out="$(mktemp)"
 trap 'rm -f "$in" "$out"' EXIT
 
 cat > "$in"
 
+size="${FZFMENU_SIZE:-50x30}"
+cols="${size%x*}"; rows="${size#*x}"
+
 dim="$(xdpyinfo | awk '/dimensions/{print $2}' | sed 's/x/ /')"
 w="${dim% *}"; h="${dim#* }"
-xoff=$(( w / 2 - 150 )); yoff=$(( h / 2 - 90 ))
+xoff=$(( w / 2 - cols * 3 )); yoff=$(( h / 2 - rows * 3 ))
 
-st -i -g 50x30+"$xoff"+"$yoff" -e sh -c "fzf $* < '$in' > '$out'"
+st -i -g "$size"+"$xoff"+"$yoff" -e sh -c "fzf $* < '$in' > '$out'"
 
 cat "$out"
