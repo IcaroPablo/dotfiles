@@ -18,16 +18,17 @@
 --                            ctrl-x   take the links out of their files
 --                            tab      select more than one
 --
--- Relative paths are under ~/Workspace. Tabs other than the first load when
--- first shown. A bound window's title starts with [file], and [file +] while
--- its tabs differ from the file; such a window closes only with :q!.
+-- Relative paths are under ~/Workspace/tabfiles, the tab files' home. Tabs
+-- other than the first load when first shown. A bound window's title starts
+-- with [file], and [file +] while its tabs differ from the file; such a
+-- window closes only with :q!.
 --
 -- The file name completes a directory at a time, as in a shell, offering
 -- the tab files and the directories that hold some. Picking runs fzf through
 -- fzfmenu (the dotfiles' bin/), in a floating st window.
 --
--- A tab file is a file under ~/Workspace with a URI on every line that isn't
--- blank, outside dot directories and git work trees.
+-- A tab file is a file under ~/Workspace/tabfiles with a URI on every line
+-- that isn't blank, outside dot directories and git work trees.
 
 local window = require("window")
 local webview = require("webview")
@@ -40,7 +41,7 @@ local lousy = require("lousy")
 local _M = {}
 
 local home = os.getenv("HOME")
-_M.dir = home .. "/Workspace"
+_M.dir = home .. "/Workspace/tabfiles"
 
 -- window -> { path, saved }: saved is the file as last read or written, as
 -- the text the window's tabs would write
