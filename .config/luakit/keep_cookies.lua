@@ -1,7 +1,9 @@
 --- Cookies and site storage last one session, except for the domains listed
 -- one per line in ~/.local/share/luakit/keep-cookies, which keep theirs: like
--- Chromium's "clear on exit" with its allowed sites, only done at start, and
--- pages wait for it before loading. With no list file, nothing is cleared.
+-- Chromium's "clear on exit" with its allowed sites. They are cleared when
+-- luakit quits, and again at start, for what a crash or a killed X session
+-- left; pages wait for that before loading. With no list file, nothing is
+-- cleared.
 --
 --   :keep-cookies    adds the current site's registrable domain to the list
 --
@@ -51,6 +53,22 @@ local function site_of(host)
     end
 end
 
+-- Removes the data of every site that list doesn't keep, then calls done.
+-- WebKit does it asynchronously, so this returns before it's finished.
+local function purge(list, done)
+    coroutine.wrap(function ()
+        local ok, err = pcall(function ()
+            for domain in pairs(luakit.website_data.fetch(_M.types)) do
+                if not kept(domain, list) then
+                    luakit.website_data.remove(_M.types, domain)
+                end
+            end
+        end)
+        if not ok then msg.error("keep_cookies: %s", err) end
+        done()
+    end)()
+end
+
 local list = read_list()
 local blocked = setmetatable({}, { __mode = "k" })
 local purging = list ~= nil
@@ -63,21 +81,39 @@ webview.add_signal("init", function (view)
 end)
 
 if purging then
-    coroutine.wrap(function ()
-        local ok, err = pcall(function ()
-            local data = luakit.website_data.fetch(_M.types)
-            for domain in pairs(data) do
-                if not kept(domain, list) then
-                    luakit.website_data.remove(_M.types, domain)
-                end
-            end
-        end)
-        if not ok then msg.error("keep_cookies: %s", err) end
+    purge(list, function ()
         purging = false
         for view in pairs(blocked) do
             webview.modify_load_block(view, "keep_cookies", false)
         end
-    end)()
+    end)
+end
+
+-- luakit quits once its last window closes, however it's closed. The list is
+-- read again, for the sites :keep-cookies added since start, and luakit waits
+-- for the purge, at most _M.exit_timeout milliseconds.
+_M.exit_timeout = 5000
+
+local quit = luakit.quit
+local quitting = false
+
+luakit.quit = function ()
+    local exit_list = read_list()
+    if not exit_list then return quit() end
+    if quitting then return end
+    quitting = true
+    local timeout = timer{ interval = _M.exit_timeout }
+    local finished = false
+    local function finish(gave_up)
+        if finished then return end
+        finished = true
+        timeout:stop()
+        if gave_up then msg.warn("keep_cookies: gave up clearing site data at exit") end
+        quit()
+    end
+    timeout:add_signal("timeout", function () finish(true) end)
+    timeout:start()
+    purge(exit_list, function () finish(false) end)
 end
 
 modes.add_cmds({
