@@ -104,27 +104,8 @@ Each is safe to rerun; `setup/chimera` and `setup/macos` end listing what was al
   - [Japanese]()
   - [Chinese]()
  
-- Remove bold style
-  - `$ mkdir "$HOME/.config/fontconfig";`
-  - `$ touch "$HOME/.config/fontconfig/fonts.conf";`
-  - ```shell
-    $ echo '<?xml version="1.0"?>
-      <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
-      <fontconfig>
-       <match target="pattern">
-         <test qual="any" name="family">
-           <string>CozetteVector</string>
-         </test>
-         <test name="weight" compare="more">
-           <const>medium</const>
-         </test>
-         <edit name="weight" mode="assign" binding="same">
-           <const>medium</const>
-         </edit>
-       </match>
-      </fontconfig>' > $HOME/.config/fontconfig/fonts.conf;
-    ```
-  - `$ fc-cache;`
+- Remove bold style: `.config/fontconfig/fonts.conf` (linked by `make install`
+  on x11 machines) makes CozetteVector's bold come out at its regular weight
 
 - Install packages (usually exported with `$ pkg_info -mz > pkg_list.txt`)
   - `$ pkg_add -l pkg_list.txt`
