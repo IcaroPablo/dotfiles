@@ -62,7 +62,38 @@ $(awk '$1 == "set" { k = $2; sub(/^[ \t]*set[ \t]+[^ \t]+[ \t]+/, ""); sub(/[ \t
     gsub(/"/, ""); print k "\t" $0 }' "$rc")
 EOF
 
-n=${2:-1}       # página atual
+# Where each document was left off lives in zathura's database, in zathura's
+# format (pages from 0), so the two viewers share it. Without python3's
+# sqlite3 module nothing is remembered. lastpage get DOC | lastpage set DOC PAGE
+db=${XDG_DATA_HOME:-$HOME/.local/share}/zathura/bookmarks.sqlite
+lastpage() {
+    python3 -I - "$db" "$@" 2>/dev/null <<'EOF'
+import os, sqlite3, sys
+db, how, doc = sys.argv[1], sys.argv[2], os.path.realpath(sys.argv[3])
+if how == "get":
+    if os.path.exists(db):
+        row = sqlite3.connect(db).execute(
+            "SELECT page FROM fileinfo WHERE file = ?", (doc,)).fetchone()
+        if row and row[0] is not None:
+            print(row[0] + 1)
+else:
+    os.makedirs(os.path.dirname(db), exist_ok=True)
+    con = sqlite3.connect(db)
+    con.execute("CREATE TABLE IF NOT EXISTS fileinfo (file TEXT PRIMARY KEY, "
+                "page INTEGER, offset INTEGER, zoom FLOAT, rotation INTEGER, "
+                "pages_per_row INTEGER, first_page_column TEXT, position_x FLOAT, "
+                "position_y FLOAT, time TIMESTAMP, page_right_to_left INTEGER, "
+                "hash BLOB, adjust_mode INTEGER)")
+    con.execute("INSERT INTO fileinfo (file, page, time) VALUES (?, ?, datetime('now')) "
+                "ON CONFLICT(file) DO UPDATE SET page = excluded.page, time = excluded.time",
+                (doc, int(sys.argv[4]) - 1))
+    con.commit()
+EOF
+}
+doc=$f          # EPUB and the like get converted, but are remembered by their own name
+
+n=${2:-$(lastpage get "$doc")}
+n=${n:-1}       # current page
 y=0             # deslocamento, em pixels, dentro da página n
 x=0             # deslocamento horizontal (com zoom)
 zoom=100        # % da largura da janela; 0 = página inteira
@@ -70,7 +101,8 @@ gap=8           # pixels entre uma página e outra
 
 tmp=$(mktemp -d) || exit 1
 old=$(stty -g)
-trap 'stty "$old"; [ -n "${alt:-}" ] && printf "\033[?25h\033[?1049l"
+trap 'stty "$old"; [ -n "${alt:-}" ] && printf "\033[?25h\033[?1049l" &&
+    lastpage set "$doc" "${shown:-$n}"
     [ -n "${pre:-}" ] && kill "$pre" 2>/dev/null; wait; rm -rf "$tmp"' EXIT
 trap 'exit 1' INT TERM HUP
 
