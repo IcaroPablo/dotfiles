@@ -141,6 +141,15 @@ Section "InputClass"
 EndSection
 EOF
 
+	# GTK records no list of the files you open (Thunar, luakit, the file
+	# picker flatpaks use): ~/.local/share/recently-used.xbel stays empty
+	mkdir -p /etc/xdg/gtk-3.0
+	cat > /etc/xdg/gtk-3.0/settings.ini <<'EOF'
+[Settings]
+gtk-recent-files-enabled=false
+gtk-recent-files-max-age=0
+EOF
+
 	# st, sowm and scrot's build deps
 	add clang gmake pkgconf linux-headers \
 		libx11-devel libxft-devel libxinerama-devel imlib2-devel \
