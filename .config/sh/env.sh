@@ -21,6 +21,12 @@ _path_prepend "$HOME/.local/bin"
 # --- locale ---
 export LANG="en_US.UTF-8" LC_MESSAGES="en_US.UTF-8" LC_TIME="pt_PT.UTF-8"
 
+# throwaway traces go to the cache, with the rest of what can be thrown away:
+# less's and python's history, and w3m's folder
+_c=${XDG_CACHE_HOME:-$HOME/.cache}
+export LESSHISTFILE="$_c/lesshst" PYTHON_HISTORY="$_c/python_history" W3M_DIR="$_c/w3m"
+unset _c
+
 # flatpak's launchers, wherever flatpak is installed
 _path_prepend /var/lib/flatpak/exports/bin
 
