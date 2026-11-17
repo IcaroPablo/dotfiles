@@ -1,30 +1,102 @@
 #!/bin/sh
-# Pull every file with an extension in $exts from the phone's Download
-# folder via adb, then delete each one from the phone once a local copy of
-# the same size exists.
-# Usage: pull-files [-k] [destination-dir]   (default: current directory)
-#   -k  keep files on the phone (don't delete)
+# Move files between the phone and this machine over adb. A folder on the
+# phone mirrors a folder here: $src/gallery/camera/x.jpg is
+# $dest/gallery/camera/x.jpg.
+#
+# Without -r, every file in $src moves here: copied (keeping its date), its
+# SHA-256 checked against the phone's, and only then deleted from the phone.
+# -r PATH (a file or folder under $dest) is the way back: PATH is copied to
+# its place on the phone and checked the same way; nothing here is deleted.
+# Either way a file that exists on the other side with other content is
+# never overwritten: it is reported and left as it is. Folders stay.
+#
+# A run without -r first collects: new files in the $collect folders (app
+# folders, like WhatsApp's Private ones) are copied, all into one folder,
+# $inbox, on the phone, to be sorted into $src by hand for a later run. Each
+# file is collected once: the checksums of what was collected are kept in
+# ~/.local/share/pull-files/SERIAL.collected, so a file moved or deleted from
+# $inbox doesn't come back. A name already taken there gets " (2)", " (3)"...
+# Usage: pull-files [-cn] [-r path]... [phone-folder local-folder]
+#   -c       only collect, move nothing
+#   -n       show what would be done, change nothing
+#   -r path  copy path from here to its place on the phone (repeatable)
+#   phone-folder is relative to /sdcard unless it starts with /
 
 set -eu
 . "${XDG_CONFIG_HOME:-$HOME/.config}/sh/lib/core.sh" || exit 1
 
-src=/sdcard/Download
+# The phone's folder that mirrors $dest.
+src=/sdcard/Download/extra
 
-# File extensions to pull, separated by spaces (case-insensitive, no dot).
-exts="mp4"
-keep=0
+# Where its files go.
+dest=/extra
+
+# File names that are never moved or copied, one find -name pattern per line.
+skip='
+.nomedia
+.trashed-*
+.pending-*
+'
+
+# Folders whose new files are collected (subfolders included), one per line.
+collect='
+/sdcard/Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Images/Private
+/sdcard/Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Video/Private
+/sdcard/Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Animated Gifs/Private
+/sdcard/Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Audio/Private
+/sdcard/Android/media/com.whatsapp/WhatsApp/Media/WhatsApp Documents/Private
+/sdcard/Android/data/org.telegram.messenger/files/Telegram/Telegram Files
+/sdcard/Android/data/org.telegram.messenger/files/Telegram/Telegram Documents
+'
+
+# Where they are collected; outside $src, so nothing there moves until sorted.
+inbox=/sdcard/Download/unfiltered
+
+dry=0 reads= failed=0 only=0
+usage="usage: ${0##*/} [-cn] [-r path]... [phone-folder local-folder]"
 args=$*
 
-while getopts k opt; do
+die() { echo "$*" >&2; exit 1; }
+
+while getopts cnr: opt; do
 	case $opt in
-	k) keep=1 ;;
-	*) echo "usage: ${0##*/} [-k] [destination-dir]" >&2; exit 2 ;;
+	c) only=1 ;;
+	n) dry=1 ;;
+	r) reads="$reads$OPTARG
+" ;;
+	*) die "$usage" ;;
 	esac
 done
 shift $((OPTIND - 1))
-dest=${1:-.}
+[ "$only" -eq 0 ] || [ -z "$reads" ] || die "-c and -r don't go together"
+case $# in
+0) ;;
+2) src=$1 dest=$2 ;;
+*) die "$usage" ;;
+esac
+case $src in /*) ;; *) src=/sdcard/$src ;; esac
+case $src in ?*/) src=${src%/} ;; esac
+[ -d "$dest" ] || die "$dest is not a folder"
+root=$(abspath "$dest")
 
-have adb || { echo "adb not found in PATH" >&2; exit 1; }
+# -r paths, relative to $root
+rels=
+while IFS= read -r p; do
+	[ -n "$p" ] || continue
+	[ -e "$p" ] || die "$p doesn't exist"
+	a=$(abspath "$p")
+	case $a in
+	"$root") rels="$rels.
+" ;;
+	"$root"/*) rels="$rels${a#"$root"/}
+" ;;
+	*) die "$p is not under $root" ;;
+	esac
+done <<EOF
+$reads
+EOF
+
+have adb || die "adb not found in PATH"
 
 if [ -z "${ANDROID_SERIAL:-}" ]; then
 	devices=$(adb devices -l | sed 1d | grep -v '^$' || true)
@@ -43,54 +115,411 @@ if [ -z "${ANDROID_SERIAL:-}" ]; then
 fi
 
 state=$(adb get-state 2>/dev/null || true)
-[ "$state" = device ] || { echo "no device connected (or not authorized)" >&2; exit 1; }
-
-mkdir -p "$dest"
+[ "$state" = device ] || die "no device connected (or not authorized)"
 
 # Single-quote a path for the phone's shell.
 q() { printf "'%s'" "$(printf %s "$1" | sed "s/'/'\\\\''/g")"; }
 
-# Build: \( -iname '*.mp4' -o -iname '*.mkv' ... \)
-match=
-for e in $exts; do
-	match="$match${match:+ -o }-iname $(q "*.$e")"
-done
-[ -n "$match" ] || { echo "no extensions configured" >&2; exit 1; }
+# sha256 differs between userlands: BSD (Chimera's too), GNU, macOS.
+if have sha256; then
+	sum256() { sha256 -q "$1" 2>/dev/null; }
+elif have sha256sum; then
+	sum256() { _s=$(sha256sum 2>/dev/null <"$1") && printf '%s\n' "${_s%% *}"; }
+else
+	sum256() { _s=$(shasum -a 256 2>/dev/null <"$1") && printf '%s\n' "${_s%% *}"; }
+fi
 
-list=$(adb shell "find $(q "$src") -type f \\( $match \\)" | tr -d '\r')
-[ -n "$list" ] || { echo "no $exts files in $src"; exit 0; }
-
-pulled=0 skipped=0 deleted=0 failed=0
-while IFS= read -r f; do
-	name=${f##*/}
-	local_file=$dest/$name
-	if [ -e "$local_file" ]; then
-		echo "skip: $name (already exists)"
-		skipped=$((skipped + 1))
-	elif adb pull "$f" "$local_file" </dev/null; then
-		pulled=$((pulled + 1))
+# Bytes as "N KB", "N.N MB" or "N.NN GB".
+size() {
+	if [ "$1" -lt 1048576 ]; then
+		echo "$((($1 + 1023) / 1024)) KB"
+	elif [ "$1" -lt 1073741824 ]; then
+		echo "$(($1 / 1048576)).$(($1 % 1048576 * 10 / 1048576)) MB"
 	else
-		echo "fail: $f" >&2
-		failed=$((failed + 1))
-		continue
+		printf '%d.%02d GB\n' $(($1 / 1073741824)) $(($1 % 1073741824 * 100 / 1073741824))
 	fi
+}
 
-	[ "$keep" -eq 0 ] || continue
-
-	# Only delete when the local copy matches the phone's file size.
-	rsize=$(adb shell "stat -c %s $(q "$f")" </dev/null | tr -d '\r')
-	lsize=$(wc -c <"$local_file" | tr -d ' ')
-	if [ "$rsize" != "$lsize" ]; then
-		echo "keep: $name (size differs: phone $rsize, local $lsize)" >&2
-	elif adb shell "rm -f $(q "$f")" </dev/null; then
-		deleted=$((deleted + 1))
+# Seconds as M:SS or H:MM:SS.
+hms() {
+	if [ "$1" -lt 3600 ]; then
+		printf '%d:%02d\n' $(($1 / 60)) $(($1 % 60))
 	else
-		echo "fail to delete: $f" >&2
-		failed=$((failed + 1))
+		printf '%d:%02d:%02d\n' $(($1 / 3600)) $(($1 % 3600 / 60)) $(($1 % 60))
 	fi
+}
+
+# Wipe the status line, so a normal line can be printed.
+unstatus() { [ ! -t 2 ] || printf '\r\033[K' >&2; }
+
+# A line about one file, above the status line; warn is for problems.
+say() { unstatus; printf '%s\n' "$*"; }
+warn() { unstatus; printf '%s\n' "$*" >&2; }
+
+# The status line, overwritten in place: files done/total, bytes done/total,
+# the average speed since $start of what was transferred ($5 bytes) and the
+# time left.
+status() {
+	[ -t 2 ] || return 0
+	printf '\r\033[K  %d/%d files, %s of %s' "$1" "$2" "$(size "$3")" "$(size "$4")" >&2
+	el=$(($(date +%s) - start))
+	[ "$el" -gt 0 ] || return 0
+	bps=$(($5 / el))
+	[ "$bps" -gt 0 ] || return 0
+	printf ', %s/s, %s left' "$(size "$bps")" "$(hms $((($4 - $3) / bps)))" >&2
+}
+
+# "SIZE in M:SS, SIZE/s" for $1 bytes since $start.
+rate() {
+	el=$(($(date +%s) - start))
+	printf '%s in %s' "$(size "$1")" "$(hms "$el")"
+	[ "$el" -eq 0 ] || printf ', %s/s' "$(size $(($1 / el)))"
+}
+
+# Run a script on the phone, inside $src, with stdin passed through.
+on_phone() { adb shell "cd $(q "$src") || exit 1; $1"; }
+
+phone_has_src() {
+	[ "$(adb shell "[ -d $(q "$src") ] && echo yes" </dev/null | tr -d '\r')" = yes ]
+}
+
+# The skip list (plus our own half-copied files) as find arguments, quoted
+# for a shell: the phone's, or eval here.
+names="-name '.pull-files.*'"
+while IFS= read -r p; do
+	[ -z "$p" ] || names="$names -o -name $(q "$p")"
 done <<EOF
-$list
+$skip
 EOF
+names="! \\( $names \\)"
 
-echo "pulled $pulled, skipped $skipped, deleted $deleted, failed $failed -> $dest"
-[ "$failed" -eq 0 ]
+umask 022
+work=$(mktemp -d)
+tmp= ptmp=
+cleanup() {
+	rm -rf "$work"
+	[ -z "$tmp" ] || rm -f "$tmp"
+	[ -z "$ptmp" ] || adb shell "rm -f $(q "$ptmp")" </dev/null >/dev/null 2>&1 || :
+}
+trap cleanup EXIT
+trap 'exit 1' HUP INT TERM
+
+# The files in the phone's folders "$@" (missing ones skipped), without the
+# $skip names, into $work/list as "sha256 size path"; a line that can't be
+# read becomes "? 0 line".
+phone_files() {
+	dirs=
+	for d; do dirs="$dirs $(q "$d")"; done
+	walk="set --; for d in $dirs; do [ ! -d \"\$d\" ] || set -- \"\$@\" \"\$d\"; done
+		[ \$# -eq 0 ] || find \"\$@\" -type f $names -exec"
+	listerr=0
+	[ ! -t 2 ] || printf '%s' "  reading the phone's files (checksums take a while) ..." >&2
+	adb shell "$walk sha256sum {} +" </dev/null >"$work/raw" || listerr=1
+	adb shell "$walk stat -c '%s %n' {} +" </dev/null >"$work/raw2" || listerr=1
+	unstatus
+	if [ "$listerr" -ne 0 ]; then
+		warn "warning: reading the phone's files reported errors (above)"
+		failed=1
+	fi
+	tr -d '\r' <"$work/raw2" >"$work/sizes"
+	tr -d '\r' <"$work/raw" | awk 'FILENAME == ARGV[1] {
+			s = $1; sub(/^[0-9]+ /, ""); size[$0] = s; next }
+		{ h = substr($0, 1, 64) }
+		length(h) < 64 || h ~ /[^0-9a-f]/ || substr($0, 65, 2) != "  " {
+			print "? 0 " $0; next }
+		{ p = substr($0, 67); s = p in size ? size[p] : 0
+			print h " " (s ~ /^[0-9]+$/ ? s : 0) " " p }' \
+		"$work/sizes" - >"$work/list"
+}
+
+# Copies a list of "sha256<TAB>size<TAB>path" (stdin) into $inbox, on the
+# phone, and prints "ok|same|failed<TAB>sha256<TAB>size<TAB>path" for each
+# (same: $inbox has it already; path: the copy, or the source if failed).
+copier='mkdir -p "$inbox" || exit 1
+while IFS="	" read -r h sz f; do
+	b=${f##*/}
+	t=$inbox/$b i=1
+	while [ -e "$t" ]; do
+		s=$(sha256sum "$t") && [ "${s%% *}" = "$h" ] && break
+		i=$((i + 1))
+		case $b in
+		?*.*) t="$inbox/${b%.*} ($i).${b##*.}" ;;
+		*) t="$inbox/$b ($i)" ;;
+		esac
+	done
+	if [ -e "$t" ]; then
+		echo "same	$h	$sz	$t"
+	elif cp "$f" "$tmp" && touch -r "$f" "$tmp" &&
+		s=$(sha256sum "$tmp") && [ "${s%% *}" = "$h" ] &&
+		[ ! -e "$t" ] && mv "$tmp" "$t"; then
+		echo "ok	$h	$sz	$t"
+	else
+		rm -f "$tmp"
+		echo "failed	$h	$sz	$f"
+	fi
+done'
+
+# The $collect folders' new files -> $inbox, on the phone.
+collect() {
+	set --
+	while IFS= read -r d; do
+		[ -z "$d" ] || set -- "$@" "$d"
+	done <<EOF
+$collect
+EOF
+	[ $# -gt 0 ] || return 0
+	seen=${XDG_DATA_HOME:-$HOME/.local/share}/pull-files
+	seen=$seen/$(adb get-serialno </dev/null | tr -d '\r').collected
+	[ -f "$seen" ] && old=$seen || old=/dev/null
+
+	phone_files "$@"
+	# The files not collected before, each content once.
+	awk -v out="$work/before" 'FILENAME == ARGV[1] { seen[substr($0, 1, 64)] = 1; next }
+		$1 == "?" { print; next }
+		$1 in seen { before++; next }
+		{ seen[$1] = 1; print }
+		END { print before + 0 >out }' "$old" "$work/list" >"$work/new"
+	before=$(cat "$work/before")
+	todo=0 todo_b=0
+	: >"$work/cnew"	# input of $copier
+	while IFS= read -r line; do
+		h=${line%% *} rest=${line#* }
+		sz=${rest%% *} f=${rest#* }
+		if [ "$h" = '?' ]; then
+			warn "can't read this line of the phone's list: $line"
+			failed=1
+			continue
+		fi
+		[ "$dry" -eq 0 ] || say "collect: ${f##*/} ($(size "$sz"))"
+		printf '%s\t%s\t%s\n' "$h" "$sz" "$f" >>"$work/cnew"
+		todo=$((todo + 1)) todo_b=$((todo_b + sz))
+	done <"$work/new"
+
+	if [ "$dry" -eq 1 ]; then
+		echo "would collect $todo ($(size "$todo_b")), already collected $before -> $inbox"
+		return
+	fi
+	: >"$work/done"
+	if [ "$todo" -gt 0 ]; then
+		mkdir -p "${seen%/*}"
+		ptmp=$inbox/.pull-files.$$
+		adb shell "inbox=$(q "$inbox") tmp=$(q "$ptmp"); $copier" \
+			<"$work/cnew" 2>"$work/err" | tr -d '\r' | tee "$work/done" |
+			while IFS='	' read -r st h sz t; do
+				case $st in
+				ok) say "collected: ${t##*/} ($(size "$sz"))" ;;
+				same) say "already in $inbox: ${t##*/}" ;;
+				failed) warn "not collected: $t" ;;
+				esac
+			done
+		ptmp=
+		[ ! -s "$work/err" ] || warn "collecting reported errors: $(cat "$work/err")"
+		# Record what was copied or found in $inbox.
+		awk -F '\t' 'FILENAME == ARGV[1] { src[$1] = $3; next }
+			($1 == "ok" || $1 == "same") && $2 in src { print $2 "  " src[$2] }' \
+			"$work/cnew" "$work/done" >>"$seen"
+	fi
+
+	got=$(grep -c '^ok	' "$work/done" || :)
+	same=$(grep -c '^same	' "$work/done" || :)
+	got_b=$(awk -F '\t' '$1 == "ok" { b += $3 } END { printf "%.0f\n", b }' "$work/done")
+	bad=$((todo - got - same))
+	[ "$bad" -eq 0 ] || failed=1
+	echo "collected $got ($(size "$got_b")), already collected $((before + same))," \
+		"failed $bad -> $inbox"
+}
+
+# Phone -> here, deleting from the phone.
+from_phone() {
+	phone_has_src || { echo "nothing to move: $src is not on the phone"; exit "$failed"; }
+
+	phone_files "$src"
+	total=$(grep -c . "$work/list" || :)
+	bytes=$(awk '{ b += $2 } END { printf "%.0f\n", b }' "$work/list")
+	n=0 moved=0 there=0 kept=0 done_b=0 moved_b=0 start=$(date +%s)
+	: >"$work/gone"	# moved or already here: safe to delete from the phone
+	while IFS= read -r line; do
+		n=$((n + 1))
+		h=${line%% *} rest=${line#* }
+		sz=${rest%% *} p=${rest#* }
+		f=${p#"$src"/}
+		t=$root/$f
+		[ "$f" != "$p" ] || h='?'
+		case /$f/ in */../*) h='?' ;; esac
+		if [ "$h" = '?' ]; then
+			warn "can't read this line of the phone's list: $line"
+			kept=$((kept + 1))
+			sz=0
+		elif [ -e "$t" ] || [ -L "$t" ]; then
+			if [ -f "$t" ] && [ "$(sum256 "$t")" = "$h" ]; then
+				if [ "$dry" -eq 1 ]; then
+					say "already here (would be deleted from the phone): $f"
+				else
+					say "already here: $f"
+				fi
+				printf '%s\n' "$f" >>"$work/gone"
+				there=$((there + 1))
+			else
+				warn "kept on the phone, $t exists and differs"
+				kept=$((kept + 1))
+			fi
+		elif [ "$dry" -eq 1 ]; then
+			d=${t%/*}
+			while [ ! -e "$d" ]; do d=${d%/*}; done
+			if [ -d "$d" ] && [ -w "$d" ]; then
+				say "move: $f ($(size "$sz"))"
+				moved=$((moved + 1))
+				moved_b=$((moved_b + sz))
+			else
+				warn "would be kept on the phone, can't write to $d: $f"
+				kept=$((kept + 1))
+			fi
+		elif ! mkdir -p "${t%/*}" 2>"$work/err"; then
+			warn "kept on the phone, $(cat "$work/err")"
+			kept=$((kept + 1))
+		else
+			tmp=${t%/*}/.pull-files.$$
+			if ! adb pull -a "$src/$f" "$tmp" </dev/null >/dev/null 2>"$work/err"; then
+				warn "kept on the phone, copy failed: $f ($(cat "$work/err"))"
+				kept=$((kept + 1))
+			elif [ "$(sum256 "$tmp")" != "$h" ]; then
+				warn "kept on the phone, the copy differs from it: $f"
+				kept=$((kept + 1))
+			else
+				chmod 644 "$tmp"
+				mv "$tmp" "$t"
+				printf '%s\n' "$f" >>"$work/gone"
+				say "copied: $f ($(size "$sz"))"
+				moved=$((moved + 1))
+				moved_b=$((moved_b + sz))
+			fi
+			rm -f "$tmp"
+			tmp=
+		fi
+		done_b=$((done_b + sz))
+		[ "$dry" -eq 1 ] || status "$n" "$total" "$done_b" "$bytes" "$moved_b"
+	done <"$work/list"
+	unstatus
+
+	if [ "$dry" -eq 1 ]; then
+		echo "would move $moved ($(size "$moved_b")), already here $there," \
+			"would keep $kept -> $root"
+		[ "$kept" -eq 0 ] && [ "$failed" -eq 0 ]
+		exit
+	fi
+
+	took=$(rate "$moved_b")	# before the deletion, which isn't transfer
+	deleted=0
+	if [ -s "$work/gone" ]; then
+		echo "deleting $(grep -c . "$work/gone") copied files from the phone ..."
+		on_phone 'while IFS= read -r f; do rm -f -- "$f" && echo "$f"; done' \
+			<"$work/gone" | tr -d '\r' >"$work/deleted" || :
+		deleted=$(grep -c . "$work/deleted" || :)
+	fi
+	left=$(($(grep -c . "$work/gone" || :) - deleted))
+	[ "$left" -eq 0 ] || warn "$left files could not be deleted from the phone"
+
+	echo "moved $moved ($took), already here $there," \
+		"deleted $deleted from the phone, kept $kept -> $root"
+	[ "$kept" -eq 0 ] && [ "$left" -eq 0 ] && [ "$failed" -eq 0 ]
+	exit
+}
+
+# Here -> phone, for the paths in $rels; nothing here is deleted.
+to_phone() {
+	# The local files, relative to $root.
+	while IFS= read -r r; do
+		[ -n "$r" ] || continue
+		case $r in .) p=. ;; *) p=./$r ;; esac
+		(cd "$root" && eval "find $(q "$p") -type f $names -print") | sed 's|^\./||'
+	done >"$work/files" <<EOF
+$rels
+EOF
+	sort -u -o "$work/files" "$work/files"
+
+	# Which of them the phone already has, as "sha256  path".
+	: >"$work/sums"
+	if phone_has_src; then
+		on_phone 'while IFS= read -r f; do [ ! -f "$f" ] || sha256sum "$f"; done' \
+			<"$work/files" | tr -d '\r' >"$work/sums"
+	fi
+	awk 'FILENAME == ARGV[1] { ph[substr($0, 67)] = substr($0, 1, 64); next }
+		{ print ($0 in ph ? ph[$0] : "-") "\t" $0 }' \
+		"$work/sums" "$work/files" >"$work/joined"
+
+	there=0 kept=0 bytes=0
+	: >"$work/push"	# "size path"
+	while IFS= read -r line; do
+		ph=${line%%	*} f=${line#*	}
+		if [ ! -f "$root/$f" ]; then
+			warn "can't read $root/$f"
+			kept=$((kept + 1))
+		elif [ "$ph" = - ]; then
+			sz=$(wc -c <"$root/$f" | tr -d ' ')
+			[ "$dry" -eq 0 ] || say "copy: $f ($(size "$sz"))"
+			printf '%s %s\n' "$sz" "$f" >>"$work/push"
+			bytes=$((bytes + sz))
+		elif [ "$(sum256 "$root/$f")" = "$ph" ]; then
+			say "already on the phone: $f"
+			there=$((there + 1))
+		else
+			warn "not copied, the phone's $src/$f differs"
+			kept=$((kept + 1))
+		fi
+	done <"$work/joined"
+
+	total=$(grep -c . "$work/push" || :)
+	# The phone's free space, in KB.
+	free=$(adb shell "df -k $(q "$src") 2>/dev/null || df -k /sdcard" </dev/null |
+		tr -d '\r' | awk 'NR == 2 { print $4 }')
+	case $free in ''|*[!0-9]*) die "can't read the phone's free space" ;; esac
+	if [ "$dry" -eq 1 ]; then
+		echo "would copy $total ($(size "$bytes"); $(size $((free * 1024))) free on the phone)," \
+			"already on the phone $there, would leave $kept -> $src"
+		[ "$kept" -eq 0 ]
+		exit
+	fi
+	# Keep 1 GB free on the phone.
+	[ $((bytes / 1024 + 1048576)) -le "$free" ] ||
+		die "not enough room on the phone: $(size "$bytes") to copy, $(size $((free * 1024))) free"
+
+	n=0 copied=0 done_b=0 copied_b=0 start=$(date +%s)
+	while IFS= read -r line; do
+		n=$((n + 1))
+		sz=${line%% *} f=${line#* }
+		h=$(sum256 "$root/$f")
+		case $f in */*) ptmp=$src/${f%/*}/.pull-files.$$ ;; *) ptmp=$src/.pull-files.$$ ;; esac
+		if ! adb push "$root/$f" "$ptmp" </dev/null >/dev/null 2>"$work/err"; then
+			warn "not copied: $f ($(cat "$work/err"))"
+			kept=$((kept + 1))
+		elif [ "$(on_phone "s=\$(sha256sum $(q "$ptmp")) &&
+			[ \"\${s%% *}\" = $h ] && [ ! -e $(q "$f") ] &&
+			mv $(q "$ptmp") $(q "$f") && echo ok" </dev/null | tr -d '\r')" = ok ]; then
+			say "copied: $f ($(size "$sz"))"
+			copied=$((copied + 1))
+			copied_b=$((copied_b + sz))
+			ptmp=
+		else
+			warn "not copied, the phone's copy differs from it: $f"
+			kept=$((kept + 1))
+		fi
+		[ -z "$ptmp" ] || adb shell "rm -f $(q "$ptmp")" </dev/null >/dev/null 2>&1 || :
+		ptmp=
+		done_b=$((done_b + sz))
+		status "$n" "$total" "$done_b" "$bytes" "$copied_b"
+	done <"$work/push"
+	unstatus
+
+	echo "copied $copied to the phone ($(rate "$copied_b")), already there $there," \
+		"left $kept -> $src"
+	[ "$kept" -eq 0 ]
+	exit
+}
+
+if [ -n "$rels" ]; then
+	to_phone
+else
+	collect
+	[ "$only" -eq 0 ] || exit "$failed"
+	from_phone
+fi
