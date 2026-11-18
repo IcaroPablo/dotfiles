@@ -52,9 +52,8 @@ case $(grep -m1 vendor_id /proc/cpuinfo) in
 esac
 # loaded early from the initramfs, which needs a rebuild once it's installed
 if [ -n "$ucode" ]; then
-	apk info -e "$ucode" >/dev/null 2>&1 || fresh=1
+	apk info -e "$ucode" >/dev/null 2>&1 || initramfs=stale
 	add "$ucode"
-	[ -z "${fresh:-}" ] || update-initramfs -c -k all
 fi
 for d in /sys/bus/pci/devices/*; do
 	case $(cat "$d/class"):$(cat "$d/vendor") in 0x03*:0x8086) add intel-media-driver ;; esac
@@ -63,21 +62,57 @@ done
 # what this script itself uses
 add git curl openssh
 
-# no dhcpcd (conflicts with NetworkManager)
-for s in networkmanager syslog-ng; do
-	[ -e "/etc/dinit.d/boot.d/$s" ] || dinitctl -o enable "$s"
-done
+# stdin into the file $1, only when it differs from what the file holds;
+# true when the file changed
+changed() {
+	[ ! -e "$1" ] || cp -p "$1" "$1.new"
+	cat > "$1.new"
+	if cmp -s "$1.new" "$1"; then rm "$1.new"; return 1; fi
+	mv "$1.new" "$1"
+}
 
-# the system disk's USB-NVMe bridge needs STOP UNIT, or every poweroff is unsafe
+# The system disk sits behind a JMicron USB-NVMe bridge. Its rule also goes
+# into the initramfs: LUKS and LVM check for TRIM only when they open the
+# disk, so the bridge must allow it by then
 mkdir -p /etc/udev/rules.d
-cat > /etc/udev/rules.d/60-jmicron-nvme-shutdown.rules <<'EOF'
-# JMicron USB-NVMe enclosure (system disk): send STOP UNIT at shutdown; the bridge turns it into the NVMe shutdown notice
-ACTION=="add", SUBSYSTEM=="scsi_disk", ATTRS{idVendor}=="152d", ATTRS{idProduct}=="0583", ATTR{manage_shutdown}="1"
+changed /etc/udev/rules.d/60-jmicron-nvme.rules <<'EOF' && initramfs=stale
+# JMicron USB-NVMe enclosure (system disk):
+# - STOP UNIT at shutdown, which the bridge turns into the NVMe shutdown notice;
+#   without it every poweroff is unsafe
+# - TRIM (unmap): the bridge supports it, but the kernel leaves it off
+ACTION=="add", SUBSYSTEM=="scsi_disk", ATTRS{idVendor}=="152d", ATTRS{idProduct}=="0583", ATTR{manage_shutdown}="1", ATTR{provisioning_mode}="unmap"
 EOF
 for d in /sys/class/scsi_disk/*; do
 	case $(cat "$d/device/../../../../idVendor" 2>/dev/null):$(cat "$d/device/../../../../idProduct" 2>/dev/null) in
-	152d:0583) echo 1 > "$d/manage_shutdown" ;;
+	152d:0583)
+		echo 1 > "$d/manage_shutdown"
+		echo unmap > "$d/provisioning_mode" ;;
 	esac
+done
+
+# TRIM through the disk encryption too
+if [ -e /etc/crypttab ]; then
+	awk '!/^[[:space:]]*#/ && NF >= 4 && $4 !~ /(^|,)discard(,|$)/ { $4 = $4 ",discard" } 1' \
+		/etc/crypttab | changed /etc/crypttab && initramfs=stale
+fi
+
+# the microcode, the rule and crypttab reach early boot only through it
+[ -z "${initramfs:-}" ] || update-initramfs -c -k all
+
+# TRIM every mounted filesystem weekly, Sunday at midnight; when the machine
+# was off then, at its next boot. snooze comes with dinit-chimera
+add util-linux-fstrim
+cat > /etc/dinit.d/fstrim <<'EOF'
+type = process
+command = /usr/lib/dinit-snooze "date; fstrim -av; touch /var/cache/snooze/fstrim" -w 0 -s 7d -t /var/cache/snooze/fstrim
+restart = true
+logfile = /var/log/fstrim.log
+depends-on: local.target
+EOF
+
+# no dhcpcd (conflicts with NetworkManager)
+for s in networkmanager syslog-ng fstrim; do
+	[ -e "/etc/dinit.d/boot.d/$s" ] || dinitctl -o enable "$s"
 done
 
 # ==== 3. shell ====
