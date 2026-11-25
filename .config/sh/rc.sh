@@ -35,9 +35,9 @@ ulimit -c 0 2>/dev/null
 
 [ -n "${INITIAL_FOLDER:-}" ] && cd "$INITIAL_FOLDER"
 
-# o eza é o normal, mas o ls precisa servir: numa máquina recém-instalada o
-# rc.sh carrega antes de existir pacote nenhum, e o e() é a última linha daqui
-e() {
+# eza is the normal case, but ls has to work: on a fresh install rc.sh loads
+# before any package exists, and a bare `c` is its last line
+_c_ls() {
     clear 2>/dev/null
     if have eza; then
         eza -lh "$@" --group-directories-first --no-quotes --icons always --color always
@@ -46,19 +46,28 @@ e() {
     fi
 }
 
-# ponto único de navegação e abertura. todo diretório alcançado por aqui é
-# registrado no zoxide -- é o que substitui o hook do `zoxide init`:
+# the one command for moving around and opening things. Every directory
+# reached through it is added to zoxide, which replaces the `zoxide init` hook:
+#   c              list the current directory
 #   c <dir>        cd
-#   c <arquivo>…   openfile
-#   c <query>      salto no zoxide: match único vai direto, ambíguo abre o picker
+#   c <file>…      openfile
+#   c <query>      zoxide jump: a single match goes straight there, several
+#                  open the picker
+# ca, or c -a, does the same and lists hidden files too. Every directory c
+# leaves goes on _c_stack, one per line and newest last, for b to walk back
+# through. It is a plain variable, so each shell keeps its own
+_c_nl='
+'
 c() {
-    [ -n "$1" ] || return
+    _c_all=
+    [ "$1" = -a ] && { _c_all=1; shift; }
+    [ -n "$1" ] || { _c_ls ${_c_all:+-a}; unset _c_all; return; }
     _c_start="$(pwd)"
 
     if [ -f "$1" ]; then
         openfile "$@"
     elif [ -d "$1" ]; then
-        cd "$1" || { unset _c_start; return; }
+        cd "$1" || { unset _c_start _c_all; return; }
     # query -l sai 0 com stdout vazio quando não há match
     elif have zoxide && _c_hits="$(zoxide query -l -- "$1" 2>/dev/null)" && [ -n "$_c_hits" ]; then
         if [ "$(printf '%s\n' "$_c_hits" | wc -l | tr -d '[:space:]')" = 1 ]; then
@@ -72,10 +81,33 @@ c() {
     fi
 
     if [ "$_c_start" != "$(pwd)" ]; then
+        _c_stack="${_c_stack-}$_c_start$_c_nl"
         have zoxide && zoxide add -- "$(pwd)"
-        e
+        _c_ls ${_c_all:+-a}
     fi
-    unset _c_start _c_hits _c_hit
+    unset _c_start _c_hits _c_hit _c_all
+}
+
+ca() { c -a "$@"; }
+
+# back to the last directory c left. Ones that are gone, or the one you are
+# in, are dropped on the way; going back pushes nothing
+b() {
+    while [ -n "${_c_stack-}" ]; do
+        _b_dir="${_c_stack%"$_c_nl"}"
+        _b_dir="${_b_dir##*"$_c_nl"}"
+        _c_stack="${_c_stack%"$_b_dir$_c_nl"}"
+        if [ -d "$_b_dir" ] && [ "$_b_dir" != "$(pwd)" ]; then
+            _b_rest="$_c_stack"
+            c "$_b_dir"
+            _c_stack="$_b_rest"
+            unset _b_dir _b_rest
+            return
+        fi
+    done
+    unset _b_dir
+    printf 'b: no directory to go back to\n' >&2
+    return 1
 }
 
 # without fzf: the numbered matches, for fc or r
@@ -244,11 +276,11 @@ extract() (
 )
 
 alias doas="${DOAS} "
-alias ea="e -a"
 alias s="sel"
 alias sc="sel c"
+alias sca="sel ca"
 alias t="trash"
-alias u="cd .. && e"
+alias u="c .."
 
 gcm() { git checkout "$(git get-default-branch)"; }
 gpom() { _b="$(git get-default-branch)"; git pull origin "$_b"; unset _b; }
@@ -279,4 +311,4 @@ fi
 export PS1
 unset _m1 _m2 _pid _cwd _sh
 
-e
+c
