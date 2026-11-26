@@ -2,6 +2,7 @@
 
 local settings = require "settings"
 local modes = require "modes"
+local webview = require "webview"
 
 -- sites' dark CSS (prefers-color-scheme) and dark GTK widgets; needs a restart
 settings.set_setting("application.prefer_dark_mode", true)
@@ -28,6 +29,19 @@ settings.set_setting("window.default_search_engine", "kagi")
 if settings.get_settings()["completion.as_you_type"] then
     settings.set_setting("completion.as_you_type", true)
 end
+
+-- WebKitGTK 2.54 saves the Blobs that third-party frames put in IndexedDB as
+-- N.blob files in luakit's working directory, ~ here: its SQLite in-memory
+-- store for them has no directory. WebKit's older in-memory store keeps them
+-- in memory. It must be chosen before a view's first load, and only luakit
+-- builds with set_feature can (IcaroPablo/luakit, branch webview-set-feature);
+-- other builds raise an error for the unknown method, hence the pcall
+webview.add_signal("init", function (view)
+    local found, set_feature = pcall(function () return view.set_feature end)
+    if found then
+        set_feature(view, "IndexedDBSQLiteMemoryBackingStore", false)
+    end
+end)
 
 -- J and K as in Vimium: J goes one tab left, K one tab right
 modes.remove_binds("normal", { "J", "K" })
